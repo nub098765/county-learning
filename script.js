@@ -8,12 +8,11 @@ const stateData = {
       { id: "sussex", name: "Sussex", stateKey: "delaware" }
     ]
   }
-  // Additional states (e.g. maryland, hawaii) fit directly into this object structure
 };
 
 // Game Configuration & State
 let selectedMode = "pin";
-let activeStateKeys = ["delaware"]; // Array of currently selected state keys
+let activeStateKeys = ["delaware"];
 let selectedCounties = [];
 let targetPool = [];
 let currentTarget = null;
@@ -47,8 +46,6 @@ const btnResetProgress = document.getElementById("btn-reset-progress");
 
 const targetPrompt = document.getElementById("target-prompt");
 const feedbackEl = document.getElementById("feedback");
-const scoreRightEl = document.getElementById("score-right");
-const scoreWrongEl = document.getElementById("score-wrong");
 const btnQuitGame = document.getElementById("btn-quit-game");
 const countyPaths = document.querySelectorAll(".county");
 
@@ -60,8 +57,27 @@ const summaryMessage = document.getElementById("summary-message");
 const btnModalYes = document.getElementById("btn-modal-action-yes");
 const btnModalNo = document.getElementById("btn-modal-action-no");
 
-// Initialization
+// Initialization & Auto Dark-Mode Setup
+const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+
+function initTheme() {
+  if (systemPrefersDark.matches) {
+    toggleDark.checked = true;
+    document.body.classList.add("dark-mode");
+  } else {
+    toggleDark.checked = false;
+    document.body.classList.remove("dark-mode");
+  }
+}
+
+initTheme();
 updateStateListUI();
+
+// Auto-switch theme if operating system setting changes dynamically
+systemPrefersDark.addEventListener("change", (e) => {
+  toggleDark.checked = e.matches;
+  document.body.classList.toggle("dark-mode", e.matches);
+});
 
 function showScreen(screenId) {
   screens.forEach(s => s.classList.remove("active"));
@@ -100,7 +116,7 @@ btnResetProgress.addEventListener("click", () => {
   alert("Progress and mistake history reset!");
 });
 
-// State Selection (Supports Single or Multi-State Selection)
+// State Selection
 document.getElementById("state-delaware").addEventListener("click", () => {
   activeStateKeys = ["delaware"];
   renderCountyCheckboxes();
@@ -108,7 +124,6 @@ document.getElementById("state-delaware").addEventListener("click", () => {
   updateSetupPlayButton();
 });
 
-// Helper: Dynamically Render Checkboxes for Active States
 function renderCountyCheckboxes() {
   const activeCounties = activeStateKeys.flatMap(key => stateData[key].counties);
   
@@ -123,12 +138,10 @@ function renderCountyCheckboxes() {
   });
 }
 
-// Helper: Get all county objects belonging to active states
 function getActiveCountiesPool() {
   return activeStateKeys.flatMap(key => stateData[key].counties);
 }
 
-// Handle "Specific Counties" Selection & Auto-Suggestions
 radioSpecific.forEach(radio => {
   radio.addEventListener("change", (e) => {
     const countyCheckboxes = document.querySelectorAll(".county-checkbox");
@@ -205,8 +218,6 @@ function initGame(countiesToPlay) {
   isGameActive = true;
   missedCounties.clear();
 
-  scoreRightEl.textContent = "0";
-  scoreWrongEl.textContent = "0";
   feedbackEl.textContent = "";
 
   countyPaths.forEach(path => {
@@ -227,11 +238,10 @@ function pickNextTarget() {
   const randomIndex = Math.floor(Math.random() * targetPool.length);
   currentTarget = targetPool[randomIndex];
   
-  // Display only the target county name
   targetPrompt.textContent = currentTarget.name;
 }
 
-// Interactive Map Click Handler (Any map path triggers a guess response)
+// Interactive Map Click Handler
 countyPaths.forEach(path => {
   path.addEventListener("click", (e) => {
     if (!isGameActive) return;
@@ -240,7 +250,6 @@ countyPaths.forEach(path => {
 
     if (clickedId === currentTarget.id) {
       scoreRight++;
-      scoreRightEl.textContent = scoreRight;
       feedbackEl.textContent = "Correct!";
       feedbackEl.style.color = "#2d5a27";
 
@@ -256,14 +265,11 @@ countyPaths.forEach(path => {
       pickNextTarget();
     } else {
       scoreWrong++;
-      scoreWrongEl.textContent = scoreWrong;
       feedbackEl.textContent = "Try again!";
       feedbackEl.style.color = "#6b2d5c";
       
-      // Track session missed county
       missedCounties.add(currentTarget);
 
-      // Save persistent mistakes in localStorage
       countyMistakes[currentTarget.id] = (countyMistakes[currentTarget.id] || 0) + 1;
       localStorage.setItem("countyMistakes", JSON.stringify(countyMistakes));
 
@@ -273,7 +279,7 @@ countyPaths.forEach(path => {
   });
 });
 
-// End-Game Summary Modal Logic (Generic Multi-State Support)
+// End-Game Summary Modal Logic
 function showSummaryModal() {
   const totalAttempts = scoreRight + scoreWrong;
   const accuracy = totalAttempts > 0 ? Math.round((scoreRight / totalAttempts) * 100) : 0;
@@ -288,7 +294,6 @@ function showSummaryModal() {
   const missedArray = Array.from(missedCounties);
 
   if (missedArray.length === 0) {
-    // Determine dynamic message grammar based on active states count
     const activeStateNames = activeStateKeys.map(key => stateData[key].name);
     
     if (activeStateNames.length === 1) {
@@ -299,7 +304,6 @@ function showSummaryModal() {
       summaryMessage.textContent = `You've learned all the counties across ${activeStateNames.length} states! Good job!`;
     }
 
-    // Award state completion badges if all counties for a state were played and cleared
     activeStateKeys.forEach(stateKey => {
       const totalStateCounties = stateData[stateKey].counties.length;
       const playedStateCounties = selectedCounties.filter(c => c.stateKey === stateKey).length;
@@ -347,7 +351,6 @@ function showSummaryModal() {
 }
 
 function updateStateListUI() {
-  // Generic update loop across all states registered in stateData
   Object.keys(stateData).forEach(stateKey => {
     const stateRow = document.getElementById(`state-${stateKey}`);
     if (!stateRow) return;
@@ -358,13 +361,13 @@ function updateStateListUI() {
       stateRow.classList.add("completed");
       stateRow.innerHTML = `
         <span class="state-name">${state.name}</span>
-        <span class="completed-tag">✓ COMPLETED</span>
+        <span class="completed-tag">COMPLETED</span>
       `;
     } else {
       stateRow.classList.remove("completed");
       stateRow.innerHTML = `
         <span class="state-name">${state.name}</span>
-        <span class="state-count">${state.counties.length} Counties</span>
+        <span class="state-count">${state.counties.length} counties</span>
       `;
     }
   });

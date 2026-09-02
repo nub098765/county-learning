@@ -416,3 +416,24 @@ body.dark-mode .completed-tag { color: #81c784; }
   min-height: 1.3em;
   text-align: center;
 }
+
+CSS
+/* Apply dark mode if the user's system prefers it */
+@media (prefers-color-scheme: dark) {
+  body:not(.light-mode-forced) {
+    background-color: #121212;
+    color: #e0e0e0;
+  }
+  
+  /* Add any additional element styles for dark mode here */
+  .prompt-box {
+    background-color: #1e1e1e;
+    border-color: #45a049;
+  }
+}
+
+/* Explicit class applied via manual toggle */
+body.dark-mode {
+  background-color: #121212;
+  color: #e0e0e0;
+}
