@@ -121,24 +121,23 @@
       </div>
 
       <div id="county-options-panel" class="county-panel hidden">
-  <p class="plain-prompt">Any specific counties?</p>
-  <div class="radio-group">
-    <label><input type="radio" name="specific-counties" value="no" checked> No (all counties)</label>
-    <label><input type="radio" name="specific-counties" value="yes"> Yes</label>
-  </div>
+        <p class="plain-prompt">Any specific counties?</p>
+        <div class="radio-group">
+          <label><input type="radio" name="specific-counties" value="no" checked> No (all counties)</label>
+          <label><input type="radio" name="specific-counties" value="yes"> Yes</label>
+        </div>
 
-  <div id="checkbox-container" class="checkbox-container hidden">
-    <div id="suggestion-box" class="hidden" style="margin-bottom: 0.8rem; font-size: 0.85rem;">
-      <span id="suggestion-text">Suggested based on past games:</span>
-      <button id="btn-select-suggested" type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; margin-left: 0.5rem;">Select the ones you struggled with</button>
-    </div>
+        <div id="checkbox-container" class="checkbox-container hidden">
+          <div id="suggestion-box" class="hidden" style="margin-bottom: 0.8rem; font-size: 0.85rem;">
+            <span id="suggestion-text">Suggested based on past games:</span>
+            <button id="btn-select-suggested" type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; margin-left: 0.5rem;">Select the ones you struggled with</button>
+          </div>
 
-    <label><input type="checkbox" class="county-checkbox" value="new-castle"> New Castle</label>
-    <label><input type="checkbox" class="county-checkbox" value="kent"> Kent</label>
-    <label><input type="checkbox" class="county-checkbox" value="sussex"> Sussex</label>
-  </div>
-</div>
-</div>
+          <label><input type="checkbox" class="county-checkbox" value="new-castle"> New Castle</label>
+          <label><input type="checkbox" class="county-checkbox" value="kent"> Kent</label>
+          <label><input type="checkbox" class="county-checkbox" value="sussex"> Sussex</label>
+        </div>
+      </div>
 
       <button id="btn-start-game" class="btn-launch hidden">Play</button>
       <br>
@@ -173,23 +172,38 @@
           </g>
         </svg>
       </div>
+
+      <!-- Persistent Bottom Bar for Admire Mode -->
+      <div id="admire-bar" class="admire-bar hidden">
+        <div class="admire-info">
+          <span id="admire-percentage" class="admire-score">100%</span>
+          <span id="admire-text" class="admire-subtext">Game finished.</span>
+        </div>
+        <div class="admire-actions">
+          <button id="btn-admire-retry" class="btn-primary hidden">Retry Missed</button>
+          <button id="btn-admire-replay" class="btn-secondary">Play Again</button>
+          <button id="btn-admire-home" class="btn-secondary">Home</button>
+        </div>
+      </div>
     </section>
 
-    <div id="modal-summary" class="modal hidden">
-  <div class="modal-content">
-    <h2 id="summary-grade-title">Good job!</h2>
-    <div id="summary-percentage">100%</div>
-    <p id="summary-message">You've learned all the counties!</p>
-    
-    <div class="modal-actions">
-      <button id="btn-modal-admire" class="btn btn-secondary">Admire Map</button>
-      <button id="btn-modal-replay" class="btn btn-primary">Play Again</button>
-      <button id="btn-modal-home" class="btn btn-secondary">Home</button>
+  </main>
+
+  <!-- MODAL SUMMARY OUTSIDE APP CONTAINER -->
+  <div id="modal-summary" class="modal hidden">
+    <div class="modal-content">
+      <h2 id="summary-grade-title">Good job!</h2>
+      <div id="summary-percentage">100%</div>
+      <p id="summary-message">You've learned all the counties!</p>
+      
+      <div class="modal-actions">
+        <button id="btn-modal-admire" class="btn-secondary">Admire Map</button>
+        <button id="btn-modal-retry" class="btn-primary hidden">Retry Missed</button>
+        <button id="btn-modal-replay" class="btn-secondary">Play Again</button>
+        <button id="btn-modal-home" class="btn-secondary">Home</button>
+      </div>
     </div>
   </div>
-</div>
-
-  </main>
 
   <script src="script.js"></script>
 </body>

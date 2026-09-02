@@ -3,6 +3,7 @@
 }
 
 body {
+  position: relative;
   background-color: #fdeca6;
   font-family: 'Roboto Serif', Georgia, serif;
   display: flex;
@@ -406,13 +407,13 @@ body.dark-mode #target-prompt {
 
 /* --- Fixed Modal Overlay Controls --- */
 
-body .modal-overlay {
+.modal, .modal-overlay {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  background: rgba(0, 0, 0, 0.65) !important;
+  background: rgba(0, 0, 0, 0.75) !important;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
@@ -420,11 +421,11 @@ body .modal-overlay {
   backdrop-filter: blur(4px);
 }
 
-body .modal-overlay.hidden {
+.modal.hidden, .modal-overlay.hidden {
   display: none !important;
 }
 
-.modal-card {
+.modal-content, .modal-card {
   background: #ffffff;
   padding: 2.25rem 2rem;
   border-radius: 16px;
@@ -436,16 +437,23 @@ body .modal-overlay.hidden {
   margin: auto;
 }
 
+body.dark-mode .modal-content,
 body.dark-mode .modal-card {
   background: #242420;
   border-color: #33332d;
   color: #ffffff;
 }
 
+#summary-grade-title, .grade-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+
 #summary-percentage {
   font-size: 3.5rem;
   font-weight: 800;
-  margin: 0;
+  margin: 0.5rem 0;
   color: #2d5a27;
   line-height: 1;
 }
@@ -454,25 +462,20 @@ body.dark-mode #summary-percentage {
   color: #81c784;
 }
 
-.grade-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0.5rem 0 1rem 0;
-}
-
-.summary-text {
+#summary-message, .summary-text {
   font-size: 0.95rem;
   line-height: 1.4;
   margin-bottom: 1.5rem;
   color: #444;
 }
+body.dark-mode #summary-message,
 body.dark-mode .summary-text { 
   color: #ccc; 
 }
 
 .modal-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   justify-content: center;
   margin-top: 1.5rem;
   flex-wrap: wrap;
@@ -480,5 +483,68 @@ body.dark-mode .summary-text {
 
 .modal-actions button {
   flex: 1;
-  min-width: 110px;
+  min-width: 90px;
+  padding: 0.6rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+/* --- Admire Map Bottom Bar --- */
+
+.admire-bar {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+body.dark-mode .admire-bar {
+  background: #242420;
+  border-color: #33332d;
+}
+
+.admire-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admire-score {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #2d5a27;
+}
+
+body.dark-mode .admire-score {
+  color: #81c784;
+}
+
+.admire-subtext {
+  font-size: 0.85rem;
+  color: #555;
+  font-weight: 600;
+}
+
+body.dark-mode .admire-subtext {
+  color: #ccc;
+}
+
+.admire-actions {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.admire-actions button {
+  padding: 0.55rem 0.6rem;
+  font-size: 0.8rem;
+  flex: 1;
+  min-width: 80px;
 }
