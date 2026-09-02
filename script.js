@@ -1,532 +1,379 @@
-document.addEventListener('DOMContentLoaded', () => {
-  // Data Registry for States and Counties
-  const stateData = {
+document.addEventListener("DOMContentLoaded", () => {
+  // --- STATE & DATA SETUP ---
+  const STATE_DATA = {
     delaware: {
       name: "Delaware",
-      counties: [
-        { id: "new-castle", name: "New Castle", stateKey: "delaware" },
-        { id: "kent", name: "Kent", stateKey: "delaware" },
-        { id: "sussex", name: "Sussex", stateKey: "delaware" }
-      ]
+      svgId: "map-delaware",
+      counties: ["New Castle", "Kent", "Sussex"]
+    },
+    rhode_island: {
+      name: "Rhode Island",
+      svgId: "map-rhode_island",
+      counties: ["Bristol", "Kent", "Newport", "Providence", "Washington"]
     }
   };
 
-  // Game Configuration & State Variables
-  let selectedMode = "pin";
-  let activeStateKeys = ["delaware"];
-  let selectedCounties = [];
-  let targetPool = [];
+  // --- APP STATE ---
+  let selectedStateKey = "delaware";
+  let gameMode = "pin"; // "pin" or "pin-hard"
+  let selectedCounties = []; // list of target county names for the game
+  let remainingCounties = [];
   let currentTarget = null;
-  let scoreRight = 0;
-  let scoreWrong = 0;
-  let isGameActive = false;
-  let missedCounties = new Set();
+  let totalGameCount = 0;
+  let correctCount = 0;
+  let missedCounties = [];
+  let isChecking = false;
+  let previousScreenBeforeSettings = "home";
 
-  // Persistent Data Storage
-  let completedStates = JSON.parse(localStorage.getItem("completedStates")) || [];
-  let countyMistakes = JSON.parse(localStorage.getItem("countyMistakes")) || {};
+  // Persistent storage for wrong guesses across sessions
+  let struggleData = JSON.parse(localStorage.getItem("county_struggles") || "{}");
 
-  // Navigation & Screen DOM Elements
-  const screens = document.querySelectorAll(".screen");
-  const btnGotoModes = document.getElementById("btn-goto-modes");
-  const btnGotoSettings = document.getElementById("btn-goto-settings");
-  const backButtons = document.querySelectorAll(".btn-back");
-  const modeButtons = document.querySelectorAll(".btn-mode");
+  // --- DOM ELEMENTS ---
+  const screens = {
+    home: document.getElementById("screen-home"),
+    settings: document.getElementById("screen-settings"),
+    modes: document.getElementById("screen-modes"),
+    setup: document.getElementById("screen-setup"),
+    game: document.getElementById("screen-game")
+  };
 
-  // Setup Screen DOM Elements
-  const countyPanel = document.getElementById("county-options-panel");
-  const radioSpecific = document.querySelectorAll('input[name="specific-counties"]');
-  const checkboxContainer = document.getElementById("checkbox-container");
-  const btnStartGame = document.getElementById("btn-start-game");
-  const suggestionBox = document.getElementById("suggestion-box");
-  const btnSelectSuggested = document.getElementById("btn-select-suggested");
-
-  // Settings DOM Elements
   const toggleDark = document.getElementById("toggle-dark");
   const toggleContrast = document.getElementById("toggle-contrast");
   const btnResetProgress = document.getElementById("btn-reset-progress");
 
-  // Game Screen DOM Elements
+  const stateRows = document.querySelectorAll(".state-row:not(.disabled)");
+  const countyOptionsPanel = document.getElementById("county-options-panel");
+  const checkboxContainer = document.getElementById("checkbox-container");
+  const suggestionBox = document.getElementById("suggestion-box");
+  const btnSelectSuggested = document.getElementById("btn-select-suggested");
+  const specificRadios = document.querySelectorAll('input[name="specific-counties"]');
+  const btnStartGame = document.getElementById("btn-start-game");
+
   const targetPrompt = document.getElementById("target-prompt");
-  const feedbackEl = document.getElementById("feedback");
-  const btnQuitGame = document.getElementById("btn-quit-game");
-  const btnNewGame = document.getElementById("btn-new-game");
-  const countyPaths = document.querySelectorAll(".county");
+  const feedback = document.getElementById("feedback");
+  const stateMaps = document.querySelectorAll(".state-map");
 
-  // Modal Summary DOM Elements
   const modalSummary = document.getElementById("modal-summary");
-  const summaryPercentage = document.getElementById("summary-percentage");
   const summaryGradeTitle = document.getElementById("summary-grade-title");
+  const summaryPercentage = document.getElementById("summary-percentage");
   const summaryMessage = document.getElementById("summary-message");
-  const modalActions = document.querySelector(".modal-actions");
+  const btnModalAdmire = document.getElementById("btn-modal-admire");
+  const btnModalRetry = document.getElementById("btn-modal-retry");
+  const btnModalReplay = document.getElementById("btn-modal-replay");
+  const btnModalSettings = document.getElementById("btn-modal-settings");
+  const btnModalHome = document.getElementById("btn-modal-home");
 
-  // Bottom Admire Bar DOM Elements
   const admireBar = document.getElementById("admire-bar");
   const admirePercentage = document.getElementById("admire-percentage");
-  const admireText = document.getElementById("admire-text");
   const btnAdmireRetry = document.getElementById("btn-admire-retry");
   const btnAdmireReplay = document.getElementById("btn-admire-replay");
+  const btnAdmireSettings = document.getElementById("btn-admire-settings");
   const btnAdmireHome = document.getElementById("btn-admire-home");
 
-  // --- Theme Initialization & System Preference Sync ---
-  const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+  const btnGameSettings = document.getElementById("btn-game-settings");
 
-  function initTheme() {
-    if (toggleDark) {
-      if (systemPrefersDark.matches) {
-        toggleDark.checked = true;
-        document.body.classList.add("dark-mode");
-      } else {
-        toggleDark.checked = false;
-        document.body.classList.remove("dark-mode");
-      }
+  // --- NAVIGATION FUNCTIONS ---
+  function showScreen(screenKey) {
+    Object.values(screens).forEach(screen => screen.classList.remove("active"));
+    if (screens[screenKey]) {
+      screens[screenKey].classList.add("active");
     }
   }
 
-  initTheme();
-  updateStateListUI();
-
-  if (systemPrefersDark) {
-    systemPrefersDark.addEventListener("change", (e) => {
-      if (toggleDark) toggleDark.checked = e.matches;
-      document.body.classList.toggle("dark-mode", e.matches);
-    });
+  function openSettings(fromScreen) {
+    previousScreenBeforeSettings = fromScreen;
+    showScreen("settings");
   }
 
-  // --- Screen Navigation ---
-  function showScreen(screenId) {
-    screens.forEach(s => s.classList.remove("active"));
-    const activeScreen = document.getElementById(screenId);
-    if (activeScreen) activeScreen.classList.add("active");
-  }
-
-  if (btnGotoModes) btnGotoModes.addEventListener("click", () => showScreen("screen-modes"));
-  if (btnGotoSettings) btnGotoSettings.addEventListener("click", () => showScreen("screen-settings"));
-
-  backButtons.forEach(btn => {
-    btn.addEventListener("click", () => showScreen(btn.dataset.target));
-  });
-
-  modeButtons.forEach(btn => {
+  // Handle generic back buttons
+  document.querySelectorAll(".btn-back").forEach(btn => {
     btn.addEventListener("click", () => {
-      selectedMode = btn.dataset.mode;
-      showScreen("screen-setup");
+      const target = btn.dataset.target.replace("screen-", "");
+      // Return to previous screen if coming back from settings
+      if (screens.settings.classList.contains("active") && previousScreenBeforeSettings) {
+        showScreen(previousScreenBeforeSettings);
+      } else {
+        showScreen(target);
+      }
     });
   });
 
-  if (toggleDark) {
-    toggleDark.addEventListener("change", (e) => {
-      document.body.classList.toggle("dark-mode", e.target.checked);
-    });
-  }
+  document.getElementById("btn-goto-modes").addEventListener("click", () => showScreen("modes"));
+  document.getElementById("btn-goto-settings").addEventListener("click", () => openSettings("home"));
 
-  if (toggleContrast) {
-    toggleContrast.addEventListener("change", (e) => {
-      document.body.classList.toggle("high-contrast", e.target.checked);
+  // Mode Selection
+  document.querySelectorAll(".btn-mode").forEach(btn => {
+    btn.addEventListener("click", () => {
+      gameMode = btn.dataset.mode;
+      showScreen("setup");
     });
-  }
+  });
 
-  // Reset Saved Progress
-  if (btnResetProgress) {
-    btnResetProgress.addEventListener("click", () => {
-      completedStates = [];
-      countyMistakes = {};
-      localStorage.removeItem("completedStates");
-      localStorage.removeItem("countyMistakes");
-      updateStateListUI();
-      alert("Progress and mistake history reset!");
-    });
-  }
+  // --- SETTINGS CONTROLS ---
+  toggleDark.addEventListener("change", (e) => {
+    document.body.classList.toggle("dark-mode", e.target.checked);
+  });
 
-  // --- State & County Setup Logic ---
-  const delawareRow = document.getElementById("state-delaware");
-  if (delawareRow) {
-    delawareRow.addEventListener("click", () => {
-      activeStateKeys = ["delaware"];
+  toggleContrast.addEventListener("change", (e) => {
+    document.body.classList.toggle("high-contrast", e.target.checked);
+  });
+
+  btnResetProgress.addEventListener("click", () => {
+    if (confirm("Are you sure you want to reset your saved progress and struggle history?")) {
+      struggleData = {};
+      localStorage.removeItem("county_struggles");
+      alert("Progress reset!");
+      if (screens.setup.classList.contains("active")) {
+        renderCountyCheckboxes();
+      }
+    }
+  });
+
+  // --- SETUP & STATE SELECTION ---
+  stateRows.forEach(row => {
+    row.addEventListener("click", () => {
+      stateRows.forEach(r => r.classList.remove("selected"));
+      row.classList.add("selected");
+      selectedStateKey = row.dataset.state;
+
+      // Reset radio toggle to "No"
+      document.querySelector('input[name="specific-counties"][value="no"]').checked = true;
+      checkboxContainer.classList.add("hidden");
+
       renderCountyCheckboxes();
-      if (countyPanel) countyPanel.classList.remove("hidden");
-      updateSetupPlayButton();
+      countyOptionsPanel.classList.remove("hidden");
+      btnStartGame.classList.remove("hidden");
     });
-  }
+  });
 
+  // Specific counties radio handler
+  specificRadios.forEach(radio => {
+    radio.addEventListener("change", (e) => {
+      if (e.target.value === "yes") {
+        checkboxContainer.classList.remove("hidden");
+      } else {
+        checkboxContainer.classList.add("hidden");
+      }
+    });
+  });
+
+  // Render Checkboxes dynamically for selected state
   function renderCountyCheckboxes() {
-    if (!checkboxContainer) return;
+    const counties = STATE_DATA[selectedStateKey].counties;
     
-    // Retrieve counties and sort shallow copy alphabetically by name
-    const activeCounties = [...getActiveCountiesPool()].sort((a, b) => 
-      a.name.localeCompare(b.name)
-    );
-    
-    // Target only dynamic labels for cleanup to protect suggestionBox element
-    const existingCheckboxes = checkboxContainer.querySelectorAll("label");
-    existingCheckboxes.forEach(label => label.remove());
+    // Clear dynamic checkboxes (preserve suggestion box)
+    const existingLabels = checkboxContainer.querySelectorAll(".dynamic-county-label");
+    existingLabels.forEach(el => el.remove());
 
-    // Render sorted checkboxes
-    activeCounties.forEach(c => {
+    const hasStruggles = counties.some(c => (struggleData[`${selectedStateKey}_${c}`] || 0) > 0);
+    if (hasStruggles) {
+      suggestionBox.classList.remove("hidden");
+    } else {
+      suggestionBox.classList.add("hidden");
+    }
+
+    counties.forEach(county => {
       const label = document.createElement("label");
-      label.innerHTML = `<input type="checkbox" class="county-checkbox" value="${c.id}" data-state="${c.stateKey}"> ${c.name}`;
+      label.className = "dynamic-county-label";
+      
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = county;
+      checkbox.className = "county-checkbox";
+
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(` ${county}`));
       checkboxContainer.appendChild(label);
     });
-
-    document.querySelectorAll(".county-checkbox").forEach(cb => {
-      cb.addEventListener("change", updateSetupPlayButton);
-    });
   }
 
-  function getActiveCountiesPool() {
-    return activeStateKeys.flatMap(key => (stateData[key] ? stateData[key].counties : []));
-  }
-
-  radioSpecific.forEach(radio => {
-    radio.addEventListener("change", (e) => {
-      const countyCheckboxes = document.querySelectorAll(".county-checkbox");
-      if (e.target.value === "yes") {
-        if (checkboxContainer) checkboxContainer.classList.remove("hidden");
-        
-        let suggestedCount = 0;
-        countyCheckboxes.forEach(cb => {
-          const mistakeCount = countyMistakes[cb.value] || 0;
-          if (mistakeCount > 0) {
-            cb.checked = true;
-            suggestedCount++;
-          } else {
-            cb.checked = false;
-          }
-        });
-
-        if (suggestionBox) {
-          if (suggestedCount > 0) {
-            suggestionBox.classList.remove("hidden");
-          } else {
-            suggestionBox.classList.add("hidden");
-          }
-        }
-
-      } else {
-        if (checkboxContainer) checkboxContainer.classList.add("hidden");
-        if (suggestionBox) suggestionBox.classList.add("hidden");
-        countyCheckboxes.forEach(cb => cb.checked = false);
-      }
-      updateSetupPlayButton();
+  // Handle "Select suggested" button
+  btnSelectSuggested.addEventListener("click", () => {
+    const checkboxes = checkboxContainer.querySelectorAll(".county-checkbox");
+    checkboxes.forEach(cb => {
+      const key = `${selectedStateKey}_${cb.value}`;
+      cb.checked = (struggleData[key] || 0) > 0;
     });
   });
 
-  if (btnSelectSuggested) {
-    btnSelectSuggested.addEventListener("click", () => {
-      document.querySelectorAll(".county-checkbox").forEach(cb => {
-        cb.checked = (countyMistakes[cb.value] || 0) > 0;
-      });
-      updateSetupPlayButton();
-    });
-  }
+  // --- GAME LOGIC ---
+  btnStartGame.addEventListener("click", () => {
+    const isSpecific = document.querySelector('input[name="specific-counties"]:checked').value === "yes";
+    const stateCounties = STATE_DATA[selectedStateKey].counties;
 
-  function updateSetupPlayButton() {
-    if (!btnStartGame) return;
-    const specificRadio = document.querySelector('input[name="specific-counties"]:checked');
-    const isSpecificYes = specificRadio ? specificRadio.value === "yes" : false;
-
-    if (!isSpecificYes || document.querySelectorAll(".county-checkbox:checked").length >= 1) {
-      btnStartGame.classList.remove("hidden");
-    } else {
-      btnStartGame.classList.add("hidden");
-    }
-  }
-
-  if (btnStartGame) {
-    btnStartGame.addEventListener("click", () => {
-      const specificRadio = document.querySelector('input[name="specific-counties"]:checked');
-      const isSpecificYes = specificRadio ? specificRadio.value === "yes" : false;
-      const allActiveCounties = getActiveCountiesPool();
-
-      if (isSpecificYes) {
-        const checkedIds = Array.from(document.querySelectorAll(".county-checkbox:checked")).map(cb => cb.value);
-        selectedCounties = allActiveCounties.filter(c => checkedIds.includes(c.id));
-      } else {
-        selectedCounties = [...allActiveCounties];
+    if (isSpecific) {
+      const checkedBoxes = checkboxContainer.querySelectorAll(".county-checkbox:checked");
+      selectedCounties = Array.from(checkedBoxes).map(cb => cb.value);
+      if (selectedCounties.length === 0) {
+        alert("Please select at least one county to play!");
+        return;
       }
+    } else {
+      selectedCounties = [...stateCounties];
+    }
 
-      showScreen("screen-game");
-      initGame(selectedCounties);
-    });
-  }
+    initGame();
+  });
 
-  if (btnQuitGame) {
-    btnQuitGame.addEventListener("click", () => {
-      isGameActive = false;
-      if (modalSummary) modalSummary.classList.add("hidden");
-      if (admireBar) admireBar.classList.add("hidden");
-      showScreen("screen-home");
-    });
-  }
+  function initGame() {
+    remainingCounties = [...selectedCounties];
+    totalGameCount = selectedCounties.length;
+    correctCount = 0;
+    missedCounties = [];
+    isChecking = false;
 
-  if (btnNewGame) {
-    btnNewGame.addEventListener("click", () => {
-      initGame(selectedCounties);
-    });
-  }
+    // Show correct SVG map
+    stateMaps.forEach(map => map.classList.add("hidden"));
+    const activeMap = document.getElementById(STATE_DATA[selectedStateKey].svgId);
+    activeMap.classList.remove("hidden");
 
-  // --- Game Loop Functions ---
-  function initGame(countiesToPlay) {
-    targetPool = [...countiesToPlay];
-    scoreRight = 0;
-    scoreWrong = 0;
-    isGameActive = true;
-    missedCounties.clear();
-
-    if (modalSummary) modalSummary.classList.add("hidden");
-    if (admireBar) admireBar.classList.add("hidden");
-    if (feedbackEl) feedbackEl.textContent = "";
-
-    countyPaths.forEach(path => {
-      path.classList.remove("correct", "wrong", "flash-correct");
-      path.style.pointerEvents = "auto";
+    // Clean SVG paths
+    const paths = activeMap.querySelectorAll(".county");
+    paths.forEach(path => {
+      path.classList.remove("found", "flash-correct", "flash-wrong");
     });
 
-    pickNextTarget();
+    // Attach path click listeners
+    paths.forEach(path => {
+      path.removeEventListener("click", handleCountyClick);
+      path.addEventListener("click", handleCountyClick);
+    });
+
+    modalSummary.classList.add("hidden");
+    admireBar.classList.add("hidden");
+    showScreen("game");
+
+    nextTurn();
   }
 
-  function pickNextTarget() {
-    if (targetPool.length === 0) {
-      isGameActive = false;
-      showSummaryModal();
+  function nextTurn() {
+    if (remainingCounties.length === 0) {
+      endGame();
       return;
     }
 
-    const randomIndex = Math.floor(Math.random() * targetPool.length);
-    currentTarget = targetPool[randomIndex];
-    
-    if (targetPrompt) targetPrompt.textContent = currentTarget.name;
+    // Pick random target
+    const randomIndex = Math.floor(Math.random() * remainingCounties.length);
+    currentTarget = remainingCounties[randomIndex];
+
+    targetPrompt.textContent = `Find: ${currentTarget}`;
+    feedback.textContent = "";
+    feedback.className = "";
   }
 
-  // --- County Map Click Handling ---
-  countyPaths.forEach(path => {
-    path.addEventListener("click", (e) => {
-      if (!isGameActive) return;
+  function handleCountyClick(e) {
+    if (isChecking || !currentTarget) return;
 
-      const clickedId = e.target.id;
-      const isHighContrast = document.body.classList.contains("high-contrast");
+    const clickedPath = e.currentTarget;
+    const clickedName = clickedPath.getAttribute("data-name");
 
-      if (clickedId === currentTarget.id) {
-        scoreRight++;
-        if (feedbackEl) {
-          feedbackEl.textContent = "Correct!";
-          feedbackEl.style.color = isHighContrast ? "#00ffff" : "#2d5a27";
-        }
+    if (clickedPath.classList.contains("found") && gameMode === "pin") return;
 
-        if (selectedMode === "pin") {
-          e.target.classList.add("correct");
-          e.target.style.pointerEvents = "none";
-        } else if (selectedMode === "pin-hard") {
-          e.target.classList.add("flash-correct");
-          setTimeout(() => e.target.classList.remove("flash-correct"), 600);
-        }
+    isChecking = true;
 
-        targetPool = targetPool.filter(c => c.id !== currentTarget.id);
-        pickNextTarget();
+    if (clickedName === currentTarget) {
+      correctCount++;
+      feedback.textContent = "Correct!";
+      feedback.className = "feedback-correct";
+
+      if (gameMode === "pin") {
+        clickedPath.classList.add("found");
       } else {
-        scoreWrong++;
-        if (feedbackEl) {
-          feedbackEl.textContent = "Try again!";
-          feedbackEl.style.color = isHighContrast ? "#ff0055" : "#6b2d5c";
-        }
-        
-        missedCounties.add(currentTarget);
-
-        // Record mistake persistent history
-        countyMistakes[currentTarget.id] = (countyMistakes[currentTarget.id] || 0) + 1;
-        localStorage.setItem("countyMistakes", JSON.stringify(countyMistakes));
-
-        e.target.classList.add("wrong");
-        setTimeout(() => e.target.classList.remove("wrong"), 500);
-      }
-    });
-  });
-
-  // --- End-Game Summary & Admire Map Logic ---
-  function showSummaryModal() {
-    if (!modalSummary) return;
-
-    const totalAttempts = scoreRight + scoreWrong;
-    const accuracy = totalAttempts > 0 ? Math.round((scoreRight / totalAttempts) * 100) : 0;
-
-    if (summaryPercentage) summaryPercentage.textContent = `${accuracy}%`;
-
-    if (summaryGradeTitle) {
-      if (accuracy === 100) summaryGradeTitle.textContent = "Good job!";
-      else if (accuracy >= 75) summaryGradeTitle.textContent = "Not bad.";
-      else if (accuracy >= 50) summaryGradeTitle.textContent = "You could work on that.";
-      else summaryGradeTitle.textContent = "Oof.";
-    }
-
-    const missedArray = Array.from(missedCounties);
-    modalActions.innerHTML = ""; // Reset modal buttons dynamically
-
-    if (missedArray.length === 0) {
-      // Perfect Score Flow
-      const activeStateNames = activeStateKeys.map(key => stateData[key].name);
-      
-      if (summaryMessage) {
-        if (activeStateNames.length === 1) {
-          summaryMessage.textContent = `You've learned all the counties in ${activeStateNames[0]}! Good job!`;
-        } else if (activeStateNames.length === 2) {
-          summaryMessage.textContent = `You've learned all the counties in ${activeStateNames[0]} and ${activeStateNames[1]}! Good job!`;
-        } else {
-          summaryMessage.textContent = `You've learned all the counties across ${activeStateNames.length} states! Good job!`;
-        }
+        clickedPath.classList.add("flash-correct");
+        setTimeout(() => clickedPath.classList.remove("flash-correct"), 800);
       }
 
-      countyPaths.forEach(path => {
-        path.classList.add("correct");
-        path.style.pointerEvents = "none";
-      });
+      remainingCounties = remainingCounties.filter(c => c !== currentTarget);
 
-      if (targetPrompt) targetPrompt.textContent = "Complete!";
-
-      // Mark states completed
-      activeStateKeys.forEach(stateKey => {
-        const totalStateCounties = stateData[stateKey].counties.length;
-        const playedStateCounties = selectedCounties.filter(c => c.stateKey === stateKey).length;
-
-        if (playedStateCounties === totalStateCounties && !completedStates.includes(stateKey)) {
-          completedStates.push(stateKey);
-        }
-      });
-
-      localStorage.setItem("completedStates", JSON.stringify(completedStates));
-      updateStateListUI();
-
-      // Modal Buttons
-      const admireBtn = document.createElement("button");
-      admireBtn.textContent = "Admire Map";
-      admireBtn.className = "btn-secondary";
-      admireBtn.onclick = enableAdmireBar;
-      modalActions.appendChild(admireBtn);
-
-      const playAgainBtn = document.createElement("button");
-      playAgainBtn.textContent = "Play Again";
-      playAgainBtn.onclick = () => {
-        modalSummary.classList.add("hidden");
-        initGame(selectedCounties);
-      };
-      modalActions.appendChild(playAgainBtn);
-
-      const homeBtn = document.createElement("button");
-      homeBtn.textContent = "Home";
-      homeBtn.className = "btn-secondary";
-      homeBtn.onclick = () => {
-        modalSummary.classList.add("hidden");
-        showScreen("screen-home");
-      };
-      modalActions.appendChild(homeBtn);
+      setTimeout(() => {
+        isChecking = false;
+        nextTurn();
+      }, 700);
 
     } else {
-      // Mistakes Made Flow
-      const missedNames = missedArray.slice(0, 3).map(c => c.name);
-      let formattedMissed = "";
-      if (missedNames.length === 1) formattedMissed = missedNames[0];
-      else if (missedNames.length === 2) formattedMissed = `${missedNames[0]} and ${missedNames[1]}`;
-      else formattedMissed = `${missedNames[0]}, ${missedNames[1]}, and ${missedNames[2]}`;
-
-      if (summaryMessage) {
-        summaryMessage.textContent = `You missed ${missedArray.length} county target${missedArray.length > 1 ? 's' : ''} (${formattedMissed}). What would you like to do?`;
+      if (!missedCounties.includes(currentTarget)) {
+        missedCounties.push(currentTarget);
       }
 
-      // Modal Buttons
-      const admireBtn = document.createElement("button");
-      admireBtn.textContent = "Admire Map";
-      admireBtn.className = "btn-secondary";
-      admireBtn.onclick = enableAdmireBar;
-      modalActions.appendChild(admireBtn);
+      const key = `${selectedStateKey}_${currentTarget}`;
+      struggleData[key] = (struggleData[key] || 0) + 1;
+      localStorage.setItem("county_struggles", JSON.stringify(struggleData));
 
-      const retryBtn = document.createElement("button");
-      retryBtn.textContent = "Retry Missed";
-      retryBtn.className = "btn-primary";
-      retryBtn.onclick = () => {
-        modalSummary.classList.add("hidden");
-        initGame(missedArray);
-      };
-      modalActions.appendChild(retryBtn);
+      feedback.textContent = `Oops! That's ${clickedName}`;
+      feedback.className = "feedback-wrong";
 
-      const playAgainBtn = document.createElement("button");
-      playAgainBtn.textContent = "Play Again";
-      playAgainBtn.className = "btn-secondary";
-      playAgainBtn.onclick = () => {
-        modalSummary.classList.add("hidden");
-        initGame(selectedCounties);
-      };
-      modalActions.appendChild(playAgainBtn);
+      clickedPath.classList.add("flash-wrong");
+      setTimeout(() => {
+        clickedPath.classList.remove("flash-wrong");
+        isChecking = false;
+      }, 800);
+    }
+  }
 
-      const homeBtn = document.createElement("button");
-      homeBtn.textContent = "Home";
-      homeBtn.className = "btn-secondary";
-      homeBtn.onclick = () => {
-        modalSummary.classList.add("hidden");
-        showScreen("screen-home");
-      };
-      modalActions.appendChild(homeBtn);
+  // --- END GAME & MODALS ---
+  function endGame() {
+    currentTarget = null;
+    const scorePct = Math.round((correctCount / totalGameCount) * 100) || 0;
+
+    summaryPercentage.textContent = `${scorePct}%`;
+    admirePercentage.textContent = `${scorePct}%`;
+
+    if (scorePct === 100) {
+      summaryGradeTitle.textContent = "Perfect Score!";
+      summaryMessage.textContent = "You've mastered all selected counties!";
+    } else if (scorePct >= 70) {
+      summaryGradeTitle.textContent = "Great job!";
+      summaryMessage.textContent = "You're building solid state geography knowledge!";
+    } else {
+      summaryGradeTitle.textContent = "Keep Practicing!";
+      summaryMessage.textContent = "Review missed counties to improve your score next time.";
+    }
+
+    if (missedCounties.length > 0) {
+      btnModalRetry.classList.remove("hidden");
+      btnAdmireRetry.classList.remove("hidden");
+    } else {
+      btnModalRetry.classList.add("hidden");
+      btnAdmireRetry.classList.add("hidden");
     }
 
     modalSummary.classList.remove("hidden");
   }
 
-  // Activate Bottom Bar for "Admire Map"
-  function enableAdmireBar() {
+  function retryMissed() {
+    selectedCounties = [...missedCounties];
+    initGame();
+  }
+
+  // Navigation handlers for modals and gameplay settings
+  btnGameSettings.addEventListener("click", () => openSettings("game"));
+  btnModalSettings.addEventListener("click", () => openSettings("game"));
+  btnAdmireSettings.addEventListener("click", () => openSettings("game"));
+
+  btnModalRetry.addEventListener("click", retryMissed);
+  btnAdmireRetry.addEventListener("click", retryMissed);
+
+  btnModalReplay.addEventListener("click", initGame);
+  btnAdmireReplay.addEventListener("click", initGame);
+
+  btnModalHome.addEventListener("click", () => {
     modalSummary.classList.add("hidden");
-    if (admirePercentage) admirePercentage.textContent = summaryPercentage.textContent;
-    if (admireText) admireText.textContent = summaryMessage.textContent;
+    showScreen("home");
+  });
 
-    if (missedCounties.size > 0) {
-      btnAdmireRetry.classList.remove("hidden");
-    } else {
-      btnAdmireRetry.classList.add("hidden");
-    }
+  btnAdmireHome.addEventListener("click", () => {
+    admireBar.classList.add("hidden");
+    showScreen("home");
+  });
 
+  btnModalAdmire.addEventListener("click", () => {
+    modalSummary.classList.add("hidden");
     admireBar.classList.remove("hidden");
-  }
+  });
 
-  // Admire Bar Event Actions
-  if (btnAdmireRetry) {
-    btnAdmireRetry.addEventListener("click", () => {
-      admireBar.classList.add("hidden");
-      initGame(Array.from(missedCounties));
-    });
-  }
-
-  if (btnAdmireReplay) {
-    btnAdmireReplay.addEventListener("click", () => {
-      admireBar.classList.add("hidden");
-      initGame(selectedCounties);
-    });
-  }
-
-  if (btnAdmireHome) {
-    btnAdmireHome.addEventListener("click", () => {
-      admireBar.classList.add("hidden");
-      showScreen("screen-home");
-    });
-  }
-
-  // --- UI Update Helper ---
-  function updateStateListUI() {
-    Object.keys(stateData).forEach(stateKey => {
-      const stateRow = document.getElementById(`state-${stateKey}`);
-      if (!stateRow) return;
-
-      const state = stateData[stateKey];
-
-      if (completedStates.includes(stateKey)) {
-        stateRow.classList.add("completed");
-        stateRow.innerHTML = `
-          <span class="state-name">${state.name}</span>
-          <span class="completed-tag">✓ COMPLETED</span>
-        `;
-      } else {
-        stateRow.classList.remove("completed");
-        stateRow.innerHTML = `
-          <span class="state-name">${state.name}</span>
-          <span class="state-count">${state.counties.length} counties</span>
-        `;
-      }
-    });
-  }
+  document.getElementById("btn-quit-game").addEventListener("click", () => {
+    if (confirm("Are you sure you want to quit this game?")) {
+      showScreen("home");
+    }
+  });
 });
