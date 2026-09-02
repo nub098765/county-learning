@@ -1,0 +1,159 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #fdeca6;
+  font-family: 'Roboto Serif', Georgia, serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  color: #1c1c1a;
+}
+
+.game-container {
+  background: #ffffff;
+  padding: 2.5rem 2rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  text-align: center;
+  max-width: 440px;
+  width: 90%;
+}
+
+h1 {
+  font-weight: 700;
+  font-size: 1.75rem;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.02em;
+  color: #111111;
+}
+
+/* Controls & Inputs */
+.controls {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+select, button {
+  font-family: 'Roboto Serif', Georgia, serif;
+  font-size: 0.85rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #dcdcd6;
+  background-color: #fafaf7;
+  color: #222222;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+select:hover, select:focus {
+  border-color: #111111;
+  outline: none;
+}
+
+button {
+  background-color: #111111;
+  color: #fdeca6;
+  font-weight: 600;
+  border: 1px solid #111111;
+}
+
+button:hover {
+  background-color: #333333;
+  border-color: #333333;
+}
+
+/* Status & Feedback Area */
+.prompt-box {
+  min-height: 64px;
+  margin-bottom: 1rem;
+}
+
+#target-prompt {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+#feedback {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-top: 0.35rem;
+  min-height: 1.2em;
+}
+
+/* Score Board */
+.score-board {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: #555550;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.02em;
+}
+
+.score-board strong {
+  color: #111111;
+}
+
+/* Map Wrapper & SVGs */
+.map-wrapper {
+  max-width: 200px;
+  margin: 0 auto;
+}
+
+.county {
+  fill: #f3f1ea;
+  stroke: #ffffff;
+  stroke-width: 3.5;
+  stroke-linejoin: round;
+  cursor: pointer;
+  transition: fill 0.25s ease;
+}
+
+.county:hover {
+  fill: #e5e1d3;
+}
+
+/* Colorblind-Friendly Feedback States */
+.county.correct {
+  fill: #2d5a27 !important; /* Deep Forest Green */
+}
+
+.county.wrong {
+  fill: #6b2d5c !important; /* Deep Plum / Burgundy (high contrast, non-blue) */
+}
+
+/* Flash animation for Pin (Hard) */
+.county.flash-correct {
+  animation: flashGreen 0.6s ease-in-out;
+}
+
+@keyframes flashGreen {
+  0%, 100% { fill: #f3f1ea; }
+  50% { fill: #2d5a27; }
+}
+
+.map-wrapper {
+  max-width: 180px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.map-wrapper svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
