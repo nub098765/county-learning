@@ -150,24 +150,29 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderCountyCheckboxes() {
-    if (!checkboxContainer) return;
-    const activeCounties = getActiveCountiesPool();
-    
-    // Retain suggested box inside container
-    const existingSuggestionBox = document.getElementById("suggestion-box");
-    checkboxContainer.innerHTML = '';
-    if (existingSuggestionBox) checkboxContainer.appendChild(existingSuggestionBox);
+  if (!checkboxContainer) return;
+  
+  // Retrieve counties and sort them alphabetically by name
+  const activeCounties = getActiveCountiesPool().sort((a, b) => 
+    a.name.localeCompare(b.name)
+  );
+  
+  // Preserve the suggested box element if present
+  const existingSuggestionBox = document.getElementById("suggestion-box");
+  checkboxContainer.innerHTML = '';
+  if (existingSuggestionBox) checkboxContainer.appendChild(existingSuggestionBox);
 
-    activeCounties.forEach(c => {
-      const label = document.createElement("label");
-      label.innerHTML = `<input type="checkbox" class="county-checkbox" value="${c.id}" data-state="${c.stateKey}"> ${c.name}`;
-      checkboxContainer.appendChild(label);
-    });
+  // Render sorted checkboxes
+  activeCounties.forEach(c => {
+    const label = document.createElement("label");
+    label.innerHTML = `<input type="checkbox" class="county-checkbox" value="${c.id}" data-state="${c.stateKey}"> ${c.name}`;
+    checkboxContainer.appendChild(label);
+  });
 
-    document.querySelectorAll(".county-checkbox").forEach(cb => {
-      cb.addEventListener("change", updateSetupPlayButton);
-    });
-  }
+  document.querySelectorAll(".county-checkbox").forEach(cb => {
+    cb.addEventListener("change", updateSetupPlayButton);
+  });
+}
 
   function getActiveCountiesPool() {
     return activeStateKeys.flatMap(key => (stateData[key] ? stateData[key].counties : []));
