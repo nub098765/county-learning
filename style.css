@@ -11,106 +11,262 @@ body {
   min-height: 100vh;
   margin: 0;
   color: #1c1c1a;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.game-container {
+/* Dark Mode Dynamic Class */
+body.dark-mode {
+  background-color: #181816;
+  color: #fdeca6;
+}
+
+.app-container {
   background: #ffffff;
   padding: 2.5rem 2rem;
   border-radius: 16px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.05);
   text-align: center;
-  max-width: 440px;
+  max-width: 460px;
   width: 90%;
+  transition: background-color 0.3s ease;
 }
 
-h1 {
+body.dark-mode .app-container {
+  background: #242420;
+  border-color: #33332d;
+}
+
+/* Screen Visibility Control */
+.screen {
+  display: none;
+}
+
+.screen.active {
+  display: block;
+}
+
+h1, h2 {
   font-weight: 700;
-  font-size: 1.75rem;
   margin-top: 0;
-  margin-bottom: 1.5rem;
   letter-spacing: -0.02em;
-  color: #111111;
 }
 
-/* Controls & Inputs */
-.controls {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 1.5rem;
+.subtitle {
+  color: #666;
+  font-size: 0.95rem;
+  margin-bottom: 2rem;
 }
+body.dark-mode .subtitle { color: #aaa; }
 
-label {
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-select, button {
+/* Buttons & Inputs */
+button {
   font-family: 'Roboto Serif', Georgia, serif;
-  font-size: 0.85rem;
-  padding: 0.6rem 0.9rem;
+  font-size: 0.9rem;
+  padding: 0.75rem 1.25rem;
   border-radius: 8px;
-  border: 1px solid #dcdcd6;
-  background-color: #fafaf7;
-  color: #222222;
+  border: 1px solid #111;
+  background-color: #111;
+  color: #fdeca6;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-select:hover, select:focus {
-  border-color: #111111;
-  outline: none;
+button:hover { background-color: #333; }
+
+.btn-secondary {
+  background-color: transparent;
+  color: #111;
+  border: 1px solid #ccc;
+}
+body.dark-mode .btn-secondary { color: #fdeca6; border-color: #555; }
+.btn-secondary:hover { background-color: #f3f1ea; }
+body.dark-mode .btn-secondary:hover { background-color: #333; }
+
+.btn-back {
+  margin-top: 1.5rem;
+  background: transparent;
+  border: none;
+  color: #666;
+  text-decoration: underline;
+  padding: 0.5rem;
+}
+body.dark-mode .btn-back { color: #aaa; }
+
+.menu-buttons, .mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-button {
-  background-color: #111111;
-  color: #fdeca6;
+.btn-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: #fafaf7;
+  color: #111;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+body.dark-mode .btn-mode { background: #2b2b26; color: #fdeca6; border-color: #444; }
+
+.btn-mode span {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #666;
+}
+body.dark-mode .btn-mode span { color: #aaa; }
+
+/* Settings Screen */
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #eee;
+}
+body.dark-mode .setting-item { border-color: #333; }
+
+/* State & County Setup Grid */
+/* Scrollable State List Container */
+.states-list {
+  max-height: 240px; /* Limits height so it stays compact */
+  overflow-y: auto;  /* Adds vertical scrollbar when items exceed height */
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-right: 0.35rem; /* Space for scrollbar */
+  margin-bottom: 1.25rem;
+  border-radius: 8px;
+}
+
+/* Custom Sleek Scrollbar */
+.states-list::-webkit-scrollbar {
+  width: 6px;
+}
+.states-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+.states-list::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+body.dark-mode .states-list::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+/* State Row Bar */
+.state-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #e0e0da;
+  background: #fafaf7;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+body.dark-mode .state-row {
+  background: #2b2b26;
+  border-color: #3f3f38;
+}
+
+.state-row:hover:not(.disabled) {
+  border-color: #111;
+  background: #f5f3e9;
+}
+
+.state-name {
   font-weight: 600;
-  border: 1px solid #111111;
+  font-size: 0.95rem;
 }
 
-button:hover {
-  background-color: #333333;
-  border-color: #333333;
+.state-count {
+  font-size: 0.75rem;
+  color: #666;
+  text-transform: none;
+}
+body.dark-mode .state-count { color: #aaa; }
+
+/* Active Selection */
+.state-row.active {
+  border-color: #111;
+  background: #fdeca6;
+  color: #111;
+}
+body.dark-mode .state-row.active {
+  background: #fdeca6;
+  color: #111;
 }
 
-/* Status & Feedback Area */
-.prompt-box {
-  min-height: 64px;
+/* Disabled State Row */
+.state-row.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f0f0eb;
+}
+body.dark-mode .state-row.disabled {
+  background: #1f1f1c;
+}
+
+.wip-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #c62828;
+  letter-spacing: 0.03em;
+}
+
+/* Plain Text Specific Counties Question */
+.plain-prompt {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  text-align: left;
+}
+
+.radio-group, .checkbox-container {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-start;
   margin-bottom: 1rem;
 }
 
-#target-prompt {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0;
+.checkbox-container {
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+  background: #f9f9f5;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+body.dark-mode .checkbox-container { background: #1f1f1c; }
+
+.btn-launch {
+  background-color: #2d5a27;
+  color: white;
+  border-color: #2d5a27;
+  width: 100%;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+}
+.btn-launch:hover { background-color: #23471f; }
+
+.hidden { display: none !important; }
+
+/* Map & Game Elements */
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
-#feedback {
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin-top: 0.35rem;
-  min-height: 1.2em;
-}
-
-/* Score Board */
-.score-board {
-  font-size: 0.9rem;
-  font-weight: 400;
-  color: #555550;
-  margin-bottom: 1.5rem;
-  letter-spacing: 0.02em;
-}
-
-.score-board strong {
-  color: #111111;
-}
-
-/* Map Wrapper & SVGs */
 .map-wrapper {
-  max-width: 200px;
+  max-width: 180px;
   margin: 0 auto;
 }
 
@@ -118,42 +274,145 @@ button:hover {
   fill: #f3f1ea;
   stroke: #ffffff;
   stroke-width: 3.5;
-  stroke-linejoin: round;
   cursor: pointer;
   transition: fill 0.25s ease;
 }
+body.dark-mode .county { fill: #3a3a34; stroke: #242420; }
 
-.county:hover {
-  fill: #e5e1d3;
-}
+.county:hover { fill: #e5e1d3; }
 
-/* Colorblind-Friendly Feedback States */
-.county.correct {
-  fill: #2d5a27 !important; /* Deep Forest Green */
-}
+/* Standard Colors */
+.county.correct { fill: #2d5a27 !important; }
+.county.wrong { fill: #6b2d5c !important; }
 
-.county.wrong {
-  fill: #6b2d5c !important; /* Deep Plum / Burgundy (high contrast, non-blue) */
-}
+/* High Contrast Settings Overrides */
+body.high-contrast .county.correct { fill: #008800 !important; }
+body.high-contrast .county.wrong { fill: #ff0055 !important; }
 
-/* Flash animation for Pin (Hard) */
-.county.flash-correct {
-  animation: flashGreen 0.6s ease-in-out;
-}
-
+.county.flash-correct { animation: flashGreen 0.6s ease-in-out; }
 @keyframes flashGreen {
   0%, 100% { fill: #f3f1ea; }
   50% { fill: #2d5a27; }
 }
 
-.map-wrapper {
-  max-width: 180px;
-  width: 100%;
-  margin: 0 auto;
+/* Modal Overlay & Pop-up Window */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  backdrop-filter: blur(3px);
 }
 
-.map-wrapper svg {
-  display: block;
-  width: 100%;
-  height: auto;
+.modal-card {
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 380px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .modal-card {
+  background: #242420;
+  border-color: #333;
+}
+
+#summary-percentage {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin: 0;
+  color: #2d5a27;
+  line-height: 1;
+}
+
+.grade-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0.5rem 0 1rem 0;
+}
+
+.summary-text {
+  font-size: 0.95rem;
+  line-height: 1.4;
+  margin-bottom: 1.5rem;
+  color: #444;
+}
+body.dark-mode .summary-text { color: #ccc; }
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+/* Completed State Highlight */
+.state-row.completed {
+  border-color: #2d5a27;
+  background-color: #eaf4e9;
+  color: #1b3818;
+}
+
+body.dark-mode .state-row.completed {
+  background-color: #1e331c;
+  color: #d1f2ce;
+  border-color: #2d5a27;
+}
+
+.completed-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #2d5a27;
+}
+body.dark-mode .completed-tag { color: #81c784; }
+
+/* Prominent Target Banner */
+/* Prominent & Elegant Target Banner */
+/* Prominent & Elegant Target Banner */
+.prompt-box {
+  background: #ffffff;
+  border: 2px solid #2d5a27;
+  border-radius: 16px;
+  padding: 1rem 2rem;
+  margin: 1rem auto 1.5rem auto;
+  max-width: 480px;
+  box-shadow: 0 8px 24px rgba(45, 90, 39, 0.12);
+
+  /* Flexbox to lock everything dead-center horizontally & vertically */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#target-prompt {
+  font-family: 'Roboto Serif', Georgia, serif;
+  font-size: 3.2rem;
+  font-weight: 700;
+  line-height: 1; /* Tightens line-height to remove extra top/bottom font-padding */
+  margin: 0;
+  color: #1b3818;
+  letter-spacing: -0.5px;
+  text-align: center;
+}
+
+#feedback {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  min-height: 1.3em;
+  text-align: center;
 }
