@@ -10,7 +10,7 @@ const stateData = {
   }
 };
 
-// Game Configuration & State
+// Game Configuration & State Variables
 let selectedMode = "pin";
 let activeStateKeys = ["delaware"];
 let selectedCounties = [];
@@ -25,67 +25,74 @@ let missedCounties = new Set();
 let completedStates = JSON.parse(localStorage.getItem("completedStates")) || [];
 let countyMistakes = JSON.parse(localStorage.getItem("countyMistakes")) || {};
 
-// DOM Elements
+// Screen & Navigation DOM Elements
 const screens = document.querySelectorAll(".screen");
 const btnGotoModes = document.getElementById("btn-goto-modes");
 const btnGotoSettings = document.getElementById("btn-goto-settings");
 const backButtons = document.querySelectorAll(".btn-back");
 const modeButtons = document.querySelectorAll(".btn-mode");
 
+// Setup Screen DOM Elements
 const countyPanel = document.getElementById("county-options-panel");
 const radioSpecific = document.querySelectorAll('input[name="specific-counties"]');
 const checkboxContainer = document.getElementById("checkbox-container");
 const btnStartGame = document.getElementById("btn-start-game");
-
 const suggestionBox = document.getElementById("suggestion-box");
 const btnSelectSuggested = document.getElementById("btn-select-suggested");
 
+// Settings DOM Elements
 const toggleDark = document.getElementById("toggle-dark");
 const toggleContrast = document.getElementById("toggle-contrast");
 const btnResetProgress = document.getElementById("btn-reset-progress");
 
+// Game Screen DOM Elements
 const targetPrompt = document.getElementById("target-prompt");
 const feedbackEl = document.getElementById("feedback");
 const btnQuitGame = document.getElementById("btn-quit-game");
+const btnNewGame = document.getElementById("btn-new-game");
 const countyPaths = document.querySelectorAll(".county");
 
-// Modal Elements
+// Modal Summary DOM Elements
 const modalSummary = document.getElementById("modal-summary");
 const summaryPercentage = document.getElementById("summary-percentage");
 const summaryGradeTitle = document.getElementById("summary-grade-title");
 const summaryMessage = document.getElementById("summary-message");
-const btnModalYes = document.getElementById("btn-modal-action-yes");
-const btnModalNo = document.getElementById("btn-modal-action-no");
+const modalActions = document.querySelector(".modal-actions");
 
-// Initialization & Auto Dark-Mode Setup
+// Theme Initialization & System Preference Sync
 const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)");
 
 function initTheme() {
-  if (systemPrefersDark.matches) {
-    toggleDark.checked = true;
-    document.body.classList.add("dark-mode");
-  } else {
-    toggleDark.checked = false;
-    document.body.classList.remove("dark-mode");
+  if (toggleDark) {
+    if (systemPrefersDark.matches) {
+      toggleDark.checked = true;
+      document.body.classList.add("dark-mode");
+    } else {
+      toggleDark.checked = false;
+      document.body.classList.remove("dark-mode");
+    }
   }
 }
 
 initTheme();
 updateStateListUI();
 
-// Auto-switch theme if operating system setting changes dynamically
-systemPrefersDark.addEventListener("change", (e) => {
-  toggleDark.checked = e.matches;
-  document.body.classList.toggle("dark-mode", e.matches);
-});
-
-function showScreen(screenId) {
-  screens.forEach(s => s.classList.remove("active"));
-  document.getElementById(screenId).classList.add("active");
+if (systemPrefersDark) {
+  systemPrefersDark.addEventListener("change", (e) => {
+    if (toggleDark) toggleDark.checked = e.matches;
+    document.body.classList.toggle("dark-mode", e.matches);
+  });
 }
 
-btnGotoModes.addEventListener("click", () => showScreen("screen-modes"));
-btnGotoSettings.addEventListener("click", () => showScreen("screen-settings"));
+// UI Navigation Helpers
+function showScreen(screenId) {
+  screens.forEach(s => s.classList.remove("active"));
+  const activeScreen = document.getElementById(screenId);
+  if (activeScreen) activeScreen.classList.add("active");
+}
+
+if (btnGotoModes) btnGotoModes.addEventListener("click", () => showScreen("screen-modes"));
+if (btnGotoSettings) btnGotoSettings.addEventListener("click", () => showScreen("screen-settings"));
 
 backButtons.forEach(btn => {
   btn.addEventListener("click", () => showScreen(btn.dataset.target));
@@ -98,34 +105,44 @@ modeButtons.forEach(btn => {
   });
 });
 
-toggleDark.addEventListener("change", (e) => {
-  document.body.classList.toggle("dark-mode", e.target.checked);
-});
+if (toggleDark) {
+  toggleDark.addEventListener("change", (e) => {
+    document.body.classList.toggle("dark-mode", e.target.checked);
+  });
+}
 
-toggleContrast.addEventListener("change", (e) => {
-  document.body.classList.toggle("high-contrast", e.target.checked);
-});
+if (toggleContrast) {
+  toggleContrast.addEventListener("change", (e) => {
+    document.body.classList.toggle("high-contrast", e.target.checked);
+  });
+}
 
-// Reset Saved Progress
-btnResetProgress.addEventListener("click", () => {
-  completedStates = [];
-  countyMistakes = {};
-  localStorage.removeItem("completedStates");
-  localStorage.removeItem("countyMistakes");
-  updateStateListUI();
-  alert("Progress and mistake history reset!");
-});
+// Reset Local Progress
+if (btnResetProgress) {
+  btnResetProgress.addEventListener("click", () => {
+    completedStates = [];
+    countyMistakes = {};
+    localStorage.removeItem("completedStates");
+    localStorage.removeItem("countyMistakes");
+    updateStateListUI();
+    alert("Progress and mistake history reset!");
+  });
+}
 
-// State Selection
-document.getElementById("state-delaware").addEventListener("click", () => {
-  activeStateKeys = ["delaware"];
-  renderCountyCheckboxes();
-  countyPanel.classList.remove("hidden");
-  updateSetupPlayButton();
-});
+// State & County Setup Logic
+const delawareRow = document.getElementById("state-delaware");
+if (delawareRow) {
+  delawareRow.addEventListener("click", () => {
+    activeStateKeys = ["delaware"];
+    renderCountyCheckboxes();
+    if (countyPanel) countyPanel.classList.remove("hidden");
+    updateSetupPlayButton();
+  });
+}
 
 function renderCountyCheckboxes() {
-  const activeCounties = activeStateKeys.flatMap(key => stateData[key].counties);
+  if (!checkboxContainer) return;
+  const activeCounties = getActiveCountiesPool();
   
   checkboxContainer.innerHTML = activeCounties.map(c => `
     <label>
@@ -139,14 +156,14 @@ function renderCountyCheckboxes() {
 }
 
 function getActiveCountiesPool() {
-  return activeStateKeys.flatMap(key => stateData[key].counties);
+  return activeStateKeys.flatMap(key => (stateData[key] ? stateData[key].counties : []));
 }
 
 radioSpecific.forEach(radio => {
   radio.addEventListener("change", (e) => {
     const countyCheckboxes = document.querySelectorAll(".county-checkbox");
     if (e.target.value === "yes") {
-      checkboxContainer.classList.remove("hidden");
+      if (checkboxContainer) checkboxContainer.classList.remove("hidden");
       
       let suggestedCount = 0;
       countyCheckboxes.forEach(cb => {
@@ -159,30 +176,37 @@ radioSpecific.forEach(radio => {
         }
       });
 
-      if (suggestedCount > 0) {
-        suggestionBox.classList.remove("hidden");
-      } else {
-        suggestionBox.classList.add("hidden");
+      if (suggestionBox) {
+        if (suggestedCount > 0) {
+          suggestionBox.classList.remove("hidden");
+        } else {
+          suggestionBox.classList.add("hidden");
+        }
       }
 
     } else {
-      checkboxContainer.classList.add("hidden");
-      suggestionBox.classList.add("hidden");
+      if (checkboxContainer) checkboxContainer.classList.add("hidden");
+      if (suggestionBox) suggestionBox.classList.add("hidden");
       countyCheckboxes.forEach(cb => cb.checked = false);
     }
     updateSetupPlayButton();
   });
 });
 
-btnSelectSuggested.addEventListener("click", () => {
-  document.querySelectorAll(".county-checkbox").forEach(cb => {
-    cb.checked = (countyMistakes[cb.value] || 0) > 0;
+if (btnSelectSuggested) {
+  btnSelectSuggested.addEventListener("click", () => {
+    document.querySelectorAll(".county-checkbox").forEach(cb => {
+      cb.checked = (countyMistakes[cb.value] || 0) > 0;
+    });
+    updateSetupPlayButton();
   });
-  updateSetupPlayButton();
-});
+}
 
 function updateSetupPlayButton() {
-  const isSpecificYes = document.querySelector('input[name="specific-counties"]:checked').value === "yes";
+  if (!btnStartGame) return;
+  const specificRadio = document.querySelector('input[name="specific-counties"]:checked');
+  const isSpecificYes = specificRadio ? specificRadio.value === "yes" : false;
+
   if (!isSpecificYes || document.querySelectorAll(".county-checkbox:checked").length >= 1) {
     btnStartGame.classList.remove("hidden");
   } else {
@@ -190,27 +214,39 @@ function updateSetupPlayButton() {
   }
 }
 
-btnStartGame.addEventListener("click", () => {
-  const isSpecificYes = document.querySelector('input[name="specific-counties"]:checked').value === "yes";
-  const allActiveCounties = getActiveCountiesPool();
+if (btnStartGame) {
+  btnStartGame.addEventListener("click", () => {
+    const specificRadio = document.querySelector('input[name="specific-counties"]:checked');
+    const isSpecificYes = specificRadio ? specificRadio.value === "yes" : false;
+    const allActiveCounties = getActiveCountiesPool();
 
-  if (isSpecificYes) {
-    const checkedIds = Array.from(document.querySelectorAll(".county-checkbox:checked")).map(cb => cb.value);
-    selectedCounties = allActiveCounties.filter(c => checkedIds.includes(c.id));
-  } else {
-    selectedCounties = [...allActiveCounties];
-  }
+    if (isSpecificYes) {
+      const checkedIds = Array.from(document.querySelectorAll(".county-checkbox:checked")).map(cb => cb.value);
+      selectedCounties = allActiveCounties.filter(c => checkedIds.includes(c.id));
+    } else {
+      selectedCounties = [...allActiveCounties];
+    }
 
-  showScreen("screen-game");
-  initGame(selectedCounties);
-});
+    showScreen("screen-game");
+    initGame(selectedCounties);
+  });
+}
 
-btnQuitGame.addEventListener("click", () => {
-  isGameActive = false;
-  showScreen("screen-home");
-});
+if (btnQuitGame) {
+  btnQuitGame.addEventListener("click", () => {
+    isGameActive = false;
+    if (modalSummary) modalSummary.classList.add("hidden");
+    showScreen("screen-home");
+  });
+}
 
-// Game Quiz Logic
+if (btnNewGame) {
+  btnNewGame.addEventListener("click", () => {
+    initGame(selectedCounties);
+  });
+}
+
+// Game Loop Functions
 function initGame(countiesToPlay) {
   targetPool = [...countiesToPlay];
   scoreRight = 0;
@@ -218,7 +254,8 @@ function initGame(countiesToPlay) {
   isGameActive = true;
   missedCounties.clear();
 
-  feedbackEl.textContent = "";
+  if (modalSummary) modalSummary.classList.add("hidden");
+  if (feedbackEl) feedbackEl.textContent = "";
 
   countyPaths.forEach(path => {
     path.classList.remove("correct", "wrong", "flash-correct");
@@ -238,20 +275,23 @@ function pickNextTarget() {
   const randomIndex = Math.floor(Math.random() * targetPool.length);
   currentTarget = targetPool[randomIndex];
   
-  targetPrompt.textContent = currentTarget.name;
+  if (targetPrompt) targetPrompt.textContent = currentTarget.name;
 }
 
-// Interactive Map Click Handler
+// County Map Click Event Handling
 countyPaths.forEach(path => {
   path.addEventListener("click", (e) => {
     if (!isGameActive) return;
 
     const clickedId = e.target.id;
+    const isHighContrast = document.body.classList.contains("high-contrast");
 
     if (clickedId === currentTarget.id) {
       scoreRight++;
-      feedbackEl.textContent = "Correct!";
-      feedbackEl.style.color = "#2d5a27";
+      if (feedbackEl) {
+        feedbackEl.textContent = "Correct!";
+        feedbackEl.style.color = isHighContrast ? "#00ffff" : "#2d5a27";
+      }
 
       if (selectedMode === "pin") {
         e.target.classList.add("correct");
@@ -265,8 +305,10 @@ countyPaths.forEach(path => {
       pickNextTarget();
     } else {
       scoreWrong++;
-      feedbackEl.textContent = "Try again!";
-      feedbackEl.style.color = "#6b2d5c";
+      if (feedbackEl) {
+        feedbackEl.textContent = "Try again!";
+        feedbackEl.style.color = isHighContrast ? "#ff0055" : "#6b2d5c";
+      }
       
       missedCounties.add(currentTarget);
 
@@ -279,31 +321,47 @@ countyPaths.forEach(path => {
   });
 });
 
-// End-Game Summary Modal Logic
+// Dynamic End-Game Summary Modal Logic
 function showSummaryModal() {
+  if (!modalSummary) return;
+
   const totalAttempts = scoreRight + scoreWrong;
   const accuracy = totalAttempts > 0 ? Math.round((scoreRight / totalAttempts) * 100) : 0;
-  
-  summaryPercentage.textContent = `${accuracy}%`;
 
-  if (accuracy === 100) summaryGradeTitle.textContent = "Good job!";
-  else if (accuracy >= 75) summaryGradeTitle.textContent = "Not bad.";
-  else if (accuracy >= 50) summaryGradeTitle.textContent = "You could work on that.";
-  else summaryGradeTitle.textContent = "Oof.";
+  if (summaryPercentage) summaryPercentage.textContent = `${accuracy}%`;
+
+  if (summaryGradeTitle) {
+    if (accuracy === 100) summaryGradeTitle.textContent = "Good job!";
+    else if (accuracy >= 75) summaryGradeTitle.textContent = "Not bad.";
+    else if (accuracy >= 50) summaryGradeTitle.textContent = "You could work on that.";
+    else summaryGradeTitle.textContent = "Oof.";
+  }
 
   const missedArray = Array.from(missedCounties);
+  modalActions.innerHTML = ""; // Clear existing dynamic action buttons
 
   if (missedArray.length === 0) {
+    // Perfect Victory Scenario
     const activeStateNames = activeStateKeys.map(key => stateData[key].name);
     
-    if (activeStateNames.length === 1) {
-      summaryMessage.textContent = `You've learned all the counties in ${activeStateNames[0]}! Good job!`;
-    } else if (activeStateNames.length === 2) {
-      summaryMessage.textContent = `You've learned all the counties in ${activeStateNames[0]} and ${activeStateNames[1]}! Good job!`;
-    } else {
-      summaryMessage.textContent = `You've learned all the counties across ${activeStateNames.length} states! Good job!`;
+    if (summaryMessage) {
+      if (activeStateNames.length === 1) {
+        summaryMessage.textContent = `You've learned all the counties in ${activeStateNames[0]}! Good job!`;
+      } else if (activeStateNames.length === 2) {
+        summaryMessage.textContent = `You've learned all the counties in ${activeStateNames[0]} and ${activeStateNames[1]}! Good job!`;
+      } else {
+        summaryMessage.textContent = `You've learned all the counties across ${activeStateNames.length} states! Good job!`;
+      }
     }
 
+    countyPaths.forEach(path => {
+      path.classList.add("correct");
+      path.style.pointerEvents = "none";
+    });
+
+    if (targetPrompt) targetPrompt.textContent = "Complete!";
+
+    // Mark states as completed if played in full
     activeStateKeys.forEach(stateKey => {
       const totalStateCounties = stateData[stateKey].counties.length;
       const playedStateCounties = selectedCounties.filter(c => c.stateKey === stateKey).length;
@@ -316,40 +374,79 @@ function showSummaryModal() {
     localStorage.setItem("completedStates", JSON.stringify(completedStates));
     updateStateListUI();
 
-    btnModalYes.textContent = "Home";
-    btnModalNo.classList.add("hidden");
+    // Create Admire Map Button
+    const admireBtn = document.createElement("button");
+    admireBtn.textContent = "Admire Map";
+    admireBtn.className = "btn-secondary";
+    admireBtn.onclick = () => modalSummary.classList.add("hidden");
+    modalActions.appendChild(admireBtn);
 
-    btnModalYes.onclick = () => {
+    // Create Play Again Button
+    const playAgainBtn = document.createElement("button");
+    playAgainBtn.textContent = "Play Again";
+    playAgainBtn.onclick = () => {
+      modalSummary.classList.add("hidden");
+      initGame(selectedCounties);
+    };
+    modalActions.appendChild(playAgainBtn);
+
+    // Create Main Menu Button
+    const homeBtn = document.createElement("button");
+    homeBtn.textContent = "Main Menu";
+    homeBtn.className = "btn-secondary";
+    homeBtn.onclick = () => {
       modalSummary.classList.add("hidden");
       showScreen("screen-home");
     };
+    modalActions.appendChild(homeBtn);
+
   } else {
+    // Loss / Mistakes Made Scenario
     const missedNames = missedArray.slice(0, 3).map(c => c.name);
     let formattedMissed = "";
     if (missedNames.length === 1) formattedMissed = missedNames[0];
     else if (missedNames.length === 2) formattedMissed = `${missedNames[0]} and ${missedNames[1]}`;
     else formattedMissed = `${missedNames[0]}, ${missedNames[1]}, and ${missedNames[2]}`;
 
-    summaryMessage.textContent = `You should probably work on ${formattedMissed}. Would you like to?`;
-    
-    btnModalYes.textContent = "Yes";
-    btnModalNo.textContent = "No";
-    btnModalNo.classList.remove("hidden");
+    if (summaryMessage) {
+      summaryMessage.textContent = `You missed ${missedArray.length} county target${missedArray.length > 1 ? 's' : ''} (${formattedMissed}). What would you like to do?`;
+    }
 
-    btnModalYes.onclick = () => {
+    // 1. Retry Missed Button
+    const retryBtn = document.createElement("button");
+    retryBtn.textContent = "Retry Missed";
+    retryBtn.onclick = () => {
       modalSummary.classList.add("hidden");
       initGame(missedArray);
     };
+    modalActions.appendChild(retryBtn);
 
-    btnModalNo.onclick = () => {
+    // 2. New Game Button (Restart Full Selection)
+    const newGameBtn = document.createElement("button");
+    newGameBtn.textContent = "New Game";
+    newGameBtn.className = "btn-secondary";
+    newGameBtn.onclick = () => {
+      modalSummary.classList.add("hidden");
+      initGame(selectedCounties);
+    };
+    modalActions.appendChild(newGameBtn);
+
+    // 3. Main Menu Button
+    const homeBtn = document.createElement("button");
+    homeBtn.textContent = "Main Menu";
+    homeBtn.className = "btn-secondary";
+    homeBtn.onclick = () => {
       modalSummary.classList.add("hidden");
       showScreen("screen-home");
     };
+    modalActions.appendChild(homeBtn);
   }
 
+  // Force reveal modal overlay
   modalSummary.classList.remove("hidden");
 }
 
+// Update State List UI on Main Setup Screen
 function updateStateListUI() {
   Object.keys(stateData).forEach(stateKey => {
     const stateRow = document.getElementById(`state-${stateKey}`);
@@ -361,7 +458,7 @@ function updateStateListUI() {
       stateRow.classList.add("completed");
       stateRow.innerHTML = `
         <span class="state-name">${state.name}</span>
-        <span class="completed-tag">COMPLETED</span>
+        <span class="completed-tag">✓ COMPLETED</span>
       `;
     } else {
       stateRow.classList.remove("completed");
