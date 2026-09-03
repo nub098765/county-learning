@@ -492,11 +492,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Returns the ids of up to `limit` currently-rendered counties with the
   // highest mistake counts, highest first. Counties with zero mistakes are
   // never included, so this can return fewer than `limit` ids.
-  function getTopMistakeCountyIds(limit) {
+  function getLowestMistakeCountyIds(limit) {
     return Array.from(document.querySelectorAll(".county-checkbox"))
       .map(cb => ({ id: cb.value, mistakes: countyMistakes[cb.value] || 0 }))
-      .filter(c => c.mistakes > 0)
-      .sort((a, b) => b.mistakes - a.mistakes)
+      .filter(c => c.mistakes >= 0) // Change to c.mistakes >= 0 if you want to include 0-mistake counties
+      .sort((a, b) => a.mistakes - b.mistakes) // Sorts lowest to highest
       .slice(0, limit)
       .map(c => c.id);
   }
@@ -507,7 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.target.value === "yes") {
         if (checkboxContainer) checkboxContainer.classList.remove("hidden");
 
-        const topMistakeIds = getTopMistakeCountyIds(SUGGESTION_LIMIT);
+        const topMistakeIds = getLowestMistakeCountyIds(SUGGESTION_LIMIT);
         countyCheckboxes.forEach(cb => {
           cb.checked = topMistakeIds.includes(cb.value);
         });
@@ -530,7 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnSelectSuggested) {
     btnSelectSuggested.addEventListener("click", () => {
-      const topMistakeIds = getTopMistakeCountyIds(SUGGESTION_LIMIT);
+      const topMistakeIds = getLowestMistakeCountyIds(SUGGESTION_LIMIT);
       document.querySelectorAll(".county-checkbox").forEach(cb => {
         cb.checked = topMistakeIds.includes(cb.value);
       });
