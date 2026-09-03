@@ -381,30 +381,40 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function switchVisibleSvgMap() {
-    svgMaps.forEach(map => {
-      map.style.display = "none";
-      map.classList.add("hidden");
-      map.classList.remove("map-divider");
-    });
+  svgMaps.forEach(map => {
+    map.style.display = "none";
+    map.classList.add("hidden");
+    map.classList.remove("map-divider");
+  });
 
-    const visibleMaps = [];
-    activeStateKeys.forEach(key => {
-      const targetSvg = document.getElementById(stateData[key]?.svgId);
-      if (targetSvg) {
-        targetSvg.style.display = "block";
-        targetSvg.classList.remove("hidden");
-        visibleMaps.push(targetSvg);
-      }
-    });
+  const visibleMaps = [];
+  activeStateKeys.forEach(key => {
+    const targetSvg = document.getElementById(stateData[key]?.svgId);
+    if (targetSvg) {
+      targetSvg.style.display = "block";
+      targetSvg.classList.remove("hidden");
+      visibleMaps.push(targetSvg);
+    }
+  });
 
-    // Add the subtle divider line between maps, but never after the last
-    // one — so a single map shown alone has no stray border.
-    visibleMaps.forEach((map, index) => {
-      if (index < visibleMaps.length - 1) {
-        map.classList.add("map-divider");
-      }
-    });
-  }
+  // Add the subtle divider line between maps, but never after the last
+  // one — so a single map shown alone has no stray border.
+  //
+  // Important: this has to be based on the maps' actual DOM order, not
+  // the order the user selected the states in. .map-wrapper is a flex
+  // row, so visual left-to-right position always follows DOM order —
+  // if we instead used activeStateKeys' order (selection order), the
+  // divider could land on the wrong map whenever the user picked the
+  // states in a different order than they appear in the markup, making
+  // it show up outside the pair instead of between them.
+  const domOrderedVisibleMaps = Array.from(svgMaps).filter(map => visibleMaps.includes(map));
+
+  domOrderedVisibleMaps.forEach((map, index) => {
+    if (index < domOrderedVisibleMaps.length - 1) {
+      map.classList.add("map-divider");
+    }
+  });
+}
 
   // --- State & County Setup Logic ---
   function renderCountyCheckboxes() {
