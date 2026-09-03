@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Game Configuration & State Variables ---
   let selectedMode = "pin"; // "pin" or "pin-hard"
-  let activeStateKeys = [];
+  let activeStateKeys = ["rhode_island"];
   let selectedCounties = [];
   let targetPool = [];
   let currentTarget = null;
@@ -77,7 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let gameSettings = JSON.parse(localStorage.getItem("gameSettings")) || {
     darkMode: false,
     highContrast: false,
-    soundVolume: 50
+    soundVolume: 50,
+    speedrunMode: false
   };
 
   // --- Navigation & Screen DOM Elements ---
@@ -103,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggleDark = document.getElementById("toggle-dark");
   const toggleContrast = document.getElementById("toggle-contrast");
   const sliderSound = document.getElementById("slider-sound");
+  const toggleSpeedrun = document.getElementById("toggle-speedrun");
   const btnResetProgress = document.getElementById("btn-reset-progress");
 
   // --- Game Screen DOM Elements ---
@@ -190,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleDark) toggleDark.checked = gameSettings.darkMode;
     if (toggleContrast) toggleContrast.checked = gameSettings.highContrast;
     if (sliderSound) sliderSound.value = gameSettings.soundVolume;
+    if (toggleSpeedrun) toggleSpeedrun.checked = gameSettings.speedrunMode;
 
     document.body.classList.toggle("dark-mode", gameSettings.darkMode);
     document.body.classList.toggle("high-contrast", gameSettings.highContrast);
@@ -283,6 +286,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (sliderSound) {
     sliderSound.addEventListener("input", (e) => {
       gameSettings.soundVolume = Number(e.target.value);
+      localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+    });
+  }
+
+  if (toggleSpeedrun) {
+    toggleSpeedrun.addEventListener("change", (e) => {
+      gameSettings.speedrunMode = e.target.checked;
       localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
     });
   }
@@ -628,8 +638,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- County Map Mouse & Accessibility Keyboard Interactivity ---
+  // Normal mode responds on "click", which only fires once the mouse
+  // button (or finger) is released over the same element it was pressed
+  // on. Speedrun mode instead responds on "pointerdown" — the instant the
+  // press begins — so there's no need to lift off before the guess
+  // registers. Both listeners stay attached at all times; each one just
+  // checks gameSettings.speedrunMode and no-ops if it isn't the active mode,
+  // so toggling the setting mid-game takes effect immediately without
+  // re-binding anything.
   countyPaths.forEach(path => {
+    path.addEventListener("pointerdown", (e) => {
+      if (!gameSettings.speedrunMode) return;
+      handleCountyClick(e.currentTarget);
+    });
+
     path.addEventListener("click", (e) => {
+      if (gameSettings.speedrunMode) return;
       handleCountyClick(e.currentTarget);
     });
 
