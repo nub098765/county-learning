@@ -3,10 +3,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const stateData = {
     delaware: {
       name: "Delaware",
-      svgId: "svg-delaware",
+      svgId: "map-delaware", // FIX #2: was "svg-delaware", didn't match the <svg id="map-delaware"> in index.html
       counties: [
         { id: "new-castle", name: "New Castle", stateKey: "delaware" },
-        { id: "kent-de", name: "Kent", stateKey: "delaware" },
+        { id: "kent", name: "Kent", stateKey: "delaware" }, // FIX #3: was "kent-de", didn't match <path id="kent"> in the SVG
         { id: "sussex", name: "Sussex", stateKey: "delaware" }
       ]
     },
@@ -58,7 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStartGame = document.getElementById("btn-start-game");
   const suggestionBox = document.getElementById("suggestion-box");
   const btnSelectSuggested = document.getElementById("btn-select-suggested");
-  const stateListContainer = document.getElementById("state-list");
+  // FIX #1: there is no #state-list container in index.html — the state rows
+  // (#state-delaware, #state-rhode_island, plus the static WIP rows) are already
+  // hardcoded in the markup. renderStateListUI() now wires up the existing rows
+  // instead of trying to rebuild a container that was never there.
 
   // --- Settings DOM Elements ---
   const toggleDark = document.getElementById("toggle-dark");
@@ -220,27 +223,41 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Dynamic State Selector UI ---
+  // FIX #1: previously this function bailed out immediately because
+  // document.getElementById("state-list") returned null (no such element
+  // exists in index.html), so none of the click/keydown handlers below it
+  // were ever attached anywhere. Now it looks up each *existing* state row
+  // (#state-delaware, #state-rhode_island, ...) by id and wires it up in
+  // place, leaving the static WIP rows untouched.
   function renderStateListUI() {
-    if (!stateListContainer) return;
-
-    stateListContainer.innerHTML = "";
-
     Object.keys(stateData).forEach(stateKey => {
       const state = stateData[stateKey];
+      const stateRow = document.getElementById(`state-${stateKey}`);
+      if (!stateRow) return;
+
       const isCompleted = completedStates.includes(stateKey);
       const isSelected = activeStateKeys.includes(stateKey);
 
-      const stateRow = document.createElement("div");
-      stateRow.className = `state-row ${isSelected ? 'selected' : ''} ${isCompleted ? 'completed' : ''}`;
-      stateRow.id = `state-${stateKey}`;
+      stateRow.classList.toggle("selected", isSelected);
+      stateRow.classList.toggle("completed", isCompleted);
       stateRow.setAttribute("tabindex", "0");
       stateRow.setAttribute("role", "button");
       stateRow.setAttribute("aria-pressed", isSelected);
 
-      stateRow.innerHTML = `
-        <span class="state-name">${state.name}</span>
-        ${isCompleted ? '<span class="completed-tag">✓ COMPLETED</span>' : `<span class="state-count">${state.counties.length} counties</span>`}
-      `;
+      // Swap the "N counties" label for a "COMPLETED" tag and back, without
+      // touching the rest of the row's markup.
+      const countSpan = stateRow.querySelector(".state-count");
+      const completedTag = stateRow.querySelector(".completed-tag");
+      if (isCompleted && countSpan) {
+        countSpan.outerHTML = '<span class="completed-tag">✓ COMPLETED</span>';
+      } else if (!isCompleted && completedTag) {
+        completedTag.outerHTML = `<span class="state-count">${state.counties.length} counties</span>`;
+      }
+
+      // Only attach listeners once per row, even though this function can
+      // run again later (e.g. after a progress reset).
+      if (stateRow.dataset.listenerAttached === "true") return;
+      stateRow.dataset.listenerAttached = "true";
 
       const selectState = () => {
         activeStateKeys = [stateKey];
@@ -264,8 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
           selectState();
         }
       });
-
-      stateListContainer.appendChild(stateRow);
     });
   }
 
