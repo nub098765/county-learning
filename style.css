@@ -378,13 +378,28 @@ body.dark-mode .badge-mistake {
   align-items: center;
 }
 
-/* Base styling for vector map counties */
+/* Base styling for vector map counties.
+   vector-effect: non-scaling-stroke keeps the border a fixed screen-pixel
+   width no matter how much a map's SVG viewBox gets scaled down to fit its
+   display size. Without it, Rhode Island's huge viewBox (thousands of
+   units) shrinks a "2.5px" stroke down to a fraction of a real pixel,
+   making its county borders effectively invisible even though the same
+   value looks fine on Delaware's much smaller viewBox. */
 .county {
   fill: #e8e4d9;
   stroke: #2b4c32;
-  stroke-width: 3px;
+  stroke-width: 2.5px;
+  vector-effect: non-scaling-stroke;
   cursor: pointer;
   transition: fill 0.2s ease, stroke 0.2s ease;
+}
+
+/* Newport and Washington counties are drawn as multiple <path> elements
+   nested inside a <g class="county">. stroke and fill are inherited from
+   the group, but vector-effect is not, so it has to be set on the paths
+   directly too. */
+.county path {
+  vector-effect: non-scaling-stroke;
 }
 
 /* Hover state */
