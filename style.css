@@ -692,3 +692,13 @@ body.dark-mode .admire-subtext {
   flex: 1;
   min-width: 80px;
 }
+
+/* Completed AND currently selected — background stays the "completed"
+   green (so progress is still visually obvious), but an inner ring in
+   the "selected" color shows it's also picked for the next game. */
+.state-row.completed.selected {
+  box-shadow: inset 0 0 0 2px #111;
+}
+body.dark-mode .state-row.completed.selected {
+  box-shadow: inset 0 0 0 2px #fdeca6;
+}
