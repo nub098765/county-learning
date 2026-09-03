@@ -433,37 +433,45 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- State & County Setup Logic ---
-  function renderCountyCheckboxes() {
+    function renderCountyCheckboxes() {
     if (!checkboxContainer) return;
 
-    const activeCounties = [...getActiveCountiesPool()].sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
+    // Remove both the county labels AND any state-header dividers from
+    // the previous render.
+    const existingChildren = checkboxContainer.querySelectorAll("label, .county-group-header");
+    existingChildren.forEach(el => el.remove());
 
-    // If more than one active state is selected, disambiguate any county
-    // name shared between them (e.g. "Kent" in both Delaware and Rhode
-    // Island) so the list isn't showing two identical-looking options.
-    const checkboxAmbiguousNames = computeAmbiguousNames(activeCounties);
+    // Grouped by state (in the order the states were selected), with
+    // each state's own counties sorted alphabetically underneath its
+    // header. The header itself is what disambiguates two counties that
+    // share a name (e.g. "Kent" in Delaware vs Rhode Island), so the
+    // label text no longer needs a ", State" suffix the way the flat
+    // combined list did.
+    activeStateKeys.forEach(stateKey => {
+      const state = stateData[stateKey];
+      if (!state) return;
 
-    const existingLabels = checkboxContainer.querySelectorAll("label");
-    existingLabels.forEach(label => label.remove());
+      const header = document.createElement("div");
+      header.className = "county-group-header";
+      header.textContent = state.name;
+      checkboxContainer.appendChild(header);
 
-    activeCounties.forEach(c => {
-      const label = document.createElement("label");
-      label.className = "checkbox-label";
-      const mistakes = countyMistakes[c.id] || 0;
-      const mistakeBadge = mistakes > 0 ? `<span class="badge-mistake">${mistakes} miss${mistakes > 1 ? 'es' : ''}</span>` : '';
-      const displayName = checkboxAmbiguousNames.has(c.name)
-        ? `${c.name}, ${stateData[c.stateKey]?.name || c.stateKey}`
-        : c.name;
+      const sortedCounties = [...state.counties].sort((a, b) => a.name.localeCompare(b.name));
 
-      label.innerHTML = `
-        <input type="checkbox" class="county-checkbox" value="${c.id}" data-state="${c.stateKey}">
-        <span class="checkbox-custom"></span>
-        <span class="county-label-text">${displayName}</span>
-        ${mistakeBadge}
-      `;
-      checkboxContainer.appendChild(label);
+      sortedCounties.forEach(c => {
+        const label = document.createElement("label");
+        label.className = "checkbox-label";
+        const mistakes = countyMistakes[c.id] || 0;
+        const mistakeBadge = mistakes > 0 ? `<span class="badge-mistake">${mistakes} miss${mistakes > 1 ? 'es' : ''}</span>` : '';
+
+        label.innerHTML = `
+          <input type="checkbox" class="county-checkbox" value="${c.id}" data-state="${c.stateKey}">
+          <span class="checkbox-custom"></span>
+          <span class="county-label-text">${c.name}</span>
+          ${mistakeBadge}
+        `;
+        checkboxContainer.appendChild(label);
+      });
     });
 
     document.querySelectorAll(".county-checkbox").forEach(cb => {
@@ -591,7 +599,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Recompute per-game: e.g. retrying only Delaware's missed counties
     // means "Kent" is no longer ambiguous even if it was during the full
     // multi-state round.
-    ambiguousCountyNames = computeAmbiguousNames(countiesToPlay);
+        ambiguousCountyNames = computeAmbiguousNames(getActiveCountiesPool());
 
     if (modalSummary) modalSummary.classList.add("hidden");
     if (admireBar) admireBar.classList.add("hidden");

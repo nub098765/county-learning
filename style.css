@@ -702,3 +702,23 @@ body.dark-mode .admire-subtext {
 body.dark-mode .state-row.completed.selected {
   box-shadow: inset 0 0 0 2px #fdeca6;
 }
+
+.county-group-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #666;
+  margin: 0.6rem 0 0.3rem 0;
+  padding-top: 0.4rem;
+  border-top: 1px solid #e0e0da;
+}
+.county-group-header:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+body.dark-mode .county-group-header {
+  color: #aaa;
+  border-top-color: #3f3f38;
+}
