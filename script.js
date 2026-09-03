@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let gameSettings = JSON.parse(localStorage.getItem("gameSettings")) || {
     darkMode: false,
     highContrast: false,
-    soundEnabled: true
+    soundVolume: 50
   };
 
   // --- Navigation & Screen DOM Elements ---
@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Settings DOM Elements ---
   const toggleDark = document.getElementById("toggle-dark");
   const toggleContrast = document.getElementById("toggle-contrast");
-  const toggleSound = document.getElementById("toggle-sound");
+  const sliderSound = document.getElementById("slider-sound");
   const btnResetProgress = document.getElementById("btn-reset-progress");
 
   // --- Game Screen DOM Elements ---
@@ -150,7 +150,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Audio Synthesis Helper (No external assets required) ---
   function playSound(type) {
-    if (!gameSettings.soundEnabled) return;
+    if (!gameSettings.soundVolume || gameSettings.soundVolume <= 0) return;
+    const vol = gameSettings.soundVolume / 100; // 0–1 scale applied to gain
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return;
@@ -164,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         osc.type = "sine";
         osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
         osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1); // A5
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.setValueAtTime(0.1 * vol, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
         osc.start();
         osc.stop(ctx.currentTime + 0.3);
@@ -172,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
         osc.type = "sawtooth";
         osc.frequency.setValueAtTime(220, ctx.currentTime); // A3
         osc.frequency.setValueAtTime(164.81, ctx.currentTime + 0.1); // E3
-        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.setValueAtTime(0.12 * vol, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
         osc.start();
         osc.stop(ctx.currentTime + 0.4);
@@ -188,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function applySettings() {
     if (toggleDark) toggleDark.checked = gameSettings.darkMode;
     if (toggleContrast) toggleContrast.checked = gameSettings.highContrast;
-    if (toggleSound) toggleSound.checked = gameSettings.soundEnabled;
+    if (sliderSound) sliderSound.value = gameSettings.soundVolume;
 
     document.body.classList.toggle("dark-mode", gameSettings.darkMode);
     document.body.classList.toggle("high-contrast", gameSettings.highContrast);
@@ -279,9 +280,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (toggleSound) {
-    toggleSound.addEventListener("change", (e) => {
-      gameSettings.soundEnabled = e.target.checked;
+  if (sliderSound) {
+    sliderSound.addEventListener("input", (e) => {
+      gameSettings.soundVolume = Number(e.target.value);
       localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
     });
   }

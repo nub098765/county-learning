@@ -155,6 +155,13 @@ body.dark-mode .setting-item {
   border-color: #333; 
 }
 
+/* Sound volume slider */
+.setting-item input[type="range"] {
+  width: 140px;
+  accent-color: #2d5a27;
+  cursor: pointer;
+}
+
 /* Scrollable State List Container */
 .states-list {
   max-height: 240px;
@@ -375,7 +382,7 @@ body.dark-mode .badge-mistake {
 .county {
   fill: #e8e4d9;
   stroke: #2b4c32;
-  stroke-width: 2px;
+  stroke-width: 3px;
   cursor: pointer;
   transition: fill 0.2s ease, stroke 0.2s ease;
 }
@@ -383,6 +390,17 @@ body.dark-mode .badge-mistake {
 /* Hover state */
 .county:hover {
   fill: #d5cebe;
+}
+
+/* Remove the default click/tap outline box, but keep a visible outline
+   for keyboard (Tab) focus so accessibility isn't lost. */
+.county:focus {
+  outline: none;
+}
+
+.county:focus-visible {
+  outline: 2px dashed #1b3818;
+  outline-offset: 2px;
 }
 
 /* Correctly guessed county */
@@ -417,7 +435,7 @@ body.dark-mode .state-map.map-divider {
 }
 body.dark-mode .county { 
   fill: #3a3a34; 
-  stroke: #242420; 
+  stroke: #6b6b5f; 
 }
 
 .county:hover { 
