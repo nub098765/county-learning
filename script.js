@@ -120,19 +120,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // Home, but is set to "screen-game" whenever Settings is opened from
   // mid-game (the header button, the summary modal, or the Admire bar) so
   // adjusting a toggle doesn't quietly abandon the running game.
-  let settingsReturnScreen = "screen-home";
-  const settingsBackButton = document.querySelector("#screen-settings .btn-back");
+  // was: let settingsReturnScreen = "screen-home";
+let settingsReturnScreen = "screen-home";
+let settingsReturnOverlay = null; // "modal" | "admire" | null
 
-  // Opens the Settings screen and points its "Back" button (and label) at
-  // wherever it should return to. Use this instead of calling showScreen()
-  // directly whenever Settings is entered from somewhere other than Home.
-  function openSettings(returnScreen) {
-    settingsReturnScreen = returnScreen;
-    if (settingsBackButton) {
-      settingsBackButton.textContent = returnScreen === "screen-game" ? "Back to Game" : "Back to Home";
-    }
-    showScreen("screen-settings");
+function openSettings(returnScreen, returnOverlay = null) {
+  settingsReturnScreen = returnScreen;
+  settingsReturnOverlay = returnOverlay;
+  if (settingsBackButton) {
+    settingsBackButton.textContent = returnScreen === "screen-game" ? "Back to Game" : "Back to Home";
   }
+  showScreen("screen-settings");
+}
 
   // --- Modal Summary DOM Elements ---
   const modalSummary = document.getElementById("modal-summary");
@@ -243,20 +242,28 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   backButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      const parentScreen = btn.closest(".screen");
-      if (parentScreen && parentScreen.id === "screen-settings") {
-        // The Settings screen's back button is context-sensitive: go back
-        // to wherever Settings was opened from, then reset to the default
-        // (Home) for the next time Settings is opened normally.
-        showScreen(settingsReturnScreen);
-        settingsReturnScreen = "screen-home";
-        if (settingsBackButton) settingsBackButton.textContent = "Back to Home";
-      } else {
-        showScreen(btn.dataset.target);
+  btn.addEventListener("click", () => {
+    const parentScreen = btn.closest(".screen");
+    if (parentScreen && parentScreen.id === "screen-settings") {
+      showScreen(settingsReturnScreen);
+
+      // Re-show whichever overlay was open when Settings was launched,
+      // so the player still has Play Again / Retry / Home available
+      // instead of being stranded with only Quit in the header.
+      if (settingsReturnOverlay === "modal" && modalSummary) {
+        modalSummary.classList.remove("hidden");
+      } else if (settingsReturnOverlay === "admire" && admireBar) {
+        admireBar.classList.remove("hidden");
       }
-    });
+
+      settingsReturnScreen = "screen-home";
+      settingsReturnOverlay = null;
+      if (settingsBackButton) settingsBackButton.textContent = "Back to Home";
+    } else {
+      showScreen(btn.dataset.target);
+    }
   });
+});
 
   modeButtons.forEach(btn => {
     btn.addEventListener("click", () => {
@@ -835,12 +842,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (btnAdmireSettings) {
-    btnAdmireSettings.addEventListener("click", () => {
-      admireBar.classList.add("hidden");
-      openSettings("screen-game");
-    });
-  }
+  // summary modal's Settings button
+appendModalButton("Settings", "btn-secondary", () => {
+  modalSummary.classList.add("hidden");
+  openSettings("screen-game", "modal");
+});
+
+// admire bar's Settings button
+if (btnAdmireSettings) {
+  btnAdmireSettings.addEventListener("click", () => {
+    admireBar.classList.add("hidden");
+    openSettings("screen-game", "admire");
+  });
+}
 
   if (btnAdmireHome) {
     btnAdmireHome.addEventListener("click", () => {
