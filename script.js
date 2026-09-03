@@ -116,22 +116,29 @@ document.addEventListener('DOMContentLoaded', () => {
   const countyPaths = document.querySelectorAll(".county");
   const svgMaps = document.querySelectorAll(".state-map");
 
-  // Which screen the Settings "Back" button should return to. Defaults to
-  // Home, but is set to "screen-game" whenever Settings is opened from
-  // mid-game (the header button, the summary modal, or the Admire bar) so
-  // adjusting a toggle doesn't quietly abandon the running game.
-  // was: let settingsReturnScreen = "screen-home";
-let settingsReturnScreen = "screen-home";
-let settingsReturnOverlay = null; // "modal" | "admire" | null
+  // Which screen (and, if relevant, which finished-game overlay) the
+  // Settings "Back" button should return to. Defaults to Home, but is set
+  // to "screen-game" whenever Settings is opened from mid-game (the header
+  // button, the summary modal, or the Admire bar) so adjusting a toggle
+  // doesn't quietly abandon the running game. settingsReturnOverlay tracks
+  // whether the summary modal or the Admire bar needs to be re-shown once
+  // Settings closes, since those are hidden (not screens) and would
+  // otherwise vanish for good — leaving the player stuck with no way to
+  // start a new game. FIX: settingsBackButton previously wasn't declared
+  // anywhere, which made every openSettings() call throw and silently
+  // abort before showScreen("screen-settings") ever ran.
+  let settingsReturnScreen = "screen-home";
+  let settingsReturnOverlay = null; // "modal" | "admire" | null
+  const settingsBackButton = document.querySelector("#screen-settings .btn-back");
 
-function openSettings(returnScreen, returnOverlay = null) {
-  settingsReturnScreen = returnScreen;
-  settingsReturnOverlay = returnOverlay;
-  if (settingsBackButton) {
-    settingsBackButton.textContent = returnScreen === "screen-game" ? "Back to Game" : "Back to Home";
+  function openSettings(returnScreen, returnOverlay = null) {
+    settingsReturnScreen = returnScreen;
+    settingsReturnOverlay = returnOverlay;
+    if (settingsBackButton) {
+      settingsBackButton.textContent = returnScreen === "screen-game" ? "Back to Game" : "Back to Home";
+    }
+    showScreen("screen-settings");
   }
-  showScreen("screen-settings");
-}
 
   // --- Modal Summary DOM Elements ---
   const modalSummary = document.getElementById("modal-summary");
@@ -242,28 +249,28 @@ function openSettings(returnScreen, returnOverlay = null) {
   }
 
   backButtons.forEach(btn => {
-  btn.addEventListener("click", () => {
-    const parentScreen = btn.closest(".screen");
-    if (parentScreen && parentScreen.id === "screen-settings") {
-      showScreen(settingsReturnScreen);
+    btn.addEventListener("click", () => {
+      const parentScreen = btn.closest(".screen");
+      if (parentScreen && parentScreen.id === "screen-settings") {
+        showScreen(settingsReturnScreen);
 
-      // Re-show whichever overlay was open when Settings was launched,
-      // so the player still has Play Again / Retry / Home available
-      // instead of being stranded with only Quit in the header.
-      if (settingsReturnOverlay === "modal" && modalSummary) {
-        modalSummary.classList.remove("hidden");
-      } else if (settingsReturnOverlay === "admire" && admireBar) {
-        admireBar.classList.remove("hidden");
+        // Re-show whichever overlay was open when Settings was launched,
+        // so the player still has Play Again / Retry / Home available
+        // instead of being stranded with only Quit in the header.
+        if (settingsReturnOverlay === "modal" && modalSummary) {
+          modalSummary.classList.remove("hidden");
+        } else if (settingsReturnOverlay === "admire" && admireBar) {
+          admireBar.classList.remove("hidden");
+        }
+
+        settingsReturnScreen = "screen-home";
+        settingsReturnOverlay = null;
+        if (settingsBackButton) settingsBackButton.textContent = "Back to Home";
+      } else {
+        showScreen(btn.dataset.target);
       }
-
-      settingsReturnScreen = "screen-home";
-      settingsReturnOverlay = null;
-      if (settingsBackButton) settingsBackButton.textContent = "Back to Home";
-    } else {
-      showScreen(btn.dataset.target);
-    }
+    });
   });
-});
 
   modeButtons.forEach(btn => {
     btn.addEventListener("click", () => {
@@ -388,40 +395,40 @@ function openSettings(returnScreen, returnOverlay = null) {
   }
 
   function switchVisibleSvgMap() {
-  svgMaps.forEach(map => {
-    map.style.display = "none";
-    map.classList.add("hidden");
-    map.classList.remove("map-divider");
-  });
+    svgMaps.forEach(map => {
+      map.style.display = "none";
+      map.classList.add("hidden");
+      map.classList.remove("map-divider");
+    });
 
-  const visibleMaps = [];
-  activeStateKeys.forEach(key => {
-    const targetSvg = document.getElementById(stateData[key]?.svgId);
-    if (targetSvg) {
-      targetSvg.style.display = "block";
-      targetSvg.classList.remove("hidden");
-      visibleMaps.push(targetSvg);
-    }
-  });
+    const visibleMaps = [];
+    activeStateKeys.forEach(key => {
+      const targetSvg = document.getElementById(stateData[key]?.svgId);
+      if (targetSvg) {
+        targetSvg.style.display = "block";
+        targetSvg.classList.remove("hidden");
+        visibleMaps.push(targetSvg);
+      }
+    });
 
-  // Add the subtle divider line between maps, but never after the last
-  // one — so a single map shown alone has no stray border.
-  //
-  // Important: this has to be based on the maps' actual DOM order, not
-  // the order the user selected the states in. .map-wrapper is a flex
-  // row, so visual left-to-right position always follows DOM order —
-  // if we instead used activeStateKeys' order (selection order), the
-  // divider could land on the wrong map whenever the user picked the
-  // states in a different order than they appear in the markup, making
-  // it show up outside the pair instead of between them.
-  const domOrderedVisibleMaps = Array.from(svgMaps).filter(map => visibleMaps.includes(map));
+    // Add the subtle divider line between maps, but never after the last
+    // one — so a single map shown alone has no stray border.
+    //
+    // Important: this has to be based on the maps' actual DOM order, not
+    // the order the user selected the states in. .map-wrapper is a flex
+    // row, so visual left-to-right position always follows DOM order —
+    // if we instead used activeStateKeys' order (selection order), the
+    // divider could land on the wrong map whenever the user picked the
+    // states in a different order than they appear in the markup, making
+    // it show up outside the pair instead of between them.
+    const domOrderedVisibleMaps = Array.from(svgMaps).filter(map => visibleMaps.includes(map));
 
-  domOrderedVisibleMaps.forEach((map, index) => {
-    if (index < domOrderedVisibleMaps.length - 1) {
-      map.classList.add("map-divider");
-    }
-  });
-}
+    domOrderedVisibleMaps.forEach((map, index) => {
+      if (index < domOrderedVisibleMaps.length - 1) {
+        map.classList.add("map-divider");
+      }
+    });
+  }
 
   // --- State & County Setup Logic ---
   function renderCountyCheckboxes() {
@@ -758,7 +765,9 @@ function openSettings(returnScreen, returnOverlay = null) {
       });
       appendModalButton("Settings", "btn-secondary", () => {
         modalSummary.classList.add("hidden");
-        openSettings("screen-game");
+        // FIX: pass "modal" so the summary popup reappears when the
+        // player backs out of Settings, instead of staying hidden forever.
+        openSettings("screen-game", "modal");
       });
       appendModalButton("Home", "btn-secondary", () => {
         modalSummary.classList.add("hidden");
@@ -791,7 +800,8 @@ function openSettings(returnScreen, returnOverlay = null) {
       });
       appendModalButton("Settings", "btn-secondary", () => {
         modalSummary.classList.add("hidden");
-        openSettings("screen-game");
+        // FIX: pass "modal" here too, for the same reason as above.
+        openSettings("screen-game", "modal");
       });
       appendModalButton("Home", "btn-secondary", () => {
         modalSummary.classList.add("hidden");
@@ -842,19 +852,14 @@ function openSettings(returnScreen, returnOverlay = null) {
     });
   }
 
-  // summary modal's Settings button
-appendModalButton("Settings", "btn-secondary", () => {
-  modalSummary.classList.add("hidden");
-  openSettings("screen-game", "modal");
-});
-
-// admire bar's Settings button
-if (btnAdmireSettings) {
-  btnAdmireSettings.addEventListener("click", () => {
-    admireBar.classList.add("hidden");
-    openSettings("screen-game", "admire");
-  });
-}
+  // admire bar's Settings button — already correctly passes "admire" so
+  // the bar reappears (instead of the summary modal) when Settings closes.
+  if (btnAdmireSettings) {
+    btnAdmireSettings.addEventListener("click", () => {
+      admireBar.classList.add("hidden");
+      openSettings("screen-game", "admire");
+    });
+  }
 
   if (btnAdmireHome) {
     btnAdmireHome.addEventListener("click", () => {
