@@ -449,25 +449,37 @@ document.addEventListener('DOMContentLoaded', () => {
     return activeStateKeys.flatMap(key => (stateData[key] ? stateData[key].counties : []));
   }
 
+  // How many of the most-missed counties get auto-selected by "Select the
+  // ones you struggled with" / the initial suggestion. Capped rather than
+  // selecting every county with any mistake at all, since that list grows
+  // unhelpfully long once more states/counties have been played.
+  const SUGGESTION_LIMIT = 5;
+
+  // Returns the ids of up to `limit` currently-rendered counties with the
+  // highest mistake counts, highest first. Counties with zero mistakes are
+  // never included, so this can return fewer than `limit` ids.
+  function getTopMistakeCountyIds(limit) {
+    return Array.from(document.querySelectorAll(".county-checkbox"))
+      .map(cb => ({ id: cb.value, mistakes: countyMistakes[cb.value] || 0 }))
+      .filter(c => c.mistakes > 0)
+      .sort((a, b) => b.mistakes - a.mistakes)
+      .slice(0, limit)
+      .map(c => c.id);
+  }
+
   radioSpecific.forEach(radio => {
     radio.addEventListener("change", (e) => {
       const countyCheckboxes = document.querySelectorAll(".county-checkbox");
       if (e.target.value === "yes") {
         if (checkboxContainer) checkboxContainer.classList.remove("hidden");
 
-        let suggestedCount = 0;
+        const topMistakeIds = getTopMistakeCountyIds(SUGGESTION_LIMIT);
         countyCheckboxes.forEach(cb => {
-          const mistakeCount = countyMistakes[cb.value] || 0;
-          if (mistakeCount > 0) {
-            cb.checked = true;
-            suggestedCount++;
-          } else {
-            cb.checked = false;
-          }
+          cb.checked = topMistakeIds.includes(cb.value);
         });
 
         if (suggestionBox) {
-          if (suggestedCount > 0) {
+          if (topMistakeIds.length > 0) {
             suggestionBox.classList.remove("hidden");
           } else {
             suggestionBox.classList.add("hidden");
@@ -484,8 +496,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnSelectSuggested) {
     btnSelectSuggested.addEventListener("click", () => {
+      const topMistakeIds = getTopMistakeCountyIds(SUGGESTION_LIMIT);
       document.querySelectorAll(".county-checkbox").forEach(cb => {
-        cb.checked = (countyMistakes[cb.value] || 0) > 0;
+        cb.checked = topMistakeIds.includes(cb.value);
       });
       updateSetupPlayButton();
     });
