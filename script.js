@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Game Configuration & State Variables ---
   let selectedMode = "pin"; // "pin" or "pin-hard"
-  let activeStateKeys = [];
+  let activeStateKeys = ["rhode_island"];
   let selectedCounties = [];
   let targetPool = [];
   let currentTarget = null;
@@ -562,7 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     countyPaths.forEach(path => {
-      path.classList.remove("correct", "wrong", "flash-correct", "found");
+      path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered");
       path.style.pointerEvents = "auto";
       path.setAttribute("tabindex", "0");
       path.setAttribute("role", "button");
@@ -600,6 +600,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (clickedId === currentTarget.id) {
       scoreRight++;
       playSound("correct");
+      // currentAttemptMistakes counts wrong guesses made on THIS target
+      // before it was finally found. pickNextTarget() (called below)
+      // resets it to 0, so it has to be read here first.
+      const recoveredFromMistake = currentAttemptMistakes > 0;
 
       if (feedbackEl) {
         feedbackEl.textContent = `Correct! That's ${getDisplayName(currentTarget)}.`;
@@ -607,11 +611,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (selectedMode === "pin") {
-        pathEl.classList.add("correct", "found");
+        pathEl.classList.add(recoveredFromMistake ? "correct-recovered" : "correct", "found");
         pathEl.style.pointerEvents = "none";
       } else if (selectedMode === "pin-hard") {
-        pathEl.classList.add("flash-correct");
-        setTimeout(() => pathEl.classList.remove("flash-correct"), 600);
+        const flashClass = recoveredFromMistake ? "flash-correct-recovered" : "flash-correct";
+        pathEl.classList.add(flashClass);
+        setTimeout(() => pathEl.classList.remove(flashClass), 600);
       }
 
       targetPool = targetPool.filter(c => c.id !== currentTarget.id);

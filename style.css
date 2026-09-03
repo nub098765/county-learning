@@ -423,6 +423,19 @@ body.dark-mode .badge-mistake {
   fill: #4a7c59;
 }
 
+/* Correct, but only after at least one wrong guess on this target this
+   round — a lighter "you got there eventually" signal instead of the
+   clean green used for a first-try correct answer. */
+.county.correct-recovered {
+  fill: #d4a017 !important;
+}
+body.dark-mode .county.correct-recovered {
+  fill: #e0b030 !important;
+}
+body.high-contrast .county.correct-recovered {
+  fill: #ffcc00 !important;
+}
+
 /* Incorrect guess flash */
 .county.wrong {
   fill: #c94a29;
@@ -480,6 +493,17 @@ body.high-contrast .county.wrong {
 @keyframes flashGreen {
   0%, 100% { fill: #f3f1ea; }
   50% { fill: #2d5a27; }
+}
+
+/* Pin (Hard) mode's flash for a correct guess that followed at least one
+   wrong guess on the same target this round. */
+.county.flash-correct-recovered {
+  animation: flashYellow 0.6s ease-in-out;
+}
+
+@keyframes flashYellow {
+  0%, 100% { fill: #f3f1ea; }
+  50% { fill: #d4a017; }
 }
 
 /* Prominent Target Banner */
