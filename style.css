@@ -364,6 +364,10 @@ body.dark-mode .badge-mistake {
 .map-wrapper {
   max-width: 180px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 }
 
 /* Base styling for vector map counties */

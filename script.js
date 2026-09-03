@@ -35,6 +35,42 @@ document.addEventListener('DOMContentLoaded', () => {
   let missedCounties = new Set();
   let currentAttemptMistakes = 0;
 
+  // Names that are ambiguous *within the counties currently being played*
+  // (e.g. "Kent" exists in both Delaware and Rhode Island). Recomputed at
+  // the start of every game/retry/replay via computeAmbiguousNames().
+  let ambiguousCountyNames = new Set();
+
+  // Given a list of counties, returns the set of county names that appear
+  // more than once in that list.
+  function computeAmbiguousNames(counties) {
+    const nameCounts = {};
+    counties.forEach(c => {
+      nameCounts[c.name] = (nameCounts[c.name] || 0) + 1;
+    });
+    return new Set(Object.keys(nameCounts).filter(name => nameCounts[name] > 1));
+  }
+
+  // Returns "Kent" normally, or "Kent, Rhode Island" if that name is
+  // ambiguous in the current context.
+  function getDisplayName(county) {
+    if (!county) return "";
+    if (ambiguousCountyNames.has(county.name)) {
+      const stateName = stateData[county.stateKey]?.name || county.stateKey;
+      return `${county.name}, ${stateName}`;
+    }
+    return county.name;
+  }
+
+  // Looks up a county object by its path id across ALL states (not just the
+  // active ones), so feedback text is always correct even mid-game.
+  function findCountyById(id) {
+    for (const key in stateData) {
+      const found = stateData[key].counties.find(c => c.id === id);
+      if (found) return found;
+    }
+    return null;
+  }
+
   // --- Persistent Data Storage ---
   let completedStates = JSON.parse(localStorage.getItem("completedStates")) || [];
   let countyMistakes = JSON.parse(localStorage.getItem("countyMistakes")) || {};
@@ -259,26 +295,34 @@ document.addEventListener('DOMContentLoaded', () => {
       if (stateRow.dataset.listenerAttached === "true") return;
       stateRow.dataset.listenerAttached = "true";
 
-      const selectState = () => {
-        activeStateKeys = [stateKey];
-        document.querySelectorAll(".state-row").forEach(r => {
-          r.classList.remove("selected");
-          r.setAttribute("aria-pressed", "false");
-        });
-        stateRow.classList.add("selected");
-        stateRow.setAttribute("aria-pressed", "true");
+      // Toggle this state in/out of the active set — lets more than one
+      // state be selected at once, so both maps can show and both counties
+      // pools get combined.
+      const toggleState = () => {
+        const idx = activeStateKeys.indexOf(stateKey);
+        if (idx === -1) {
+          activeStateKeys.push(stateKey);
+          stateRow.classList.add("selected");
+          stateRow.setAttribute("aria-pressed", "true");
+        } else {
+          activeStateKeys.splice(idx, 1);
+          stateRow.classList.remove("selected");
+          stateRow.setAttribute("aria-pressed", "false");
+        }
 
         renderCountyCheckboxes();
-        if (countyPanel) countyPanel.classList.remove("hidden");
+        if (countyPanel) {
+          countyPanel.classList.toggle("hidden", activeStateKeys.length === 0);
+        }
         updateSetupPlayButton();
         switchVisibleSvgMap();
       };
 
-      stateRow.addEventListener("click", selectState);
+      stateRow.addEventListener("click", toggleState);
       stateRow.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          selectState();
+          toggleState();
         }
       });
     });
@@ -307,6 +351,11 @@ document.addEventListener('DOMContentLoaded', () => {
       a.name.localeCompare(b.name)
     );
 
+    // If more than one active state is selected, disambiguate any county
+    // name shared between them (e.g. "Kent" in both Delaware and Rhode
+    // Island) so the list isn't showing two identical-looking options.
+    const checkboxAmbiguousNames = computeAmbiguousNames(activeCounties);
+
     const existingLabels = checkboxContainer.querySelectorAll("label");
     existingLabels.forEach(label => label.remove());
 
@@ -315,11 +364,14 @@ document.addEventListener('DOMContentLoaded', () => {
       label.className = "checkbox-label";
       const mistakes = countyMistakes[c.id] || 0;
       const mistakeBadge = mistakes > 0 ? `<span class="badge-mistake">${mistakes} miss${mistakes > 1 ? 'es' : ''}</span>` : '';
+      const displayName = checkboxAmbiguousNames.has(c.name)
+        ? `${c.name}, ${stateData[c.stateKey]?.name || c.stateKey}`
+        : c.name;
 
       label.innerHTML = `
         <input type="checkbox" class="county-checkbox" value="${c.id}" data-state="${c.stateKey}">
         <span class="checkbox-custom"></span>
-        <span class="county-label-text">${c.name}</span>
+        <span class="county-label-text">${displayName}</span>
         ${mistakeBadge}
       `;
       checkboxContainer.appendChild(label);
@@ -434,6 +486,10 @@ document.addEventListener('DOMContentLoaded', () => {
     isGameActive = true;
     missedCounties.clear();
     currentAttemptMistakes = 0;
+    // Recompute per-game: e.g. retrying only Delaware's missed counties
+    // means "Kent" is no longer ambiguous even if it was during the full
+    // multi-state round.
+    ambiguousCountyNames = computeAmbiguousNames(countiesToPlay);
 
     if (modalSummary) modalSummary.classList.add("hidden");
     if (admireBar) admireBar.classList.add("hidden");
@@ -465,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentTarget = targetPool[randomIndex];
 
     if (targetPrompt) {
-      targetPrompt.innerHTML = `Find: <strong>${currentTarget.name}</strong>`;
+      targetPrompt.innerHTML = `Find: <strong>${getDisplayName(currentTarget)}</strong>`;
     }
   }
 
@@ -473,14 +529,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!isGameActive || !currentTarget) return;
 
     const clickedId = pathEl.id;
-    const clickedName = pathEl.getAttribute("data-name") || pathEl.id;
+    const clickedCounty = findCountyById(clickedId);
+    const clickedName = clickedCounty
+      ? getDisplayName(clickedCounty)
+      : (pathEl.getAttribute("data-name") || pathEl.id);
 
     if (clickedId === currentTarget.id) {
       scoreRight++;
       playSound("correct");
 
       if (feedbackEl) {
-        feedbackEl.textContent = `Correct! That's ${currentTarget.name}.`;
+        feedbackEl.textContent = `Correct! That's ${getDisplayName(currentTarget)}.`;
         feedbackEl.className = "feedback-message success";
       }
 
@@ -592,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     } else {
       // Mistakes Flow
-      const missedNames = missedArray.slice(0, 3).map(c => c.name);
+      const missedNames = missedArray.slice(0, 3).map(c => getDisplayName(c));
       let formattedMissed = "";
       if (missedNames.length === 1) formattedMissed = missedNames[0];
       else if (missedNames.length === 2) formattedMissed = `${missedNames[0]} and ${missedNames[1]}`;
