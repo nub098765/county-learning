@@ -578,7 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
       isGameActive = false;
       if (modalSummary) modalSummary.classList.add("hidden");
       if (admireBar) admireBar.classList.add("hidden");
-      showScreen("screen-home");
+      showScreen("screen-modes");
     });
   }
 
