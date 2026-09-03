@@ -705,6 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modalSummary.classList.add("hidden");
         showScreen("screen-home");
       });
+    } else {
       // Mistakes Flow
       const missedNames = missedArray.slice(0, 3).map(c => getDisplayName(c));
       let formattedMissed = "";
