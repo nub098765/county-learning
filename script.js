@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Game Configuration & State Variables ---
   let selectedMode = "pin"; // "pin" or "pin-hard"
-  let activeStateKeys = [];
+  let activeStateKeys = ["rhode_island"];
   let selectedCounties = [];
   let targetPool = [];
   let currentTarget = null;
