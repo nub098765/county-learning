@@ -119,6 +119,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // mid-game (the header button, the summary modal, or the Admire bar) so
   // adjusting a toggle doesn't quietly abandon the running game.
   let settingsReturnScreen = "screen-home";
+  const settingsBackButton = document.querySelector("#screen-settings .btn-back");
+
+  // Opens the Settings screen and points its "Back" button (and label) at
+  // wherever it should return to. Use this instead of calling showScreen()
+  // directly whenever Settings is entered from somewhere other than Home.
+  function openSettings(returnScreen) {
+    settingsReturnScreen = returnScreen;
+    if (settingsBackButton) {
+      settingsBackButton.textContent = returnScreen === "screen-game" ? "Back to Game" : "Back to Home";
+    }
+    showScreen("screen-settings");
+  }
 
   // --- Modal Summary DOM Elements ---
   const modalSummary = document.getElementById("modal-summary");
@@ -216,20 +228,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnGotoModes) btnGotoModes.addEventListener("click", () => showScreen("screen-modes"));
   if (btnGotoSettings) {
-    btnGotoSettings.addEventListener("click", () => {
-      settingsReturnScreen = "screen-home";
-      showScreen("screen-settings");
-    });
+    btnGotoSettings.addEventListener("click", () => openSettings("screen-home"));
   }
 
   // Opens Settings from mid-game without losing the running game — the
-  // Settings screen's "Back to Home" button (below) will send the player
-  // back to screen-game instead of screen-home in this case.
+  // Settings screen's back button (below) will say "Back to Game" and
+  // send the player back to screen-game instead of screen-home here.
   if (btnGameSettings) {
-    btnGameSettings.addEventListener("click", () => {
-      settingsReturnScreen = "screen-game";
-      showScreen("screen-settings");
-    });
+    btnGameSettings.addEventListener("click", () => openSettings("screen-game"));
   }
 
   backButtons.forEach(btn => {
@@ -241,6 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // (Home) for the next time Settings is opened normally.
         showScreen(settingsReturnScreen);
         settingsReturnScreen = "screen-home";
+        if (settingsBackButton) settingsBackButton.textContent = "Back to Home";
       } else {
         showScreen(btn.dataset.target);
       }
@@ -691,8 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       appendModalButton("Settings", "btn-secondary", () => {
         modalSummary.classList.add("hidden");
-        settingsReturnScreen = "screen-game";
-        showScreen("screen-settings");
+        openSettings("screen-game");
       });
       appendModalButton("Home", "btn-secondary", () => {
         modalSummary.classList.add("hidden");
@@ -724,8 +730,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       appendModalButton("Settings", "btn-secondary", () => {
         modalSummary.classList.add("hidden");
-        settingsReturnScreen = "screen-game";
-        showScreen("screen-settings");
+        openSettings("screen-game");
       });
       appendModalButton("Home", "btn-secondary", () => {
         modalSummary.classList.add("hidden");
@@ -779,8 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnAdmireSettings) {
     btnAdmireSettings.addEventListener("click", () => {
       admireBar.classList.add("hidden");
-      settingsReturnScreen = "screen-game";
-      showScreen("screen-settings");
+      openSettings("screen-game");
     });
   }
 
