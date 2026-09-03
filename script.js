@@ -312,17 +312,19 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (btnResetProgress) {
-    btnResetProgress.addEventListener("click", () => {
-      if (confirm("Are you sure you want to reset all saved progress and mistakes?")) {
-        completedStates = [];
-        countyMistakes = {};
-        localStorage.removeItem("completedStates");
-        localStorage.removeItem("countyMistakes");
-        renderStateListUI();
-        alert("Progress and mistake history reset successfully!");
-      }
-    });
-  }
+  btnResetProgress.addEventListener("click", () => {
+    if (confirm("Are you sure you want to reset all saved progress and mistakes?")) {
+      completedStates = [];
+      countyMistakes = {};
+      localStorage.removeItem("completedStates");
+      localStorage.removeItem("countyMistakes");
+      renderStateListUI();
+      renderCountyCheckboxes(); // redraw checkboxes so mistake badges clear too
+      if (suggestionBox) suggestionBox.classList.add("hidden"); // stale "top 5 missed" no longer applies
+      alert("Progress and mistake history reset successfully!");
+    }
+  });
+}
 
   // --- Dynamic State Selector UI ---
   // FIX #1: previously this function bailed out immediately because
