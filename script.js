@@ -109,9 +109,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const targetPrompt = document.getElementById("target-prompt");
   const feedbackEl = document.getElementById("feedback");
   const btnQuitGame = document.getElementById("btn-quit-game");
+  const btnGameSettings = document.getElementById("btn-game-settings");
   const btnNewGame = document.getElementById("btn-new-game");
   const countyPaths = document.querySelectorAll(".county");
   const svgMaps = document.querySelectorAll(".state-map");
+
+  // Which screen the Settings "Back" button should return to. Defaults to
+  // Home, but is set to "screen-game" whenever Settings is opened from
+  // mid-game (the header button, the summary modal, or the Admire bar) so
+  // adjusting a toggle doesn't quietly abandon the running game.
+  let settingsReturnScreen = "screen-home";
 
   // --- Modal Summary DOM Elements ---
   const modalSummary = document.getElementById("modal-summary");
@@ -126,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const admireText = document.getElementById("admire-text");
   const btnAdmireRetry = document.getElementById("btn-admire-retry");
   const btnAdmireReplay = document.getElementById("btn-admire-replay");
+  const btnAdmireSettings = document.getElementById("btn-admire-settings");
   const btnAdmireHome = document.getElementById("btn-admire-home");
 
   // --- Audio Synthesis Helper (No external assets required) ---
@@ -207,10 +215,36 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (btnGotoModes) btnGotoModes.addEventListener("click", () => showScreen("screen-modes"));
-  if (btnGotoSettings) btnGotoSettings.addEventListener("click", () => showScreen("screen-settings"));
+  if (btnGotoSettings) {
+    btnGotoSettings.addEventListener("click", () => {
+      settingsReturnScreen = "screen-home";
+      showScreen("screen-settings");
+    });
+  }
+
+  // Opens Settings from mid-game without losing the running game — the
+  // Settings screen's "Back to Home" button (below) will send the player
+  // back to screen-game instead of screen-home in this case.
+  if (btnGameSettings) {
+    btnGameSettings.addEventListener("click", () => {
+      settingsReturnScreen = "screen-game";
+      showScreen("screen-settings");
+    });
+  }
 
   backButtons.forEach(btn => {
-    btn.addEventListener("click", () => showScreen(btn.dataset.target));
+    btn.addEventListener("click", () => {
+      const parentScreen = btn.closest(".screen");
+      if (parentScreen && parentScreen.id === "screen-settings") {
+        // The Settings screen's back button is context-sensitive: go back
+        // to wherever Settings was opened from, then reset to the default
+        // (Home) for the next time Settings is opened normally.
+        showScreen(settingsReturnScreen);
+        settingsReturnScreen = "screen-home";
+      } else {
+        showScreen(btn.dataset.target);
+      }
+    });
   });
 
   modeButtons.forEach(btn => {
@@ -655,12 +689,15 @@ document.addEventListener('DOMContentLoaded', () => {
         modalSummary.classList.add("hidden");
         initGame(selectedCounties);
       });
+      appendModalButton("Settings", "btn-secondary", () => {
+        modalSummary.classList.add("hidden");
+        settingsReturnScreen = "screen-game";
+        showScreen("screen-settings");
+      });
       appendModalButton("Home", "btn-secondary", () => {
         modalSummary.classList.add("hidden");
         showScreen("screen-home");
       });
-
-    } else {
       // Mistakes Flow
       const missedNames = missedArray.slice(0, 3).map(c => getDisplayName(c));
       let formattedMissed = "";
@@ -684,6 +721,11 @@ document.addEventListener('DOMContentLoaded', () => {
       appendModalButton("Play Again", "btn-secondary", () => {
         modalSummary.classList.add("hidden");
         initGame(selectedCounties);
+      });
+      appendModalButton("Settings", "btn-secondary", () => {
+        modalSummary.classList.add("hidden");
+        settingsReturnScreen = "screen-game";
+        showScreen("screen-settings");
       });
       appendModalButton("Home", "btn-secondary", () => {
         modalSummary.classList.add("hidden");
@@ -731,6 +773,14 @@ document.addEventListener('DOMContentLoaded', () => {
     btnAdmireReplay.addEventListener("click", () => {
       admireBar.classList.add("hidden");
       initGame(selectedCounties);
+    });
+  }
+
+  if (btnAdmireSettings) {
+    btnAdmireSettings.addEventListener("click", () => {
+      admireBar.classList.add("hidden");
+      settingsReturnScreen = "screen-game";
+      showScreen("screen-settings");
     });
   }
 
