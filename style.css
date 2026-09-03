@@ -362,12 +362,13 @@ body.dark-mode .badge-mistake {
 }
 
 .map-wrapper {
-  max-width: 180px;
+  max-width: 100%;
   margin: 0 auto;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: 1rem;
 }
 
 /* Base styling for vector map counties */
@@ -397,9 +398,22 @@ body.dark-mode .badge-mistake {
 /* Ensure SVG scales inside container */
 .state-map {
   width: 100%;
+  max-width: 180px;
   max-height: 500px;
   display: block;
   margin: 0 auto;
+  flex: 1 1 140px;
+  padding: 0 0.85rem;
+}
+
+/* Subtle divider line between two or more maps shown side by side.
+   Applied via JS (switchVisibleSvgMap) only to maps that are actually
+   visible, so a hidden map never leaves a stray line behind. */
+.state-map.map-divider {
+  border-right: 1px solid #ddd;
+}
+body.dark-mode .state-map.map-divider {
+  border-right-color: #3f3f38;
 }
 body.dark-mode .county { 
   fill: #3a3a34; 

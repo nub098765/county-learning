@@ -332,13 +332,24 @@ document.addEventListener('DOMContentLoaded', () => {
     svgMaps.forEach(map => {
       map.style.display = "none";
       map.classList.add("hidden");
+      map.classList.remove("map-divider");
     });
 
+    const visibleMaps = [];
     activeStateKeys.forEach(key => {
       const targetSvg = document.getElementById(stateData[key]?.svgId);
       if (targetSvg) {
         targetSvg.style.display = "block";
         targetSvg.classList.remove("hidden");
+        visibleMaps.push(targetSvg);
+      }
+    });
+
+    // Add the subtle divider line between maps, but never after the last
+    // one — so a single map shown alone has no stray border.
+    visibleMaps.forEach((map, index) => {
+      if (index < visibleMaps.length - 1) {
+        map.classList.add("map-divider");
       }
     });
   }
