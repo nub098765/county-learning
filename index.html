@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Learn Your Counties</title>
- <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Serif:opsz,wght@8..144,300;400;600;700&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="geonerds.png">
@@ -24,275 +24,276 @@
 
 
 
-  <section id="screen-home" class="screen active">
-    <h1>County Learning</h1>
-    <p class="subtitle">How would you like to learn the US, county by county?</p>
-    <div class="menu-buttons">
-      <button id="btn-goto-modes" class="btn-primary">Play</button>
-      <button id="btn-goto-settings" class="btn-secondary">Settings</button>
-    </div>
-  </section>
+ <section id="screen-home" class="screen active">
+   <h1>County Learning</h1>
+   <p class="subtitle">How would you like to learn the US, county by county?</p>
+   <div class="menu-buttons">
+     <button id="btn-goto-modes" class="btn-primary">Play</button>
+     <button id="btn-goto-settings" class="btn-secondary">Settings</button>
+   </div>
+ </section>
 
 
 
 
-  <section id="screen-settings" class="screen">
-    <h2>Settings</h2>
-  
+ <section id="screen-settings" class="screen">
+   <h2>Settings</h2>
     <div class="setting-item">
-      <label for="toggle-dark">Dark Mode</label>
-      <input type="checkbox" id="toggle-dark">
-    </div>
-  
+     <label for="toggle-dark">Dark Mode</label>
+     <input type="checkbox" id="toggle-dark">
+   </div>
     <div class="setting-item">
-      <label for="toggle-contrast">High Contrast Colors</label>
-      <input type="checkbox" id="toggle-contrast">
-    </div>
+     <label for="toggle-contrast">High Contrast Colors</label>
+     <input type="checkbox" id="toggle-contrast">
+   </div>
 
 
 
 
-    <div class="setting-item">
-      <label for="slider-sound">Sound Volume</label>
-      <input type="range" id="slider-sound" min="0" max="100" value="50" step="1">
-    </div>
+   <div class="setting-item">
+     <label for="slider-sound">Sound Volume</label>
+     <input type="range" id="slider-sound" min="0" max="100" value="50" step="1">
+   </div>
 
 
 
 
-    <div class="setting-item">
-      <label for="toggle-speedrun">Speedrun Mode</label>
-      <input type="checkbox" id="toggle-speedrun">
-    </div>
+   <div class="setting-item">
+     <label for="toggle-speedrun">Speedrun Mode</label>
+     <input type="checkbox" id="toggle-speedrun">
+   </div>
 
 
 
 
-    <div class="setting-item">
-      <label>Progress</label>
-      <button id="btn-reset-progress" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Reset Saved States</button>
-    </div>
+   <div class="setting-item">
+     <label>Progress</label>
+     <button id="btn-reset-progress" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Reset Saved States</button>
+   </div>
 
 
 
 
-    <button class="btn-back" data-target="screen-home">Back to Home</button>
-  </section>
+   <button class="btn-back" data-target="screen-home">Back to Home</button>
+ </section>
 
 
 
 
-  <section id="screen-modes" class="screen">
-    <h2>Select Mode</h2>
-    <div class="mode-options">
-      <button class="btn-mode" data-mode="pin">
-        <strong>Pin</strong>
-        <span>Counties stay filled when found.</span>
-      </button>
-      <button class="btn-mode" data-mode="pin-hard">
-        <strong>Pin (Hard)</strong>
-        <span>Counties flash briefly when found.</span>
-      </button>
-    </div>
-    <button class="btn-back" data-target="screen-home">Back</button>
-  </section>
+ <section id="screen-modes" class="screen">
+   <h2>Select Mode</h2>
+   <div class="mode-options">
+     <button class="btn-mode" data-mode="pin">
+       <strong>Pin</strong>
+       <span>Counties stay filled when found.</span>
+     </button>
+     <button class="btn-mode" data-mode="pin-hard">
+       <strong>Pin (Hard)</strong>
+       <span>Counties flash briefly when found.</span>
+     </button>
+   </div>
+   <button class="btn-back" data-target="screen-home">Back</button>
+ </section>
 
 
 
 
-  <section id="screen-setup" class="screen">
-    <h2>Select State(s)</h2>
-  
+ <section id="screen-setup" class="screen">
+   <h2>Select State(s)</h2>
     <div class="states-list">
-      <div class="state-row" id="state-delaware" data-state="delaware">
-        <span class="state-name">Delaware</span>
-        <span class="state-count">3 counties</span>
-      </div>
+     <div class="state-row" id="state-delaware" data-state="delaware">
+       <span class="state-name">Delaware</span>
+       <span class="state-count">3 counties</span>
+     </div>
 
 
 
 
-      <div class="state-row" id="state-rhode_island" data-state="rhode_island">
-        <span class="state-name">Rhode Island</span>
-        <span class="state-count">5 counties</span>
-      </div>
+     <div class="state-row" id="state-hawaii" data-state="hawaii">
+       <span class="state-name">Hawai&#699;i</span>
+       <span class="state-count">5 counties</span>
+     </div>
 
 
 
 
-      <div class="state-row disabled"><span class="state-name">Alabama</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Alaska</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">American Samoa</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Arizona</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Arkansas</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">California</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Colorado</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Connecticut</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Florida</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Georgia</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row" id="state-hawaii" data-state="hawaii">
-        <span class="state-name">Hawaii</span>
-        <span class="state-count">5 counties</span>
-      </div>
-      <div class="state-row disabled"><span class="state-name">Idaho</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Illinois</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Indiana</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Iowa</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Kansas</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Kentucky</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Louisiana</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Maine</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Maryland</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Massachusetts</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Michigan</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Minnesota</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Mississippi</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Missouri</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Montana</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Nebraska</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Nevada</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">New Hampshire</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">New Jersey</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">New Mexico</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">New York</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">North Carolina</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">North Dakota</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Northern Mariana Islands</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Ohio</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Oklahoma</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Oregon</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Pennsylvania</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Puerto Rico</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">South Carolina</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">South Dakota</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Tennessee</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Texas</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">United States Virgin Islands</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Utah</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Vermont</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Virginia</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Washington</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">West Virginia</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Wisconsin</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-      <div class="state-row disabled"><span class="state-name">Wyoming</span><small class="wip-tag">WORK IN PROGRESS</small></div>
-    </div>
+     <div class="state-row" id="state-rhode_island" data-state="rhode_island">
+       <span class="state-name">Rhode Island</span>
+       <span class="state-count">5 counties</span>
+     </div>
 
 
 
 
-    <div id="county-options-panel" class="county-panel hidden">
-      <p class="plain-prompt">Would you like to exclude any counties?</p>
-      <div class="radio-group">
-        <label><input type="radio" name="specific-counties" value="no" checked> No (play all counties)</label>
-        <label><input type="radio" name="specific-counties" value="yes"> Yes</label>
-      </div>
+     <div class="state-row disabled"><span class="state-name">Alabama</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Alaska</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">American Samoa</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Arizona</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Arkansas</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">California</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Colorado</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Connecticut</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Florida</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Georgia</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Idaho</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Illinois</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Indiana</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Iowa</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Kansas</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Kentucky</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Louisiana</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Maine</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Maryland</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Massachusetts</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Michigan</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Minnesota</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Mississippi</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Missouri</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Montana</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Nebraska</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Nevada</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">New Hampshire</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">New Jersey</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">New Mexico</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">New York</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">North Carolina</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">North Dakota</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Northern Mariana Islands</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Ohio</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Oklahoma</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Oregon</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Pennsylvania</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Puerto Rico</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">South Carolina</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">South Dakota</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Tennessee</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Texas</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">United States Virgin Islands</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Utah</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Vermont</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Virginia</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Washington</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">West Virginia</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Wisconsin</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+     <div class="state-row disabled"><span class="state-name">Wyoming</span><small class="wip-tag">WORK IN PROGRESS</small></div>
+   </div>
 
 
 
 
-      <div id="checkbox-container" class="checkbox-container hidden">
-        <div id="suggestion-box" class="hidden" style="margin-bottom: 0.8rem; font-size: 0.85rem;">
-          <span id="suggestion-text">Counties you already know well:</span>
-          <button id="btn-select-suggested" type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; margin-left: 0.5rem;">Select your 5 best-known</button>
-        </div>
-      
-        <!-- Checkboxes rendered dynamically via script.js -->
-      </div>
-    </div>
+   <div id="county-options-panel" class="county-panel hidden">
+     <p class="plain-prompt">Would you like to exclude any counties?</p>
+     <div class="radio-group">
+       <label><input type="radio" name="specific-counties" value="no" checked> No (play all counties)</label>
+       <label><input type="radio" name="specific-counties" value="yes"> Yes</label>
+     </div>
 
 
 
 
-    <button id="btn-start-game" class="btn-launch hidden">Play</button>
-    <br>
-    <button class="btn-back" data-target="screen-modes">Back</button>
-  </section>
+     <div id="checkbox-container" class="checkbox-container hidden">
+       <div id="suggestion-box" class="hidden" style="margin-bottom: 0.8rem; font-size: 0.85rem;">
+         <span id="suggestion-text">Counties you already know well:</span>
+         <button id="btn-select-suggested" type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; margin-left: 0.5rem;">Select your 5 best-known</button>
+       </div>
+    
+       <!-- Checkboxes rendered dynamically via script.js -->
+     </div>
+   </div>
 
 
 
 
-  <section id="screen-game" class="screen">
-    <div class="game-header">
-      <button id="btn-quit-game" class="btn-secondary">Quit</button>
-      <button id="btn-game-settings" class="btn-secondary">Settings</button>
-    </div>
+   <button id="btn-start-game" class="btn-launch hidden">Play</button>
+   <br>
+   <button class="btn-back" data-target="screen-modes">Back</button>
+ </section>
 
 
 
 
-    <div class="prompt-box">
-      <p id="target-prompt">Ready?</p>
-      <p id="feedback" aria-live="polite"></p>
-    </div>
+ <section id="screen-game" class="screen">
+   <div class="game-header">
+     <button id="btn-quit-game" class="btn-secondary">Quit</button>
+     <button id="btn-game-settings" class="btn-secondary">Settings</button>
+   </div>
 
 
 
 
-    <div class="map-wrapper">
-      <!-- Delaware SVG Map -->
-      <svg
-         id="map-delaware"
-         class="state-map hidden"
-         xmlns="http://www.w3.org/2000/svg"
-         version="1.2"
-         width="100%"
-         height="100%"
-         viewBox="0 0 400 810"
-         style="stroke-linecap:round;stroke-linejoin:round"
-         aria-label="Map of Delaware Counties">
-        <g id="Delaware" transform="translate(-41,5)">
-          <g id="g2746" transform="translate(-156)">
-            <path id="new-castle" class="county" data-name="New Castle" d="m 330.67,124.02 3.56,-2.75 1.65,3.27 1.65,10.58 -2.71,0.34 -2.55,-4.91 z m -4.06,14.74 7.01,5.83 -1.81,2.41 -3.01,-1.71 z m 30.15,134.5 -4.05,4.05 -3.15,0.17 -3.31,4.42 -2.56,-2.16 -1.63,2.07 -5.34,0.95 -1.5,2.32 1.41,2.05 0.51,3.55 -5.74,3.78 0.13,3 -2.65,5.8 -4.36,2.7 -3.12,-1.68 -6.83,2.02 -5.83,-1.14 -5.85,5.05 -3.71,-0.05 -6.06,5.81 -2.69,-0.28 -6.59,0.65 -4.46,-3.8 -13.29,-1.35 -20.23,1.39 -8.67,-145.79 -2.76,-50.16 -0.49,-11.94 0.22,-24.05 -0.04,-12.75 6.59,0.03 3.47,-8.96 5.82,-11.38 3.88,-5.87 7.74,-9.33 4.49,-4.51 7.03,-6.08 6.77,-4.84 10.31,-5.77 9.47,-4.13 10.78,-3.21 10.48,-1.97 10.31,-0.87 13.81,0.48 9.28,1.1 8.7,1.74 7.82,2.42 12.21,5.07 11.41,6.38 2.06,1.5 -20.04,11.57 -9.68,18.22 -8.4,19.95 -23.7,36.42 -3.02,0.12 -8.07,3.14 -11.09,16.68 -1.32,3.45 1.59,3.33 -1.1,2.29 0.85,5.05 3.68,4.87 2.15,-0.09 5.4,5.9 6.68,6.43 3.81,3.16 -1.16,2.14 -1.68,10.31 -0.46,7.68 -0.9,5.82 -1.82,4.54 -5.06,7.38 -0.04,3.47 -2.36,6.4 0.32,6.68 1.28,3.89 4.12,5.77 3.17,3.12 0.55,3.73 7.11,4.92 7.75,7.98 1.13,4.09 5.52,10.25 1.03,5.71 2.45,1.9 z" />
-            <path id="kent" class="county" data-name="Kent" d="m 245.86,312.58 20.23,-1.39 13.29,1.35 4.46,3.8 6.59,-0.65 2.69,0.28 6.06,-5.81 3.71,0.05 5.85,-5.05 5.83,1.14 6.83,-2.02 3.12,1.68 4.36,-2.7 2.65,-5.8 -0.13,-3 5.74,-3.78 -0.51,-3.55 -1.41,-2.05 1.5,-2.32 5.34,-0.95 1.63,-2.07 2.56,2.16 3.31,-4.42 3.15,-0.17 4.05,-4.05 3.17,3.74 4.97,2.62 1.05,1.59 -1.04,3.03 1.67,2.17 4.89,2.18 -0.23,1.41 4.75,3.31 3.98,1.49 2.26,2.02 1.14,3.62 2.13,1.7 4.04,1.21 0.94,2.3 -0.3,6.32 1.26,4.48 7.61,9.99 0.75,2.14 3.18,3.09 1.26,3.46 -1.43,4.03 0.28,4.64 1.66,1.57 -0.89,8.38 0.49,2.06 2.99,3.64 v 3.95 l 0.98,2.55 -0.31,6.06 -1.06,4.33 -3.64,6.8 -0.9,3.15 -0.16,7.42 -1.22,1.7 0.42,3.29 2.19,7.75 -0.27,6.66 3.74,13.47 -1.49,11.78 0.49,6.74 2.59,5.18 3.76,3.85 3.61,1.37 3.73,3.35 5.14,5.82 6.45,4.59 2.2,2.81 10.14,18.26 1.53,4.26 1.52,7.56 -0.42,9.53 0.29,2.96 -0.73,-2.6 -3.48,-1.73 -1.51,2.15 -3.51,-0.57 -1.15,1.95 -3.83,-0.06 0.6,-2.3 -1.71,-1.16 -3.05,3.18 -3.72,-5.52 -2.33,2.07 -0.75,-3.25 -1.91,-1.07 -3.83,-0.25 -0.84,3.44 -4.99,1.76 -3.19,2.95 0.98,4.01 -1.95,1.88 1.91,2.27 -0.22,3.8 -1.91,2.38 0.88,2.54 -3.34,0.88 -3.53,-0.69 -0.74,2.17 -5.3,0.52 -1.78,1.46 -2.85,-1.33 -4.16,0.61 -4.92,1.54 -2.15,-1.09 -5.34,3.12 -3.8,1.28 -1.13,2.66 0.06,3.56 -2.86,2.82 -1.54,3.31 -2.5,0.29 -2.63,3.36 -5.08,11.51 -7.12,3.36 -1.51,3.59 -4.12,1.47 -2.84,3.11 -75.49,3.15 -1.38,-22.68 -7.63,-129.63 -0.85,-11.66 -1.49,-28.69 -0.72,-7.45 -2.06,-39.22 z" />
-            <path id="sussex" class="county" data-name="Sussex" d="m 261.74,581.17 75.49,-3.15 2.84,-3.11 4.12,-1.47 1.51,-3.59 7.12,-3.36 5.08,-11.51 2.63,-3.36 2.5,-0.29 1.54,-3.31 2.86,-2.82 -0.06,-3.56 1.13,-2.66 3.8,-1.28 5.34,-3.12 2.15,1.09 4.92,-1.54 4.16,-0.61 2.85,1.33 1.78,-1.46 5.3,-0.52 0.74,-2.17 3.53,0.69 3.34,-0.88 -0.88,-2.54 1.91,-2.38 0.22,-3.8 -1.91,-2.27 1.95,-1.88 -0.98,-4.01 3.19,-2.95 4.99,-1.76 0.84,-3.44 3.83,0.25 1.91,1.07 0.75,3.25 2.33,-2.07 3.72,5.52 3.05,-3.18 1.71,1.16 -0.6,2.3 3.83,0.06 1.15,-1.95 3.51,0.57 1.51,-2.15 3.48,1.73 0.73,2.6 -1.79,3.56 -0.53,3.61 2.17,5.09 3.7,6.57 10.73,11.95 3.12,4.87 4.61,3.74 14.04,19.01 12.05,11.97 6.68,9.49 14.23,9.55 11.28,4.54 9.33,-0.47 7.3,-3.3 1.7,-5.14 -2.65,-3.39 3.22,-0.22 1.15,3.85 3.36,14.39 1.39,19.5 6.35,44.37 0.2,16.47 1.54,13.52 0.86,0.66 4.92,69.74 0.45,20.2 -61.86,0.23 -30.42,-0.04 -59.54,-0.36 -20.16,-0.31 -32.33,-0.86 -27.08,-0.86 -31.93,-1.4 -14.66,-0.53 -13.95,-0.8 -2.21,-35.61 -0.59,-11.91 z" />
-          </g>
-        </g>
-      </svg>
+   <div class="prompt-box">
+     <p id="target-prompt">Ready?</p>
+     <p id="feedback" aria-live="polite"></p>
+   </div>
 
 
 
 
-      <!-- Rhode Island SVG Map -->
-      <svg id="svg-rhode-island" class="state-map" viewBox="-1856 -3363 6416 9720" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+   <div class="map-wrapper">
+     <!-- Delaware SVG Map -->
+     <svg
+        id="map-delaware"
+        class="state-map hidden"
+        xmlns="http://www.w3.org/2000/svg"
+        version="1.2"
+        width="100%"
+        height="100%"
+        viewBox="0 0 400 810"
+        style="stroke-linecap:round;stroke-linejoin:round"
+        aria-label="Map of Delaware Counties">
+       <g id="Delaware" transform="translate(-41,5)">
+         <g id="g2746" transform="translate(-156)">
+           <path id="new-castle" class="county" data-name="New Castle" d="m 330.67,124.02 3.56,-2.75 1.65,3.27 1.65,10.58 -2.71,0.34 -2.55,-4.91 z m -4.06,14.74 7.01,5.83 -1.81,2.41 -3.01,-1.71 z m 30.15,134.5 -4.05,4.05 -3.15,0.17 -3.31,4.42 -2.56,-2.16 -1.63,2.07 -5.34,0.95 -1.5,2.32 1.41,2.05 0.51,3.55 -5.74,3.78 0.13,3 -2.65,5.8 -4.36,2.7 -3.12,-1.68 -6.83,2.02 -5.83,-1.14 -5.85,5.05 -3.71,-0.05 -6.06,5.81 -2.69,-0.28 -6.59,0.65 -4.46,-3.8 -13.29,-1.35 -20.23,1.39 -8.67,-145.79 -2.76,-50.16 -0.49,-11.94 0.22,-24.05 -0.04,-12.75 6.59,0.03 3.47,-8.96 5.82,-11.38 3.88,-5.87 7.74,-9.33 4.49,-4.51 7.03,-6.08 6.77,-4.84 10.31,-5.77 9.47,-4.13 10.78,-3.21 10.48,-1.97 10.31,-0.87 13.81,0.48 9.28,1.1 8.7,1.74 7.82,2.42 12.21,5.07 11.41,6.38 2.06,1.5 -20.04,11.57 -9.68,18.22 -8.4,19.95 -23.7,36.42 -3.02,0.12 -8.07,3.14 -11.09,16.68 -1.32,3.45 1.59,3.33 -1.1,2.29 0.85,5.05 3.68,4.87 2.15,-0.09 5.4,5.9 6.68,6.43 3.81,3.16 -1.16,2.14 -1.68,10.31 -0.46,7.68 -0.9,5.82 -1.82,4.54 -5.06,7.38 -0.04,3.47 -2.36,6.4 0.32,6.68 1.28,3.89 4.12,5.77 3.17,3.12 0.55,3.73 7.11,4.92 7.75,7.98 1.13,4.09 5.52,10.25 1.03,5.71 2.45,1.9 z" />
+           <path id="kent" class="county" data-name="Kent" d="m 245.86,312.58 20.23,-1.39 13.29,1.35 4.46,3.8 6.59,-0.65 2.69,0.28 6.06,-5.81 3.71,0.05 5.85,-5.05 5.83,1.14 6.83,-2.02 3.12,1.68 4.36,-2.7 2.65,-5.8 -0.13,-3 5.74,-3.78 -0.51,-3.55 -1.41,-2.05 1.5,-2.32 5.34,-0.95 1.63,-2.07 2.56,2.16 3.31,-4.42 3.15,-0.17 4.05,-4.05 3.17,3.74 4.97,2.62 1.05,1.59 -1.04,3.03 1.67,2.17 4.89,2.18 -0.23,1.41 4.75,3.31 3.98,1.49 2.26,2.02 1.14,3.62 2.13,1.7 4.04,1.21 0.94,2.3 -0.3,6.32 1.26,4.48 7.61,9.99 0.75,2.14 3.18,3.09 1.26,3.46 -1.43,4.03 0.28,4.64 1.66,1.57 -0.89,8.38 0.49,2.06 2.99,3.64 v 3.95 l 0.98,2.55 -0.31,6.06 -1.06,4.33 -3.64,6.8 -0.9,3.15 -0.16,7.42 -1.22,1.7 0.42,3.29 2.19,7.75 -0.27,6.66 3.74,13.47 -1.49,11.78 0.49,6.74 2.59,5.18 3.76,3.85 3.61,1.37 3.73,3.35 5.14,5.82 6.45,4.59 2.2,2.81 10.14,18.26 1.53,4.26 1.52,7.56 -0.42,9.53 0.29,2.96 -0.73,-2.6 -3.48,-1.73 -1.51,2.15 -3.51,-0.57 -1.15,1.95 -3.83,-0.06 0.6,-2.3 -1.71,-1.16 -3.05,3.18 -3.72,-5.52 -2.33,2.07 -0.75,-3.25 -1.91,-1.07 -3.83,-0.25 -0.84,3.44 -4.99,1.76 -3.19,2.95 0.98,4.01 -1.95,1.88 1.91,2.27 -0.22,3.8 -1.91,2.38 0.88,2.54 -3.34,0.88 -3.53,-0.69 -0.74,2.17 -5.3,0.52 -1.78,1.46 -2.85,-1.33 -4.16,0.61 -4.92,1.54 -2.15,-1.09 -5.34,3.12 -3.8,1.28 -1.13,2.66 0.06,3.56 -2.86,2.82 -1.54,3.31 -2.5,0.29 -2.63,3.36 -5.08,11.51 -7.12,3.36 -1.51,3.59 -4.12,1.47 -2.84,3.11 -75.49,3.15 -1.38,-22.68 -7.63,-129.63 -0.85,-11.66 -1.49,-28.69 -0.72,-7.45 -2.06,-39.22 z" />
+           <path id="sussex" class="county" data-name="Sussex" d="m 261.74,581.17 75.49,-3.15 2.84,-3.11 4.12,-1.47 1.51,-3.59 7.12,-3.36 5.08,-11.51 2.63,-3.36 2.5,-0.29 1.54,-3.31 2.86,-2.82 -0.06,-3.56 1.13,-2.66 3.8,-1.28 5.34,-3.12 2.15,1.09 4.92,-1.54 4.16,-0.61 2.85,1.33 1.78,-1.46 5.3,-0.52 0.74,-2.17 3.53,0.69 3.34,-0.88 -0.88,-2.54 1.91,-2.38 0.22,-3.8 -1.91,-2.27 1.95,-1.88 -0.98,-4.01 3.19,-2.95 4.99,-1.76 0.84,-3.44 3.83,0.25 1.91,1.07 0.75,3.25 2.33,-2.07 3.72,5.52 3.05,-3.18 1.71,1.16 -0.6,2.3 3.83,0.06 1.15,-1.95 3.51,0.57 1.51,-2.15 3.48,1.73 0.73,2.6 -1.79,3.56 -0.53,3.61 2.17,5.09 3.7,6.57 10.73,11.95 3.12,4.87 4.61,3.74 14.04,19.01 12.05,11.97 6.68,9.49 14.23,9.55 11.28,4.54 9.33,-0.47 7.3,-3.3 1.7,-5.14 -2.65,-3.39 3.22,-0.22 1.15,3.85 3.36,14.39 1.39,19.5 6.35,44.37 0.2,16.47 1.54,13.52 0.86,0.66 4.92,69.74 0.45,20.2 -61.86,0.23 -30.42,-0.04 -59.54,-0.36 -20.16,-0.31 -32.33,-0.86 -27.08,-0.86 -31.93,-1.4 -14.66,-0.53 -13.95,-0.8 -2.21,-35.61 -0.59,-11.91 z" />
+         </g>
+       </g>
+     </svg>
+
+
+
+
+     <!-- Rhode Island SVG Map -->
+     <svg id="svg-rhode-island" class="state-map" viewBox="-1856 -3363 6416 9720" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
 <g stroke="black" fill="#fdf9d2" stroke-linejoin="round" stroke-width="10">
-   <!-- Providence County -->
-  <path id="providence" data-name="Providence" class="county" tabindex="0" role="button" aria-label="Providence County"
-    d="M -1087,-3246 l 1075,-37 906,-34 184,-7 317,-11 594,-22 388,-6 -6,379 -7,469 -4,570 363,-77 10,51 -10,30 -10,40 5,56 21,101 10,60 16,76 5,40 -5,40 -15,46 -26,76 -5,20 10,40 11,25 0,25 -15,31 -16,25 -25,40 0,36 -5,40 15,50 16,41 0,106 10,30 16,20 25,30 26,30 10,36 10,30 16,30 10,20 66,38 -280,251 -15,35 -57,10 0,-80 -26,-66 -41,-15 -25,-35 35,-101 -20,-76 -26,-90 -36,-91 -82,-86 -10,-15 15,-70 41,-86 56,-111 35,-86 5,-81 5,-65 -51,-56 -46,86 -5,40 -10,46 0,40 -25,41 -21,55 -41,141 -30,6 -51,-26 -16,21 52,126 15,45 31,30 36,15 25,35 16,26 -5,30 -36,35 -5,56 10,75 16,71 10,55 -5,36 -20,-30 -36,-36 -46,-50 -16,5 -15,30 -61,11 -46,25 -26,10 -26,-10 -30,45 -51,6 -31,-5 -26,10 -15,25 -15,40 -5,15 -16,11 -20,20 0,20 10,65 -20,31 -41,40 -51,56 -1264,37 -1500,48 -25,-1024 -20,-1144 -4,-213 -2,-236 z" />
+  <!-- Providence County -->
+ <path id="providence" data-name="Providence" class="county" tabindex="0" role="button" aria-label="Providence County"
+   d="M -1087,-3246 l 1075,-37 906,-34 184,-7 317,-11 594,-22 388,-6 -6,379 -7,469 -4,570 363,-77 10,51 -10,30 -10,40 5,56 21,101 10,60 16,76 5,40 -5,40 -15,46 -26,76 -5,20 10,40 11,25 0,25 -15,31 -16,25 -25,40 0,36 -5,40 15,50 16,41 0,106 10,30 16,20 25,30 26,30 10,36 10,30 16,30 10,20 66,38 -280,251 -15,35 -57,10 0,-80 -26,-66 -41,-15 -25,-35 35,-101 -20,-76 -26,-90 -36,-91 -82,-86 -10,-15 15,-70 41,-86 56,-111 35,-86 5,-81 5,-65 -51,-56 -46,86 -5,40 -10,46 0,40 -25,41 -21,55 -41,141 -30,6 -51,-26 -16,21 52,126 15,45 31,30 36,15 25,35 16,26 -5,30 -36,35 -5,56 10,75 16,71 10,55 -5,36 -20,-30 -36,-36 -46,-50 -16,5 -15,30 -61,11 -46,25 -26,10 -26,-10 -30,45 -51,6 -31,-5 -26,10 -15,25 -15,40 -5,15 -16,11 -20,20 0,20 10,65 -20,31 -41,40 -51,56 -1264,37 -1500,48 -25,-1024 -20,-1144 -4,-213 -2,-236 z" />
 
 
 
 
-  <!-- Kent County -->
-  <path id="kent-ri" data-name="Kent" class="county" tabindex="0" role="button" aria-label="Kent County"
-    d="M -1030,-73 l 1500,-48 1264,-37 51,-56 41,-40 20,-31 -10,-65 0,-20 20,-20 16,-11 5,-15 15,-40 15,-25 26,-10 31,5 51,-6 30,-45 26,10 26,-10 46,-25 61,-11 15,-30 16,-5 46,50 36,36 20,30 -5,15 31,50 0,46 15,35 47,10 10,20 -46,40 5,41 5,50 -15,66 31,45 36,30 51,20 138,0 5,25 -143,51 5,35 5,25 -4,71 5,81 -26,45 -41,51 -10,50 11,56 -26,80 -41,5 -61,-55 -31,-40 25,-86 -30,-30 -26,25 -56,-25 -16,-66 -20,16 5,55 -138,-5 -103,-10 -102,-35 10,126 1,61 0,50 30,25 36,-5 46,-30 26,-5 31,-10 20,35 26,15 36,15 56,20 -10,66 0,30 -82,-10 -67,41 -51,15 -71,30 -21,61 -30,45 -10,61 -16,20 -15,-5 -31,-55 -31,-16 -71,41 -67,35 -15,56 -20,30 -36,30 -10,51 36,70 -10,71 -1162,32 -169,11 -82,5 -1127,-3 10,-439 0,-15 -11,-600 z" />
+ <!-- Kent County -->
+ <path id="kent-ri" data-name="Kent" class="county" tabindex="0" role="button" aria-label="Kent County"
+   d="M -1030,-73 l 1500,-48 1264,-37 51,-56 41,-40 20,-31 -10,-65 0,-20 20,-20 16,-11 5,-15 15,-40 15,-25 26,-10 31,5 51,-6 30,-45 26,10 26,-10 46,-25 61,-11 15,-30 16,-5 46,50 36,36 20,30 -5,15 31,50 0,46 15,35 47,10 10,20 -46,40 5,41 5,50 -15,66 31,45 36,30 51,20 138,0 5,25 -143,51 5,35 5,25 -4,71 5,81 -26,45 -41,51 -10,50 11,56 -26,80 -41,5 -61,-55 -31,-40 25,-86 -30,-30 -26,25 -56,-25 -16,-66 -20,16 5,55 -138,-5 -103,-10 -102,-35 10,126 1,61 0,50 30,25 36,-5 46,-30 26,-5 31,-10 20,35 26,15 36,15 56,20 -10,66 0,30 -82,-10 -67,41 -51,15 -71,30 -21,61 -30,45 -10,61 -16,20 -15,-5 -31,-55 -31,-16 -71,41 -67,35 -15,56 -20,30 -36,30 -10,51 36,70 -10,71 -1162,32 -169,11 -82,5 -1127,-3 10,-439 0,-15 -11,-600 z" />
 
 
 
 
-  <!-- Bristol County -->
-  <path id="bristol" data-name="Bristol" class="county" tabindex="0" role="button" aria-label="Bristol County"
-    d="M 2899,-663 l 282,160 190,109 283,402 0,41 -16,56 -15,71 -71,30 -21,-10 -46,-71 -41,-105 -31,15 0,35 -5,40 41,86 77,111 47,116 -10,75 -31,26 -72,40 -30,41 5,45 -26,30 -10,76 -51,15 -36,-45 -10,-91 -52,-50 -30,-66 -62,-10 -56,116 -15,36 -15,50 -46,0 -11,-20 -15,-10 -5,-40 0,-91 -1,-71 21,-45 56,-56 25,-35 5,-50 -10,-56 0,-75 15,-46 26,-60 15,-31 36,-70 15,-41 0,-45 5,-61 0,-50 15,-40 -10,-56 -36,-91 -41,31 -26,35 -10,81 -20,5 -26,-10 -41,-15 -41,-50 -21,-61 36,-66 -41,-50 -51,0 -10,51 -5,50 -5,45 41,81 97,76 67,75 21,91 -41,45 -16,41 -5,60 -20,25 -20,-10 -16,-85 -26,-46 -46,-35 -46,-20 -51,-5 -36,5 -36,-10 -20,-30 0,-35 -16,-66 -41,-60 -36,-41 -20,-50 15,-35 z" />
+ <!-- Bristol County -->
+ <path id="bristol" data-name="Bristol" class="county" tabindex="0" role="button" aria-label="Bristol County"
+   d="M 2899,-663 l 282,160 190,109 283,402 0,41 -16,56 -15,71 -71,30 -21,-10 -46,-71 -41,-105 -31,15 0,35 -5,40 41,86 77,111 47,116 -10,75 -31,26 -72,40 -30,41 5,45 -26,30 -10,76 -51,15 -36,-45 -10,-91 -52,-50 -30,-66 -62,-10 -56,116 -15,36 -15,50 -46,0 -11,-20 -15,-10 -5,-40 0,-91 -1,-71 21,-45 56,-56 25,-35 5,-50 -10,-56 0,-75 15,-46 26,-60 15,-31 36,-70 15,-41 0,-45 5,-61 0,-50 15,-40 -10,-56 -36,-91 -41,31 -26,35 -10,81 -20,5 -26,-10 -41,-15 -41,-50 -21,-61 36,-66 -41,-50 -51,0 -10,51 -5,50 -5,45 41,81 97,76 67,75 21,91 -41,45 -16,41 -5,60 -20,25 -20,-10 -16,-85 -26,-46 -46,-35 -46,-20 -51,-5 -36,5 -36,-10 -20,-30 0,-35 -16,-66 -41,-60 -36,-41 -20,-50 15,-35 z" />
 
 
 
 
-  <!-- Newport County (Combined main island + Aquidneck + Conanicut paths) -->
-  <g id="newport" data-name="Newport" class="county" tabindex="0" role="button" aria-label="Newport County">
-    <path d="M 3895,416 l 26,41 164,40 -5,30 363,95 11,80 -31,132 5,35 11,25 0,50 -16,31 -15,20 -15,25 -10,25 -5,36 -5,35 -5,45 5,46 10,35 26,45 46,56 84,846 16,197 5,55 -46,6 -36,5 -31,16 -51,25 -10,45 -5,56 -36,40 -46,31 -56,15 -25,30 -26,0 -31,36 -25,35 0,45 -36,26 -56,5 -36,15 -36,30 -36,20 -35,-15 25,-75 25,-71 16,-91 -26,-110 -36,-46 -36,-60 -31,-35 -10,-56 35,-45 21,-46 -10,-20 -42,-40 -10,-30 10,-46 -25,-60 5,-35 30,-76 -20,-35 -82,-46 -1,-40 0,-65 -25,-56 30,-10 57,20 15,-35 -10,-106 -1,-25 -5,-51 -5,-20 -20,-20 25,-61 20,-40 21,-20 10,-20 0,-36 -16,-30 -20,-30 -26,-40 0,-66 -10,-106 0,-25 10,-81 -6,-55 16,-71 15,-55 10,-51 15,-121 36,-60 z" />
-    <path d="M 2771,1478 l -10,-85 0,-121 35,-86 20,-106 -10,-76 -31,-20 -82,-5 -77,-80 11,-71 25,-30 56,-46 -5,-35 -31,-96 21,-50 51,-5 20,25 31,86 -10,45 0,91 26,50 164,96 56,50 26,35 15,81 -76,222 -97,121 -66,40 z" />
-    <path d="M 2860,2396 l 5,-61 -10,-20 0,-30 10,-51 -36,-30 15,-65 92,30 21,-51 -5,-75 10,-137 25,-101 46,-90 30,-41 46,-70 51,-162 15,-55 5,-21 67,-111 20,-196 36,-41 51,-15 41,-86 56,-50 158,-66 72,-91 25,10 1,111 20,60 0,91 -15,56 -20,20 -46,10 -87,30 -5,121 -36,192 83,141 -15,86 -5,116 15,80 1,162 56,50 -20,126 -26,86 -56,76 -20,70 -26,81 26,50 36,51 -15,35 -36,91 -36,-5 10,-51 11,-25 -6,-10 -5,-15 -15,-15 -31,-30 -87,-35 -51,15 0,35 -26,35 -56,-10 -31,-45 -102,21 -15,85 0,106 -51,56 -36,121 -36,-15 -87,-66 -36,31 -61,45 -46,20 -46,-25 -36,21 -46,35 -31,-30 -10,-56 -31,-35 10,-50 67,-51 56,-50 66,-86 11,80 20,10 31,-5 41,-35 77,-41 -16,-75 -26,-66 z" />
-    <path d="M 3169,807 l 15,-25 46,-21 46,20 0,15 1,36 -11,10 -5,20 -20,25 -36,-5 -41,-25 z" />
-    <path d="M 2227,2972 l -26,-46 10,-45 31,-76 5,-70 -32,-202 21,-45 97,25 56,-11 -30,-45 5,-40 20,-51 -51,-70 -52,-161 51,-192 25,-187 61,-141 46,-25 52,10 41,70 5,71 5,50 5,56 -45,111 5,262 -15,25 10,25 51,35 0,26 -30,50 -31,46 -5,55 57,121 -31,50 -97,11 -51,-10 -10,40 -11,25 -5,46 -15,40 -41,0 -5,81 -25,40 z" />
-  </g>
+ <!-- Newport County (Combined main island + Aquidneck + Conanicut paths) -->
+ <g id="newport" data-name="Newport" class="county" tabindex="0" role="button" aria-label="Newport County">
+   <path d="M 3895,416 l 26,41 164,40 -5,30 363,95 11,80 -31,132 5,35 11,25 0,50 -16,31 -15,20 -15,25 -10,25 -5,36 -5,35 -5,45 5,46 10,35 26,45 46,56 84,846 16,197 5,55 -46,6 -36,5 -31,16 -51,25 -10,45 -5,56 -36,40 -46,31 -56,15 -25,30 -26,0 -31,36 -25,35 0,45 -36,26 -56,5 -36,15 -36,30 -36,20 -35,-15 25,-75 25,-71 16,-91 -26,-110 -36,-46 -36,-60 -31,-35 -10,-56 35,-45 21,-46 -10,-20 -42,-40 -10,-30 10,-46 -25,-60 5,-35 30,-76 -20,-35 -82,-46 -1,-40 0,-65 -25,-56 30,-10 57,20 15,-35 -10,-106 -1,-25 -5,-51 -5,-20 -20,-20 25,-61 20,-40 21,-20 10,-20 0,-36 -16,-30 -20,-30 -26,-40 0,-66 -10,-106 0,-25 10,-81 -6,-55 16,-71 15,-55 10,-51 15,-121 36,-60 z" />
+   <path d="M 2771,1478 l -10,-85 0,-121 35,-86 20,-106 -10,-76 -31,-20 -82,-5 -77,-80 11,-71 25,-30 56,-46 -5,-35 -31,-96 21,-50 51,-5 20,25 31,86 -10,45 0,91 26,50 164,96 56,50 26,35 15,81 -76,222 -97,121 -66,40 z" />
+   <path d="M 2860,2396 l 5,-61 -10,-20 0,-30 10,-51 -36,-30 15,-65 92,30 21,-51 -5,-75 10,-137 25,-101 46,-90 30,-41 46,-70 51,-162 15,-55 5,-21 67,-111 20,-196 36,-41 51,-15 41,-86 56,-50 158,-66 72,-91 25,10 1,111 20,60 0,91 -15,56 -20,20 -46,10 -87,30 -5,121 -36,192 83,141 -15,86 -5,116 15,80 1,162 56,50 -20,126 -26,86 -56,76 -20,70 -26,81 26,50 36,51 -15,35 -36,91 -36,-5 10,-51 11,-25 -6,-10 -5,-15 -15,-15 -31,-30 -87,-35 -51,15 0,35 -26,35 -56,-10 -31,-45 -102,21 -15,85 0,106 -51,56 -36,121 -36,-15 -87,-66 -36,31 -61,45 -46,20 -46,-25 -36,21 -46,35 -31,-30 -10,-56 -31,-35 10,-50 67,-51 56,-50 66,-86 11,80 20,10 31,-5 41,-35 77,-41 -16,-75 -26,-66 z" />
+   <path d="M 3169,807 l 15,-25 46,-21 46,20 0,15 1,36 -11,10 -5,20 -20,25 -36,-5 -41,-25 z" />
+   <path d="M 2227,2972 l -26,-46 10,-45 31,-76 5,-70 -32,-202 21,-45 97,25 56,-11 -30,-45 5,-40 20,-51 -51,-70 -52,-161 51,-192 25,-187 61,-141 46,-25 52,10 41,70 5,71 5,50 5,56 -45,111 5,262 -15,25 10,25 51,35 0,26 -30,50 -31,46 -5,55 57,121 -31,50 -97,11 -51,-10 -10,40 -11,25 -5,46 -15,40 -41,0 -5,81 -25,40 z" />
+ </g>
 
 
 
 
-  <!-- Washington County (Combined main land + Block Island) -->
-  <g id="washington" data-name="Washington" class="county" tabindex="0" role="button" aria-label="Washington County">
-    <path d="M -1023,1304 l 1127,3 82,-5 169,-11 1162,-32 10,-71 -36,-70 10,-51 36,-30 20,-30 15,-56 67,-35 71,-41 31,16 31,55 15,5 16,-20 10,-61 30,-45 21,-61 71,-30 51,-15 67,-41 82,10 5,35 10,61 -4,75 20,56 10,35 6,66 -67,0 -25,30 76,30 31,71 -61,40 -46,46 21,45 81,5 16,86 -46,55 -77,25 -107,31 -67,35 -61,-30 -26,51 21,65 51,20 16,76 66,45 21,30 -15,25 0,21 10,35 25,-5 16,5 -21,25 57,207 11,171 -56,116 0,182 31,70 -10,101 -62,0 -20,20 -10,66 36,101 -36,50 -20,86 -56,15 -87,51 -21,25 -10,30 0,81 21,106 -20,75 -46,66 -36,65 -67,91 -51,76 -20,61 -20,50 20,86 -15,35 -56,-15 -31,-40 -26,-36 -51,-25 -56,-30 -31,-15 -5,-35 10,-30 20,-16 31,-35 36,-20 20,-20 10,-16 21,-20 5,-35 -10,-40 10,-26 0,-30 -11,-20 -25,-35 5,-66 -5,-55 -77,10 0,56 -26,65 -15,66 -36,106 1,30 -31,30 -10,30 10,46 -5,55 -51,5 -56,21 -41,10 -16,5 -71,-10 -31,0 -67,10 -56,10 -15,5 -31,11 -36,20 -51,15 -41,5 -10,5 -16,5 -15,0 -36,21 -102,0 -108,20 -56,30 -112,51 -52,20 -35,15 -169,66 -205,71 -107,91 -77,20 -77,11 -72,0 -122,25 -93,-15 -30,15 -31,-5 -31,0 -36,16 -76,20 -87,15 -220,46 -149,61 -112,85 -31,10 -10,-60 -36,0 -72,20 -72,36 -20,-10 -15,-15 10,-56 30,-20 82,-5 103,-5 46,-61 15,-5 20,-66 0,-31 41,-30 62,-45 35,-25 21,-25 10,-35 0,-31 -10,-30 -14,-31 -22,-44 -10,-46 -11,-35 5,-35 10,-26 11,-45 10,-60 5,-61 -10,-30 -11,-30 -10,-21 -18,-19 -18,-31 0,-30 -2,-25 0,-31 -5,-25 6,-20 11,-25 10,-20 16,-10 20,-11 20,-10 62,-40 20,-15 26,-20 25,-11 149,46 21,-32 13,-358 55,-1310 0,-166 z" />
-    <path d="M 1009,6184 l -26,36 -81,40 -82,10 -92,6 -77,15 -118,51 -67,15 -46,-66 10,-40 0,-141 26,-151 66,-51 41,-60 20,-21 36,56 72,55 67,-40 -21,-66 -72,-100 20,-21 31,-50 5,-66 -26,-191 36,-5 159,100 11,182 -36,156 5,96 62,121 z" />
-  </g>
+ <!-- Washington County (Combined main land + Block Island) -->
+ <g id="washington" data-name="Washington" class="county" tabindex="0" role="button" aria-label="Washington County">
+   <path d="M -1023,1304 l 1127,3 82,-5 169,-11 1162,-32 10,-71 -36,-70 10,-51 36,-30 20,-30 15,-56 67,-35 71,-41 31,16 31,55 15,5 16,-20 10,-61 30,-45 21,-61 71,-30 51,-15 67,-41 82,10 5,35 10,61 -4,75 20,56 10,35 6,66 -67,0 -25,30 76,30 31,71 -61,40 -46,46 21,45 81,5 16,86 -46,55 -77,25 -107,31 -67,35 -61,-30 -26,51 21,65 51,20 16,76 66,45 21,30 -15,25 0,21 10,35 25,-5 16,5 -21,25 57,207 11,171 -56,116 0,182 31,70 -10,101 -62,0 -20,20 -10,66 36,101 -36,50 -20,86 -56,15 -87,51 -21,25 -10,30 0,81 21,106 -20,75 -46,66 -36,65 -67,91 -51,76 -20,61 -20,50 20,86 -15,35 -56,-15 -31,-40 -26,-36 -51,-25 -56,-30 -31,-15 -5,-35 10,-30 20,-16 31,-35 36,-20 20,-20 10,-16 21,-20 5,-35 -10,-40 10,-26 0,-30 -11,-20 -25,-35 5,-66 -5,-55 -77,10 0,56 -26,65 -15,66 -36,106 1,30 -31,30 -10,30 10,46 -5,55 -51,5 -56,21 -41,10 -16,5 -71,-10 -31,0 -67,10 -56,10 -15,5 -31,11 -36,20 -51,15 -41,5 -10,5 -16,5 -15,0 -36,21 -102,0 -108,20 -56,30 -112,51 -52,20 -35,15 -169,66 -205,71 -107,91 -77,20 -77,11 -72,0 -122,25 -93,-15 -30,15 -31,-5 -31,0 -36,16 -76,20 -87,15 -220,46 -149,61 -112,85 -31,10 -10,-60 -36,0 -72,20 -72,36 -20,-10 -15,-15 10,-56 30,-20 82,-5 103,-5 46,-61 15,-5 20,-66 0,-31 41,-30 62,-45 35,-25 21,-25 10,-35 0,-31 -10,-30 -14,-31 -22,-44 -10,-46 -11,-35 5,-35 10,-26 11,-45 10,-60 5,-61 -10,-30 -11,-30 -10,-21 -18,-19 -18,-31 0,-30 -2,-25 0,-31 -5,-25 6,-20 11,-25 10,-20 16,-10 20,-11 20,-10 62,-40 20,-15 26,-20 25,-11 149,46 21,-32 13,-358 55,-1310 0,-166 z" />
+   <path d="M 1009,6184 l -26,36 -81,40 -82,10 -92,6 -77,15 -118,51 -67,15 -46,-66 10,-40 0,-141 26,-151 66,-51 41,-60 20,-21 36,56 72,55 67,-40 -21,-66 -72,-100 20,-21 31,-50 5,-66 -26,-191 36,-5 159,100 11,182 -36,156 5,96 62,121 z" />
+ </g>
 
 
 
@@ -303,59 +304,63 @@
 
 
 
-      <!-- Hawaii SVG Map -->
-      <svg id="svg-hawaii" class="state-map hidden" viewBox="-29668,-14192 56625,36809" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg" aria-label="Map of Hawaii Counties">
+     <!-- Hawaii SVG Map -->
+     <svg id="svg-hawaii" class="state-map hidden" viewBox="-29668,-14192 56625,36809" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg" aria-label="Map of Hawai&#699;i Counties">
 <g stroke="black" fill="#fdf9d2" stroke-linejoin="round" stroke-width="90">
-  <!-- Hawaii County (Big Island) -->
-  <path id="hawaii-county" data-name="Hawaii" class="county" tabindex="0" role="button" aria-label="Hawaii County"
-    d="M 16056,7580 l 61,87 91,5 36,41 167,19 0,46 25,21 15,10 203,76 40,-36 142,81 101,20 16,97 20,10 35,21 122,20 20,56 -15,122 36,41 106,71 66,41 81,-11 158,153 101,-1 76,56 116,81 87,41 15,51 86,30 46,87 56,35 238,45 10,62 40,10 31,91 71,51 66,46 192,-88 96,-51 172,40 81,66 97,-5 96,51 96,71 20,-5 71,-11 46,36 40,-26 51,56 111,30 102,56 131,-26 137,81 86,-6 71,72 87,50 116,41 31,15 35,10 26,56 55,51 152,40 51,61 20,10 26,15 46,36 177,45 86,-5 56,50 5,5 35,16 157,40 67,117 75,-6 188,107 71,20 25,5 61,5 147,91 87,127 101,35 82,87 111,30 183,96 81,137 36,10 223,106 224,254 96,46 46,-26 56,178 41,10 96,92 51,153 0,10 92,40 50,66 87,25 15,87 66,66 26,92 -20,40 31,123 -45,97 10,56 0,5 -45,102 66,71 -19,128 25,96 -50,154 26,147 -5,41 47,265 16,46 91,-1 101,-77 15,-40 30,45 -5,56 76,-87 0,-46 40,-40 41,20 81,-26 91,35 91,-16 86,36 81,-1 5,-41 97,97 41,102 92,137 71,198 6,143 -50,117 41,194 -19,127 15,46 66,56 218,81 6,50 15,112 82,82 147,65 61,86 92,66 76,92 508,247 86,-1 168,127 142,60 173,157 -35,41 -91,6 10,86 -35,128 41,15 -85,184 -177,205 -424,318 -70,82 -137,97 -70,77 -41,10 -182,139 -80,137 -46,16 -156,174 -101,102 -167,118 -172,72 -106,62 -75,87 -208,87 -284,17 -81,41 -30,72 -70,86 -183,73 -80,76 -142,67 -40,66 -142,-29 -142,26 -30,86 -274,42 -51,-25 -50,51 -46,10 -40,-25 -107,36 -86,-15 -340,-136 -91,6 -82,-15 -55,31 -25,40 -56,-15 -187,37 -97,82 -45,56 -131,148 -192,118 -111,163 -142,108 -223,77 -91,92 -228,36 -81,87 -101,87 -126,138 -86,143 -91,51 -91,21 -96,-5 -51,31 -96,5 -173,103 16,96 -91,72 -46,0 -76,41 -55,102 -76,112 -66,11 -55,66 -29,418 -51,91 -177,133 -20,61 0,118 -86,61 10,41 -90,132 -15,87 -46,51 10,40 -55,26 -87,-25 -81,16 5,40 -40,158 -45,36 -41,-10 -5,96 -81,41 -91,57 -86,137 -61,-15 -60,67 -137,51 25,-51 -41,-92 5,-142 -132,-137 -127,-35 -153,-127 -162,-76 -127,-25 -102,-66 -56,-81 -249,-116 -137,-163 -127,-61 -40,26 -117,-45 -46,10 -101,-61 -82,10 -86,-40 -71,21 -40,-51 -122,-56 -16,-183 -71,-137 -46,0 -66,-158 -92,-25 -102,-376 25,-184 -15,-46 30,-45 0,-51 40,-21 0,-81 -46,15 25,-132 71,-138 -20,-51 30,-97 10,-188 40,-82 -11,-183 31,-87 -16,-101 10,-87 66,-132 4,-174 20,-40 0,-199 -26,-122 -5,-41 51,-92 5,-56 -11,-112 -138,-295 5,-91 -91,-51 5,-51 -36,-76 -66,-72 66,-96 -10,-56 -41,-5 -20,-46 -1,-92 -50,-20 -21,-148 -66,-198 50,-169 -10,-40 -92,-41 -91,6 -91,-51 5,-92 -51,-86 -21,-92 -66,-86 15,-62 46,-40 0,-123 -36,-51 15,-40 -91,-20 5,-87 45,-31 -15,-46 -51,-5 15,-81 -15,-77 -71,-106 -6,-123 -106,-157 -21,-107 -51,-133 -81,-15 -254,-101 -35,-138 40,-132 -51,-25 -15,-138 -46,15 -30,-61 -41,26 -36,-51 -41,-234 -96,-112 5,-61 91,-31 -10,-122 20,-97 -41,-174 35,-30 5,-66 96,-77 0,-61 45,-31 71,5 46,-72 91,-61 40,-102 71,-36 15,-56 86,-5 -10,-87 101,-112 75,-102 41,-11 50,-46 111,-41 127,-5 40,30 178,-26 -16,-127 10,-117 91,-36 15,-56 81,-42 0,-56 55,-71 61,-5 -15,-77 30,-66 50,-21 5,-112 41,-31 9,-66 71,-5 -5,-92 96,20 -10,-71 66,-67 25,-76 106,-108 101,-10 56,61 5,-5 15,-102 30,-102 35,-143 -6,-97 -5,-36 35,-87 -20,-96 -31,-46 -101,-168 -66,-107 -92,-61 -25,-112 -86,-41 -46,-117 -102,-173 -45,0 -46,-36 -16,-178 -112,-336 25,-103 -46,-239 -41,-20 -15,-41 15,-184 40,-133 19,-270 167,-164 126,-107 91,-47 86,-10 40,25 71,-25 z" />
+ <!-- Hawaii County (Big Island) -->
+ <path id="hawaii-county" data-name="Hawai&#699;i" class="county" tabindex="0" role="button" aria-label="Hawai&#699;i County"
+   d="M 16056,7580 l 61,87 91,5 36,41 167,19 0,46 25,21 15,10 203,76 40,-36 142,81 101,20 16,97 20,10 35,21 122,20 20,56 -15,122 36,41 106,71 66,41 81,-11 158,153 101,-1 76,56 116,81 87,41 15,51 86,30 46,87 56,35 238,45 10,62 40,10 31,91 71,51 66,46 192,-88 96,-51 172,40 81,66 97,-5 96,51 96,71 20,-5 71,-11 46,36 40,-26 51,56 111,30 102,56 131,-26 137,81 86,-6 71,72 87,50 116,41 31,15 35,10 26,56 55,51 152,40 51,61 20,10 26,15 46,36 177,45 86,-5 56,50 5,5 35,16 157,40 67,117 75,-6 188,107 71,20 25,5 61,5 147,91 87,127 101,35 82,87 111,30 183,96 81,137 36,10 223,106 224,254 96,46 46,-26 56,178 41,10 96,92 51,153 0,10 92,40 50,66 87,25 15,87 66,66 26,92 -20,40 31,123 -45,97 10,56 0,5 -45,102 66,71 -19,128 25,96 -50,154 26,147 -5,41 47,265 16,46 91,-1 101,-77 15,-40 30,45 -5,56 76,-87 0,-46 40,-40 41,20 81,-26 91,35 91,-16 86,36 81,-1 5,-41 97,97 41,102 92,137 71,198 6,143 -50,117 41,194 -19,127 15,46 66,56 218,81 6,50 15,112 82,82 147,65 61,86 92,66 76,92 508,247 86,-1 168,127 142,60 173,157 -35,41 -91,6 10,86 -35,128 41,15 -85,184 -177,205 -424,318 -70,82 -137,97 -70,77 -41,10 -182,139 -80,137 -46,16 -156,174 -101,102 -167,118 -172,72 -106,62 -75,87 -208,87 -284,17 -81,41 -30,72 -70,86 -183,73 -80,76 -142,67 -40,66 -142,-29 -142,26 -30,86 -274,42 -51,-25 -50,51 -46,10 -40,-25 -107,36 -86,-15 -340,-136 -91,6 -82,-15 -55,31 -25,40 -56,-15 -187,37 -97,82 -45,56 -131,148 -192,118 -111,163 -142,108 -223,77 -91,92 -228,36 -81,87 -101,87 -126,138 -86,143 -91,51 -91,21 -96,-5 -51,31 -96,5 -173,103 16,96 -91,72 -46,0 -76,41 -55,102 -76,112 -66,11 -55,66 -29,418 -51,91 -177,133 -20,61 0,118 -86,61 10,41 -90,132 -15,87 -46,51 10,40 -55,26 -87,-25 -81,16 5,40 -40,158 -45,36 -41,-10 -5,96 -81,41 -91,57 -86,137 -61,-15 -60,67 -137,51 25,-51 -41,-92 5,-142 -132,-137 -127,-35 -153,-127 -162,-76 -127,-25 -102,-66 -56,-81 -249,-116 -137,-163 -127,-61 -40,26 -117,-45 -46,10 -101,-61 -82,10 -86,-40 -71,21 -40,-51 -122,-56 -16,-183 -71,-137 -46,0 -66,-158 -92,-25 -102,-376 25,-184 -15,-46 30,-45 0,-51 40,-21 0,-81 -46,15 25,-132 71,-138 -20,-51 30,-97 10,-188 40,-82 -11,-183 31,-87 -16,-101 10,-87 66,-132 4,-174 20,-40 0,-199 -26,-122 -5,-41 51,-92 5,-56 -11,-112 -138,-295 5,-91 -91,-51 5,-51 -36,-76 -66,-72 66,-96 -10,-56 -41,-5 -20,-46 -1,-92 -50,-20 -21,-148 -66,-198 50,-169 -10,-40 -92,-41 -91,6 -91,-51 5,-92 -51,-86 -21,-92 -66,-86 15,-62 46,-40 0,-123 -36,-51 15,-40 -91,-20 5,-87 45,-31 -15,-46 -51,-5 15,-81 -15,-77 -71,-106 -6,-123 -106,-157 -21,-107 -51,-133 -81,-15 -254,-101 -35,-138 40,-132 -51,-25 -15,-138 -46,15 -30,-61 -41,26 -36,-51 -41,-234 -96,-112 5,-61 91,-31 -10,-122 20,-97 -41,-174 35,-30 5,-66 96,-77 0,-61 45,-31 71,5 46,-72 91,-61 40,-102 71,-36 15,-56 86,-5 -10,-87 101,-112 75,-102 41,-11 50,-46 111,-41 127,-5 40,30 178,-26 -16,-127 10,-117 91,-36 15,-56 81,-42 0,-56 55,-71 61,-5 -15,-77 30,-66 50,-21 5,-112 41,-31 9,-66 71,-5 -5,-92 96,20 -10,-71 66,-67 25,-76 106,-108 101,-10 56,61 5,-5 15,-102 30,-102 35,-143 -6,-97 -5,-36 35,-87 -20,-96 -31,-46 -101,-168 -66,-107 -92,-61 -25,-112 -86,-41 -46,-117 -102,-173 -45,0 -46,-36 -16,-178 -112,-336 25,-103 -46,-239 -41,-20 -15,-41 15,-184 40,-133 19,-270 167,-164 126,-107 91,-47 86,-10 40,25 71,-25 z" />
 
-  <!-- Honolulu County (Oahu + Northwestern Hawaiian Islands) -->
-  <g id="honolulu" data-name="Honolulu" class="county" tabindex="0" role="button" aria-label="Honolulu County">
-    <path d="M -7133,-7451 l -40,-36 10,-107 76,-36 60,-51 96,-133 61,-41 61,-61 60,-92 126,-92 86,-10 15,-41 81,-20 -20,-41 131,-20 0,-41 91,5 40,46 86,-20 50,31 65,61 86,57 60,158 40,11 96,51 -45,15 5,16 25,56 40,16 15,41 55,102 86,11 -50,61 10,51 -36,97 -5,10 86,98 25,72 120,66 21,87 75,98 30,107 71,52 10,5 35,97 -5,87 20,26 10,15 75,-66 137,21 15,56 90,133 60,225 -20,149 -41,46 -90,0 -11,56 36,82 -21,41 15,41 46,0 0,123 30,41 -5,51 30,51 40,-31 86,47 0,51 86,5 10,56 60,77 -20,41 20,51 111,113 121,-15 15,56 50,92 96,-30 126,-200 -25,-41 -131,-41 -25,-51 25,-87 0,-5 91,-41 45,31 217,51 121,-97 41,36 -11,87 -131,61 -5,134 -15,92 -46,-6 0,57 61,92 60,61 20,6 162,30 90,180 -20,41 -26,163 21,97 90,185 141,118 91,10 55,51 101,46 35,87 81,-15 41,31 -41,123 -66,81 -338,245 -81,16 56,87 -132,25 -80,0 -10,-159 -56,-56 -35,-36 -45,41 -394,66 -86,51 -131,41 -71,92 -40,15 -46,-31 -141,5 -96,-46 -70,-174 -81,-56 -30,-46 -40,30 -41,-10 -20,-41 -40,-21 35,-56 -80,15 -121,-20 -5,-82 80,-61 -4,-92 -96,15 -66,-103 -60,41 -51,0 -30,-67 20,-35 5,-5 -35,-11 -101,46 -96,72 0,56 -51,56 -126,20 -55,-51 -222,-21 -30,-66 -35,-128 -36,-31 6,-82 25,-20 -10,-57 5,-20 41,-15 35,-52 50,-5 81,36 51,-25 -5,-61 -41,-16 15,-41 56,-56 -20,-77 -50,-10 -41,-72 -85,-31 -76,-5 -86,10 20,67 -5,66 -60,-36 -25,-25 -81,-57 -45,36 60,143 45,46 61,-15 70,144 -15,46 25,71 -15,5 -66,-87 -126,-41 0,-82 -25,0 -55,51 -76,-118 15,-20 -55,-21 -10,-76 -51,-6 -55,51 -10,26 25,36 10,36 -51,10 61,97 96,31 70,-30 56,25 40,51 91,16 85,123 35,128 5,46 -45,72 -308,91 -192,20 -368,86 -167,-15 -111,56 -187,4 -40,-5 -81,-87 -110,-215 -10,-143 -160,-405 -86,-77 -40,-107 -20,-16 -55,-46 -172,-77 -20,-36 -25,-154 -55,-128 -20,-36 -35,-66 10,-51 -106,-82 -20,-41 -65,-57 -71,20 -75,-199 -111,4 -9,-184 16,-430 -70,-123 -297,-256 -131,-134 212,-4 81,-26 136,-10 116,-25 136,5 31,-41 80,-30 131,57 136,-21 91,11 50,5 91,-5 81,11 141,-46 156,82 10,-76 91,-72 56,-36 -61,-56 26,-56 121,-62 101,-86 141,-113 z" />
-    <path d="M -6131,-4450 l 10,-30 31,-26 40,-15 51,-5 25,26 -16,30 -35,16 -25,15 -15,36 -36,25 -30,-36 z" />
-    <path d="M -5305,-3839 l -15,-31 5,-36 16,-10 30,21 75,46 16,25 -26,21 -30,5 -30,-5 -36,20 z" />
-  </g>
 
-  <!-- Kalawao County (Molokai peninsula) -->
-  <path id="kalawao" data-name="Kalawao" class="county" tabindex="0" role="button" aria-label="Kalawao County"
-    d="M 4722,-2275 l -56,135 40,-5 76,87 81,76 65,5 -45,31 0,26 10,15 5,15 -15,21 -10,51 5,26 -157,25 -65,-15 -76,-92 -96,-174 -30,-10 -5,-46 -61,66 -40,11 -51,-26 -65,-41 -21,0 -50,-51 -15,-10 -5,-41 -25,-67 -102,-35 -171,5 -35,15 -56,-25 0,-16 -70,-25 0,-92 55,5 101,36 81,-16 75,-77 6,-40 35,-92 0,-103 110,-102 46,15 81,82 111,220 25,143 51,41 171,71 41,-35 z" />
+ <!-- Honolulu County (Oahu + Northwestern Hawaiian Islands) -->
+ <g id="honolulu" data-name="Honolulu" class="county" tabindex="0" role="button" aria-label="Honolulu County">
+   <path d="M -7133,-7451 l -40,-36 10,-107 76,-36 60,-51 96,-133 61,-41 61,-61 60,-92 126,-92 86,-10 15,-41 81,-20 -20,-41 131,-20 0,-41 91,5 40,46 86,-20 50,31 65,61 86,57 60,158 40,11 96,51 -45,15 5,16 25,56 40,16 15,41 55,102 86,11 -50,61 10,51 -36,97 -5,10 86,98 25,72 120,66 21,87 75,98 30,107 71,52 10,5 35,97 -5,87 20,26 10,15 75,-66 137,21 15,56 90,133 60,225 -20,149 -41,46 -90,0 -11,56 36,82 -21,41 15,41 46,0 0,123 30,41 -5,51 30,51 40,-31 86,47 0,51 86,5 10,56 60,77 -20,41 20,51 111,113 121,-15 15,56 50,92 96,-30 126,-200 -25,-41 -131,-41 -25,-51 25,-87 0,-5 91,-41 45,31 217,51 121,-97 41,36 -11,87 -131,61 -5,134 -15,92 -46,-6 0,57 61,92 60,61 20,6 162,30 90,180 -20,41 -26,163 21,97 90,185 141,118 91,10 55,51 101,46 35,87 81,-15 41,31 -41,123 -66,81 -338,245 -81,16 56,87 -132,25 -80,0 -10,-159 -56,-56 -35,-36 -45,41 -394,66 -86,51 -131,41 -71,92 -40,15 -46,-31 -141,5 -96,-46 -70,-174 -81,-56 -30,-46 -40,30 -41,-10 -20,-41 -40,-21 35,-56 -80,15 -121,-20 -5,-82 80,-61 -4,-92 -96,15 -66,-103 -60,41 -51,0 -30,-67 20,-35 5,-5 -35,-11 -101,46 -96,72 0,56 -51,56 -126,20 -55,-51 -222,-21 -30,-66 -35,-128 -36,-31 6,-82 25,-20 -10,-57 5,-20 41,-15 35,-52 50,-5 81,36 51,-25 -5,-61 -41,-16 15,-41 56,-56 -20,-77 -50,-10 -41,-72 -85,-31 -76,-5 -86,10 20,67 -5,66 -60,-36 -25,-25 -81,-57 -45,36 60,143 45,46 61,-15 70,144 -15,46 25,71 -15,5 -66,-87 -126,-41 0,-82 -25,0 -55,51 -76,-118 15,-20 -55,-21 -10,-76 -51,-6 -55,51 -10,26 25,36 10,36 -51,10 61,97 96,31 70,-30 56,25 40,51 91,16 85,123 35,128 5,46 -45,72 -308,91 -192,20 -368,86 -167,-15 -111,56 -187,4 -40,-5 -81,-87 -110,-215 -10,-143 -160,-405 -86,-77 -40,-107 -20,-16 -55,-46 -172,-77 -20,-36 -25,-154 -55,-128 -20,-36 -35,-66 10,-51 -106,-82 -20,-41 -65,-57 -71,20 -75,-199 -111,4 -9,-184 16,-430 -70,-123 -297,-256 -131,-134 212,-4 81,-26 136,-10 116,-25 136,5 31,-41 80,-30 131,57 136,-21 91,11 50,5 91,-5 81,11 141,-46 156,82 10,-76 91,-72 56,-36 -61,-56 26,-56 121,-62 101,-86 141,-113 z" />
+   <path d="M -6131,-4450 l 10,-30 31,-26 40,-15 51,-5 25,26 -16,30 -35,16 -25,15 -15,36 -36,25 -30,-36 z" />
+   <path d="M -5305,-3839 l -15,-31 5,-36 16,-10 30,21 75,46 16,25 -26,21 -30,5 -30,-5 -36,20 z" />
+ </g>
 
-  <!-- Kauai County (Kauai + Niihau) -->
-  <g id="kauai" data-name="Kauai" class="county" tabindex="0" role="button" aria-label="Kauai County">
-    <path d="M -24207,-13322 l 75,-10 107,-117 80,-5 46,-30 5,5 40,26 40,-5 127,-55 75,-56 71,-15 46,-67 156,-4 182,-152 136,-40 91,-92 86,-92 122,-81 176,-14 81,-66 125,93 60,97 50,42 80,67 115,36 116,6 41,-56 0,-51 -30,-11 21,-87 35,-10 91,-55 136,6 60,46 45,16 217,-25 70,57 35,0 30,-20 46,-51 35,5 121,-4 51,-77 75,52 5,41 35,0 25,31 40,-20 30,21 -25,51 146,11 35,36 40,31 60,-36 81,37 170,134 0,72 55,-10 100,67 85,129 -45,25 60,87 -11,41 30,67 -16,108 20,10 91,-15 30,46 29,175 -40,71 30,36 -21,82 -91,92 -5,25 -11,118 -153,286 15,41 -41,107 -90,5 -61,20 0,21 25,143 -22,231 29,184 -75,25 24,57 101,-46 11,11 -36,71 -16,46 25,139 -26,158 -26,16 -34,-52 -81,15 -25,-62 -30,5 -21,67 -10,15 -35,-20 -20,5 -41,56 25,36 66,5 30,-30 25,31 -35,30 9,36 15,21 -55,10 -30,25 4,36 -110,30 -36,72 -121,40 -11,72 -55,10 -21,25 30,72 -35,10 -75,-21 -36,5 -40,82 -46,5 -25,61 -71,5 -31,66 -80,20 -36,46 -45,0 -41,26 -20,66 -35,10 -50,-62 -126,-52 -136,-41 -40,-36 -40,-26 -101,30 -60,-52 -70,-26 -96,-5 -71,76 -146,-52 -45,36 -231,-109 -96,4 -20,-36 -30,5 -91,-31 6,-41 -61,-16 -15,10 -25,26 -21,82 -61,10 -19,-41 -80,-98 -66,-1 -75,-128 -80,-47 0,-36 -40,-15 -10,-36 -35,5 -20,-26 -19,-128 -46,-11 -85,-26 -55,-98 -40,-25 -126,-27 -131,10 -166,-37 -100,-124 -55,-21 -236,-42 -80,-88 -270,-350 -60,-77 -54,-160 76,-117 27,-185 31,-97 106,-56 66,-81 157,-112 91,-82 20,-51 26,-61 11,-103 61,-184 z" />
-    <path d="M -27998,-11973 l 20,-15 16,-21 20,5 0,31 -21,36 -35,41 -26,5 -30,-21 -4,-41 15,-46 z" />
-    <path d="M -27944,-11752 l 15,61 80,16 101,-76 45,46 95,134 -10,46 19,41 -10,46 -46,36 -45,-21 -40,30 -47,154 -81,61 -16,77 5,107 -26,67 -6,128 30,108 40,26 34,92 -81,92 -121,45 -26,41 -45,-10 -61,92 -86,-27 -131,31 -40,-31 -25,40 -81,15 -126,15 -132,148 -1,92 -66,92 -86,66 -113,179 -35,82 34,112 -26,52 -96,66 44,118 -81,66 -9,-51 -51,-1 -55,-21 -10,-56 -60,-31 -60,0 -80,-139 -95,-47 10,-51 10,-5 -80,-42 6,-97 31,-117 -24,-93 20,-66 87,-92 76,-123 11,-112 21,-51 31,-103 76,-30 101,-148 209,-209 136,-20 116,-45 25,-41 6,-15 -36,-26 106,-5 121,-40 218,-173 77,-112 11,-123 36,-123 46,-46 80,-5 66,-76 z" />
-  </g>
 
-  <!-- Maui County (Maui, Molokai, Lanai, Kahoolawe) -->
-  <g id="maui-county" data-name="Maui" class="county" tabindex="0" role="button" aria-label="Maui County">
-    <path d="M 3682,-2436 l 0,92 70,25 0,16 56,25 35,-15 171,-5 102,35 25,67 5,41 15,10 50,51 21,0 65,41 51,26 40,-11 61,-66 5,46 30,10 96,174 76,92 65,15 157,-25 -5,-26 10,-51 15,-21 -5,-15 -10,-15 0,-26 45,-31 -65,-5 -81,-76 -76,-87 -40,5 56,-135 44,12 41,41 131,36 35,-82 46,5 86,66 50,-30 81,-16 30,46 131,-10 91,-46 81,41 66,-21 60,-41 41,11 90,-67 86,-10 106,97 141,-82 116,-10 122,25 126,-36 66,72 -20,71 10,31 50,-10 101,0 187,-41 -61,209 -136,225 -60,0 -116,200 -137,102 -35,41 -91,92 -121,82 -85,82 -303,82 -76,61 -40,11 -81,56 -151,61 -41,-51 -45,16 -121,92 -142,-36 -121,-61 -409,-102 -166,-10 -182,-92 -344,-97 -156,0 -15,-62 -131,-112 -41,5 -45,-31 -91,-10 -51,-51 -181,-31 -46,26 -136,-15 -71,-82 -30,46 -363,112 -329,16 -90,-11 -81,16 -187,-21 -197,57 -86,-6 -302,41 -51,-41 -50,11 -384,-52 -40,11 -71,-133 40,-26 91,-225 21,-87 50,-46 30,-15 -5,-41 46,-92 86,-61 80,-6 31,-56 40,-10 86,-61 0,-82 50,-31 0,-92 36,-46 -36,-204 -101,-98 21,-46 40,-5 303,87 40,-35 56,10 40,-36 5,46 81,0 91,77 20,71 91,51 40,-15 81,15 136,-5 51,21 90,36 31,-41 90,20 81,-41 152,72 116,-16 20,-5 45,5 86,57 86,30 101,-5 80,31 228,10 141,26 z" />
-    <path d="M 7530,-481 l 40,-20 70,-72 -45,-35 35,-108 56,10 96,-20 30,51 96,-46 -5,41 40,-5 96,-108 86,0 40,31 46,132 141,26 56,71 40,-35 56,30 25,164 15,0 26,-6 35,-51 61,128 65,71 81,16 46,102 -30,41 15,51 116,168 10,0 36,5 5,143 86,31 56,87 30,143 81,-5 40,30 31,123 56,87 45,0 25,-87 202,9 222,-102 182,-5 55,-47 152,-51 40,-36 81,-15 60,-82 91,-56 56,-1 15,-51 86,-10 35,25 15,-46 91,-66 81,5 45,25 40,-36 71,72 263,-57 146,117 86,-36 66,67 30,-46 56,10 101,35 101,36 5,51 -20,123 20,46 41,-36 90,15 31,87 167,122 5,41 -40,31 40,35 46,-15 45,36 76,25 61,46 86,30 5,92 101,41 121,-52 5,41 96,-20 71,76 5,26 26,86 -15,46 25,46 45,11 -4,81 35,0 30,31 41,-21 86,5 50,-56 56,20 40,-15 248,209 131,-11 46,41 146,20 81,56 96,25 81,82 36,10 5,61 40,-15 122,102 -5,46 35,56 41,-31 5,41 -40,30 -16,11 1,82 50,10 -25,46 26,40 -20,92 -66,82 36,41 0,46 -71,92 -5,87 -40,0 -70,189 -91,72 -167,31 -161,200 -126,133 -141,51 -86,-40 -172,163 -126,-10 -76,87 -45,1 -5,5 -116,102 -40,-10 -41,15 -96,6 -5,-41 -222,36 -91,-10 -81,-61 -5,-5 -81,-20 -212,51 -20,41 -31,15 -15,6 -76,51 -207,118 -45,-10 -146,112 -81,21 -41,-15 -91,25 -55,87 -187,26 -167,-30 -86,10 -81,36 -80,-15 -132,51 -86,51 -40,-5 -91,-61 -86,0 -91,21 -91,-36 -55,36 0,-76 -36,-97 -81,-62 -5,41 -46,26 -40,-20 -101,-143 15,-41 -5,-82 -122,-199 46,-15 40,-51 -1,-322 -45,-138 25,-87 -5,-15 -51,-138 5,-148 -71,-220 -6,-178 -5,-21 -51,-189 -76,-127 -217,-107 -106,-10 -40,25 -238,236 -40,0 -86,-41 -56,-97 -146,-61 -56,15 -182,-35 -81,-113 -151,-91 -66,-10 -157,30 -157,-296 -85,-20 -16,-21 -106,-142 -91,-51 -71,-154 -40,-10 -15,-56 -51,-102 35,-154 -20,-46 -76,-66 15,-87 -25,-87 5,-153 40,-158 10,-21 76,-179 101,-174 4,-61 36,-41 0,-56 91,5 25,-41 z" />
-    <path d="M 3728,401 l 116,0 81,-21 91,-5 212,61 80,-5 91,21 147,-11 101,11 126,66 177,51 116,92 56,92 96,56 50,82 101,25 76,92 167,143 182,255 86,174 5,148 -80,174 -76,71 -15,31 -71,153 -106,133 -81,-25 -86,20 -192,133 -85,21 -96,107 -36,-61 -121,51 -50,-15 -81,20 -51,-10 -35,41 -81,-36 -81,16 -35,40 -81,-40 -121,35 -76,-153 -71,-71 -10,-46 -61,-87 10,-46 0,-46 -60,-92 20,-41 20,-219 -35,-46 20,-67 0,-15 -5,-67 -81,-132 -20,-82 -81,-138 -127,-56 -70,-82 -91,-15 -41,20 -55,-41 -96,-112 -41,-102 21,-82 -11,-41 36,-133 50,-10 177,-123 91,-41 40,11 z" />
-    <path d="M 7803,4270 l 162,-71 90,-87 11,-5 151,-103 81,-15 40,5 61,10 212,122 1,41 80,87 26,132 -40,31 -41,-5 -25,97 -30,92 15,51 -25,41 20,41 91,-16 40,31 81,-5 -10,87 -126,173 -76,-56 -121,36 -91,-15 0,41 -40,20 -41,-15 -60,92 -51,-97 -46,-112 -40,30 -50,98 -97,-41 -136,46 -20,41 -40,-5 -81,51 5,-102 -41,-5 -15,-46 -40,112 -172,92 -46,-30 -40,15 -41,-41 -45,16 -15,-41 15,-46 -122,-56 -65,-82 60,-148 81,-51 35,-97 46,-5 20,-51 40,-21 217,-92 86,10 41,-87 86,-10 z" />
-  </g>
+ <!-- Kalawao County (Molokai peninsula) -->
+ <path id="kalawao" data-name="Kalawao" class="county" tabindex="0" role="button" aria-label="Kalawao County"
+   d="M 4722,-2275 l -56,135 40,-5 76,87 81,76 65,5 -45,31 0,26 10,15 5,15 -15,21 -10,51 5,26 -157,25 -65,-15 -76,-92 -96,-174 -30,-10 -5,-46 -61,66 -40,11 -51,-26 -65,-41 -21,0 -50,-51 -15,-10 -5,-41 -25,-67 -102,-35 -171,5 -35,15 -56,-25 0,-16 -70,-25 0,-92 55,5 101,36 81,-16 75,-77 6,-40 35,-92 0,-103 110,-102 46,15 81,82 111,220 25,143 51,41 171,71 41,-35 z" />
+
+
+ <!-- Kauai County (Kauai + Niihau) -->
+ <g id="kauai" data-name="Kaua&#699;i" class="county" tabindex="0" role="button" aria-label="Kaua&#699;i County">
+   <path d="M -24207,-13322 l 75,-10 107,-117 80,-5 46,-30 5,5 40,26 40,-5 127,-55 75,-56 71,-15 46,-67 156,-4 182,-152 136,-40 91,-92 86,-92 122,-81 176,-14 81,-66 125,93 60,97 50,42 80,67 115,36 116,6 41,-56 0,-51 -30,-11 21,-87 35,-10 91,-55 136,6 60,46 45,16 217,-25 70,57 35,0 30,-20 46,-51 35,5 121,-4 51,-77 75,52 5,41 35,0 25,31 40,-20 30,21 -25,51 146,11 35,36 40,31 60,-36 81,37 170,134 0,72 55,-10 100,67 85,129 -45,25 60,87 -11,41 30,67 -16,108 20,10 91,-15 30,46 29,175 -40,71 30,36 -21,82 -91,92 -5,25 -11,118 -153,286 15,41 -41,107 -90,5 -61,20 0,21 25,143 -22,231 29,184 -75,25 24,57 101,-46 11,11 -36,71 -16,46 25,139 -26,158 -26,16 -34,-52 -81,15 -25,-62 -30,5 -21,67 -10,15 -35,-20 -20,5 -41,56 25,36 66,5 30,-30 25,31 -35,30 9,36 15,21 -55,10 -30,25 4,36 -110,30 -36,72 -121,40 -11,72 -55,10 -21,25 30,72 -35,10 -75,-21 -36,5 -40,82 -46,5 -25,61 -71,5 -31,66 -80,20 -36,46 -45,0 -41,26 -20,66 -35,10 -50,-62 -126,-52 -136,-41 -40,-36 -40,-26 -101,30 -60,-52 -70,-26 -96,-5 -71,76 -146,-52 -45,36 -231,-109 -96,4 -20,-36 -30,5 -91,-31 6,-41 -61,-16 -15,10 -25,26 -21,82 -61,10 -19,-41 -80,-98 -66,-1 -75,-128 -80,-47 0,-36 -40,-15 -10,-36 -35,5 -20,-26 -19,-128 -46,-11 -85,-26 -55,-98 -40,-25 -126,-27 -131,10 -166,-37 -100,-124 -55,-21 -236,-42 -80,-88 -270,-350 -60,-77 -54,-160 76,-117 27,-185 31,-97 106,-56 66,-81 157,-112 91,-82 20,-51 26,-61 11,-103 61,-184 z" />
+   <path d="M -27998,-11973 l 20,-15 16,-21 20,5 0,31 -21,36 -35,41 -26,5 -30,-21 -4,-41 15,-46 z" />
+   <path d="M -27944,-11752 l 15,61 80,16 101,-76 45,46 95,134 -10,46 19,41 -10,46 -46,36 -45,-21 -40,30 -47,154 -81,61 -16,77 5,107 -26,67 -6,128 30,108 40,26 34,92 -81,92 -121,45 -26,41 -45,-10 -61,92 -86,-27 -131,31 -40,-31 -25,40 -81,15 -126,15 -132,148 -1,92 -66,92 -86,66 -113,179 -35,82 34,112 -26,52 -96,66 44,118 -81,66 -9,-51 -51,-1 -55,-21 -10,-56 -60,-31 -60,0 -80,-139 -95,-47 10,-51 10,-5 -80,-42 6,-97 31,-117 -24,-93 20,-66 87,-92 76,-123 11,-112 21,-51 31,-103 76,-30 101,-148 209,-209 136,-20 116,-45 25,-41 6,-15 -36,-26 106,-5 121,-40 218,-173 77,-112 11,-123 36,-123 46,-46 80,-5 66,-76 z" />
+ </g>
+
+
+ <!-- Maui County (Maui, Molokai, Lanai, Kahoolawe) -->
+ <g id="maui-county" data-name="Maui" class="county" tabindex="0" role="button" aria-label="Maui County">
+   <path d="M 3682,-2436 l 0,92 70,25 0,16 56,25 35,-15 171,-5 102,35 25,67 5,41 15,10 50,51 21,0 65,41 51,26 40,-11 61,-66 5,46 30,10 96,174 76,92 65,15 157,-25 -5,-26 10,-51 15,-21 -5,-15 -10,-15 0,-26 45,-31 -65,-5 -81,-76 -76,-87 -40,5 56,-135 44,12 41,41 131,36 35,-82 46,5 86,66 50,-30 81,-16 30,46 131,-10 91,-46 81,41 66,-21 60,-41 41,11 90,-67 86,-10 106,97 141,-82 116,-10 122,25 126,-36 66,72 -20,71 10,31 50,-10 101,0 187,-41 -61,209 -136,225 -60,0 -116,200 -137,102 -35,41 -91,92 -121,82 -85,82 -303,82 -76,61 -40,11 -81,56 -151,61 -41,-51 -45,16 -121,92 -142,-36 -121,-61 -409,-102 -166,-10 -182,-92 -344,-97 -156,0 -15,-62 -131,-112 -41,5 -45,-31 -91,-10 -51,-51 -181,-31 -46,26 -136,-15 -71,-82 -30,46 -363,112 -329,16 -90,-11 -81,16 -187,-21 -197,57 -86,-6 -302,41 -51,-41 -50,11 -384,-52 -40,11 -71,-133 40,-26 91,-225 21,-87 50,-46 30,-15 -5,-41 46,-92 86,-61 80,-6 31,-56 40,-10 86,-61 0,-82 50,-31 0,-92 36,-46 -36,-204 -101,-98 21,-46 40,-5 303,87 40,-35 56,10 40,-36 5,46 81,0 91,77 20,71 91,51 40,-15 81,15 136,-5 51,21 90,36 31,-41 90,20 81,-41 152,72 116,-16 20,-5 45,5 86,57 86,30 101,-5 80,31 228,10 141,26 z" />
+   <path d="M 7530,-481 l 40,-20 70,-72 -45,-35 35,-108 56,10 96,-20 30,51 96,-46 -5,41 40,-5 96,-108 86,0 40,31 46,132 141,26 56,71 40,-35 56,30 25,164 15,0 26,-6 35,-51 61,128 65,71 81,16 46,102 -30,41 15,51 116,168 10,0 36,5 5,143 86,31 56,87 30,143 81,-5 40,30 31,123 56,87 45,0 25,-87 202,9 222,-102 182,-5 55,-47 152,-51 40,-36 81,-15 60,-82 91,-56 56,-1 15,-51 86,-10 35,25 15,-46 91,-66 81,5 45,25 40,-36 71,72 263,-57 146,117 86,-36 66,67 30,-46 56,10 101,35 101,36 5,51 -20,123 20,46 41,-36 90,15 31,87 167,122 5,41 -40,31 40,35 46,-15 45,36 76,25 61,46 86,30 5,92 101,41 121,-52 5,41 96,-20 71,76 5,26 26,86 -15,46 25,46 45,11 -4,81 35,0 30,31 41,-21 86,5 50,-56 56,20 40,-15 248,209 131,-11 46,41 146,20 81,56 96,25 81,82 36,10 5,61 40,-15 122,102 -5,46 35,56 41,-31 5,41 -40,30 -16,11 1,82 50,10 -25,46 26,40 -20,92 -66,82 36,41 0,46 -71,92 -5,87 -40,0 -70,189 -91,72 -167,31 -161,200 -126,133 -141,51 -86,-40 -172,163 -126,-10 -76,87 -45,1 -5,5 -116,102 -40,-10 -41,15 -96,6 -5,-41 -222,36 -91,-10 -81,-61 -5,-5 -81,-20 -212,51 -20,41 -31,15 -15,6 -76,51 -207,118 -45,-10 -146,112 -81,21 -41,-15 -91,25 -55,87 -187,26 -167,-30 -86,10 -81,36 -80,-15 -132,51 -86,51 -40,-5 -91,-61 -86,0 -91,21 -91,-36 -55,36 0,-76 -36,-97 -81,-62 -5,41 -46,26 -40,-20 -101,-143 15,-41 -5,-82 -122,-199 46,-15 40,-51 -1,-322 -45,-138 25,-87 -5,-15 -51,-138 5,-148 -71,-220 -6,-178 -5,-21 -51,-189 -76,-127 -217,-107 -106,-10 -40,25 -238,236 -40,0 -86,-41 -56,-97 -146,-61 -56,15 -182,-35 -81,-113 -151,-91 -66,-10 -157,30 -157,-296 -85,-20 -16,-21 -106,-142 -91,-51 -71,-154 -40,-10 -15,-56 -51,-102 35,-154 -20,-46 -76,-66 15,-87 -25,-87 5,-153 40,-158 10,-21 76,-179 101,-174 4,-61 36,-41 0,-56 91,5 25,-41 z" />
+   <path d="M 3728,401 l 116,0 81,-21 91,-5 212,61 80,-5 91,21 147,-11 101,11 126,66 177,51 116,92 56,92 96,56 50,82 101,25 76,92 167,143 182,255 86,174 5,148 -80,174 -76,71 -15,31 -71,153 -106,133 -81,-25 -86,20 -192,133 -85,21 -96,107 -36,-61 -121,51 -50,-15 -81,20 -51,-10 -35,41 -81,-36 -81,16 -35,40 -81,-40 -121,35 -76,-153 -71,-71 -10,-46 -61,-87 10,-46 0,-46 -60,-92 20,-41 20,-219 -35,-46 20,-67 0,-15 -5,-67 -81,-132 -20,-82 -81,-138 -127,-56 -70,-82 -91,-15 -41,20 -55,-41 -96,-112 -41,-102 21,-82 -11,-41 36,-133 50,-10 177,-123 91,-41 40,11 z" />
+   <path d="M 7803,4270 l 162,-71 90,-87 11,-5 151,-103 81,-15 40,5 61,10 212,122 1,41 80,87 26,132 -40,31 -41,-5 -25,97 -30,92 15,51 -25,41 20,41 91,-16 40,31 81,-5 -10,87 -126,173 -76,-56 -121,36 -91,-15 0,41 -40,20 -41,-15 -60,92 -51,-97 -46,-112 -40,30 -50,98 -97,-41 -136,46 -20,41 -40,-5 -81,51 5,-102 -41,-5 -15,-46 -40,112 -172,92 -46,-30 -40,15 -41,-41 -45,16 -15,-41 15,-46 -122,-56 -65,-82 60,-148 81,-51 35,-97 46,-5 20,-51 40,-21 217,-92 86,10 41,-87 86,-10 z" />
+ </g>
 </g>
 </svg>
-    </div>
+   </div>
 
 
 
 
-    <!-- Persistent Bottom Bar for Admire Mode -->
-    <div id="admire-bar" class="admire-bar hidden">
-      <div class="admire-info">
-        <span id="admire-percentage" class="admire-score">100%</span>
-        <span id="admire-text" class="admire-subtext">Game finished.</span>
-      </div>
-      <div class="admire-actions">
-        <button id="btn-admire-retry" class="btn-primary hidden">Retry Missed</button>
-        <button id="btn-admire-replay" class="btn-secondary">Play Again</button>
-        <button id="btn-admire-settings" class="btn-secondary">Settings</button>
-        <button id="btn-admire-home" class="btn-secondary">Home</button>
-      </div>
-    </div>
-  </section>
+   <!-- Persistent Bottom Bar for Admire Mode -->
+   <div id="admire-bar" class="admire-bar hidden">
+     <div class="admire-info">
+       <span id="admire-percentage" class="admire-score">100%</span>
+       <span id="admire-text" class="admire-subtext">Game finished.</span>
+     </div>
+     <div class="admire-actions">
+       <button id="btn-admire-retry" class="btn-primary hidden">Retry Missed</button>
+       <button id="btn-admire-replay" class="btn-secondary">Play Again</button>
+       <button id="btn-admire-settings" class="btn-secondary">Settings</button>
+       <button id="btn-admire-home" class="btn-secondary">Home</button>
+     </div>
+   </div>
+ </section>
 
 
 
@@ -367,19 +372,18 @@
 
 <!-- MODAL SUMMARY OUTSIDE APP CONTAINER -->
 <div id="modal-summary" class="modal hidden">
-  <div class="modal-content">
-    <h2 id="summary-grade-title">Good job!</h2>
-    <div id="summary-percentage">100%</div>
-    <p id="summary-message">You've learned all the counties!</p>
-  
+ <div class="modal-content">
+   <h2 id="summary-grade-title">Good job!</h2>
+   <div id="summary-percentage">100%</div>
+   <p id="summary-message">You've learned all the counties!</p>
     <div class="modal-actions">
-      <button id="btn-modal-admire" class="btn-secondary">Admire Map</button>
-      <button id="btn-modal-retry" class="btn-primary hidden">Retry Missed</button>
-      <button id="btn-modal-replay" class="btn-secondary">Play Again</button>
-      <button id="btn-modal-settings" class="btn-secondary">Settings</button>
-      <button id="btn-modal-home" class="btn-secondary">Home</button>
-    </div>
-  </div>
+     <button id="btn-modal-admire" class="btn-secondary">Admire Map</button>
+     <button id="btn-modal-retry" class="btn-primary hidden">Retry Missed</button>
+     <button id="btn-modal-replay" class="btn-secondary">Play Again</button>
+     <button id="btn-modal-settings" class="btn-secondary">Settings</button>
+     <button id="btn-modal-home" class="btn-secondary">Home</button>
+   </div>
+ </div>
 </div>
 
 

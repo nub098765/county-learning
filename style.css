@@ -1,734 +1,866 @@
 * {
-  box-sizing: border-box;
+ box-sizing: border-box;
 }
 
+
 body {
-  position: relative;
-  background-color: #fdeca6;
-  font-family: 'Roboto Serif', Georgia, serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  margin: 0;
-  color: #1c1c1a;
-  transition: background-color 0.3s ease, color 0.3s ease;
+ position: relative;
+ background-color: #fdeca6;
+ font-family: 'Roboto Serif', Georgia, serif;
+ display: flex;
+ justify-content: center;
+ align-items: center;
+ min-height: 100vh;
+ margin: 0;
+ color: #1c1c1a;
+ transition: background-color 0.3s ease, color 0.3s ease;
 }
+
 
 /* Dark Mode Dynamic Class */
 body.dark-mode {
-  background-color: #181816;
-  color: #fdeca6;
+ background-color: #181816;
+ color: #fdeca6;
 }
+
 
 .app-container {
-  background: #ffffff;
-  padding: 2.5rem 2rem;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  text-align: center;
-  max-width: 460px;
-  width: 90%;
-  transition: background-color 0.3s ease;
+ background: #ffffff;
+ padding: 2.5rem 2rem;
+ border-radius: 16px;
+ box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+ border: 1px solid rgba(0, 0, 0, 0.05);
+ text-align: center;
+ max-width: 460px;
+ width: 90%;
+ transition: background-color 0.3s ease;
 }
 
+
 body.dark-mode .app-container {
-  background: #242420;
-  border-color: #33332d;
+ background: #242420;
+ border-color: #33332d;
 }
+
 
 /* Global Hidden Class Override */
 .hidden {
-  display: none !important;
+ display: none !important;
 }
+
 
 /* Screen Visibility Control */
 .screen {
-  display: none;
+ display: none;
 }
+
 
 .screen.active {
-  display: block;
+ display: block;
 }
+
 
 h1, h2 {
-  font-weight: 700;
-  margin-top: 0;
-  letter-spacing: -0.02em;
+ font-weight: 700;
+ margin-top: 0;
+ letter-spacing: -0.02em;
 }
 
+
 .subtitle {
-  color: #666;
-  font-size: 0.95rem;
-  margin-bottom: 2rem;
+ color: #666;
+ font-size: 0.95rem;
+ margin-bottom: 2rem;
 }
-body.dark-mode .subtitle { 
-  color: #aaa; 
+body.dark-mode .subtitle {
+ color: #aaa;
 }
+
 
 /* Buttons & Inputs */
 button {
-  font-family: 'Roboto Serif', Georgia, serif;
-  font-size: 0.9rem;
-  padding: 0.75rem 1.25rem;
-  border-radius: 8px;
-  border: 1px solid #111;
-  background-color: #111;
-  color: #fdeca6;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+ font-family: 'Roboto Serif', Georgia, serif;
+ font-size: 0.9rem;
+ padding: 0.75rem 1.25rem;
+ border-radius: 8px;
+ border: 1px solid #111;
+ background-color: #111;
+ color: #fdeca6;
+ font-weight: 600;
+ cursor: pointer;
+ transition: all 0.2s ease;
 }
 
-button:hover { 
-  background-color: #333; 
+
+button:hover {
+ background-color: #333;
 }
+
 
 .btn-secondary {
-  background-color: transparent;
-  color: #111;
-  border: 1px solid #ccc;
+ background-color: transparent;
+ color: #111;
+ border: 1px solid #ccc;
 }
-body.dark-mode .btn-secondary { 
-  color: #fdeca6; 
-  border-color: #555; 
+body.dark-mode .btn-secondary {
+ color: #fdeca6;
+ border-color: #555;
 }
-.btn-secondary:hover { 
-  background-color: #f3f1ea; 
+.btn-secondary:hover {
+ background-color: #f3f1ea;
 }
-body.dark-mode .btn-secondary:hover { 
-  background-color: #333; 
+body.dark-mode .btn-secondary:hover {
+ background-color: #333;
 }
+
 
 .btn-back {
-  margin-top: 1.5rem;
-  background: transparent;
-  border: none;
-  color: #666;
-  text-decoration: underline;
-  padding: 0.5rem;
+ margin-top: 1.5rem;
+ background: transparent;
+ border: none;
+ color: #666;
+ text-decoration: underline;
+ padding: 0.5rem;
 }
-body.dark-mode .btn-back { 
-  color: #aaa; 
+body.dark-mode .btn-back {
+ color: #aaa;
 }
+
 
 .menu-buttons, .mode-options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+ display: flex;
+ flex-direction: column;
+ gap: 0.75rem;
 }
+
 
 .btn-mode {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  background: #fafaf7;
-  color: #111;
-  border: 1px solid #ddd;
-  text-align: left;
+ display: flex;
+ flex-direction: column;
+ align-items: flex-start;
+ background: #fafaf7;
+ color: #111;
+ border: 1px solid #ddd;
+ text-align: left;
 }
-body.dark-mode .btn-mode { 
-  background: #2b2b26; 
-  color: #fdeca6; 
-  border-color: #444; 
+body.dark-mode .btn-mode {
+ background: #2b2b26;
+ color: #fdeca6;
+ border-color: #444;
 }
 
+
 .btn-mode span {
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: #666;
+ font-size: 0.75rem;
+ font-weight: 400;
+ color: #666;
 }
-body.dark-mode .btn-mode span { 
-  color: #aaa; 
+body.dark-mode .btn-mode span {
+ color: #aaa;
 }
+
 
 /* Settings Screen */
 .setting-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #eee;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: 0.75rem 0;
+ border-bottom: 1px solid #eee;
 }
-body.dark-mode .setting-item { 
-  border-color: #333; 
+body.dark-mode .setting-item {
+ border-color: #333;
 }
+
 
 /* Sound volume slider */
 .setting-item input[type="range"] {
-  width: 140px;
-  accent-color: #2d5a27;
-  cursor: pointer;
+ width: 140px;
+ accent-color: #2d5a27;
+ cursor: pointer;
 }
+
 
 /* Scrollable State List Container */
 .states-list {
-  max-height: 240px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding-right: 0.35rem;
-  margin-bottom: 1.25rem;
-  border-radius: 8px;
+ max-height: 240px;
+ overflow-y: auto;
+ display: flex;
+ flex-direction: column;
+ gap: 0.5rem;
+ padding-right: 0.35rem;
+ margin-bottom: 1.25rem;
+ border-radius: 8px;
 }
 
+
 .states-list::-webkit-scrollbar {
-  width: 6px;
+ width: 6px;
 }
 .states-list::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
+ background: rgba(0, 0, 0, 0.05);
+ border-radius: 4px;
 }
 .states-list::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 4px;
+ background: #ccc;
+ border-radius: 4px;
 }
 body.dark-mode .states-list::-webkit-scrollbar-thumb {
-  background: #555;
+ background: #555;
 }
+
 
 /* State Row Bar */
 .state-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.85rem 1rem;
-  border-radius: 8px;
-  border: 1px solid #e0e0da;
-  background: #fafaf7;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: 0.85rem 1rem;
+ border-radius: 8px;
+ border: 1px solid #e0e0da;
+ background: #fafaf7;
+ cursor: pointer;
+ transition: all 0.2s ease;
+ user-select: none;
 }
 body.dark-mode .state-row {
-  background: #2b2b26;
-  border-color: #3f3f38;
+ background: #2b2b26;
+ border-color: #3f3f38;
 }
+
 
 .state-row:hover:not(.disabled) {
-  border-color: #111;
-  background: #f5f3e9;
+ border-color: #111;
+ background: #f5f3e9;
 }
+
 
 .state-name {
-  font-weight: 600;
-  font-size: 0.95rem;
+ font-weight: 600;
+ font-size: 0.95rem;
 }
 
+
 .state-count {
-  font-size: 0.75rem;
-  color: #666;
-  text-transform: none;
+ font-size: 0.75rem;
+ color: #666;
+ text-transform: none;
 }
-body.dark-mode .state-count { 
-  color: #aaa; 
+body.dark-mode .state-count {
+ color: #aaa;
 }
+
 
 /* Active Selection */
 .state-row.active,
 .state-row.selected {
-  border-color: #111;
-  background: #fdeca6;
-  color: #111;
+ border-color: #111;
+ background: #fdeca6;
+ color: #111;
 }
 body.dark-mode .state-row.active,
 body.dark-mode .state-row.selected {
-  background: #fdeca6;
-  color: #111;
+ background: #fdeca6;
+ color: #111;
 }
+
 
 /* Disabled State Row */
 .state-row.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: #f0f0eb;
+ opacity: 0.5;
+ cursor: not-allowed;
+ background: #f0f0eb;
 }
 body.dark-mode .state-row.disabled {
-  background: #1f1f1c;
+ background: #1f1f1c;
 }
 
+
 .wip-tag {
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: #c62828;
-  letter-spacing: 0.03em;
+ font-size: 0.65rem;
+ font-weight: 700;
+ color: #c62828;
+ letter-spacing: 0.03em;
 }
+
 
 /* Completed State Highlight */
 .state-row.completed {
-  border-color: #2d5a27;
-  background-color: #eaf4e9;
-  color: #1b3818;
+ border-color: #2d5a27;
+ background-color: #eaf4e9;
+ color: #1b3818;
 }
+
 
 body.dark-mode .state-row.completed {
-  background-color: #1e331c;
-  color: #d1f2ce;
-  border-color: #2d5a27;
+ background-color: #1e331c;
+ color: #d1f2ce;
+ border-color: #2d5a27;
 }
 
+
 .completed-tag {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #2d5a27;
+ font-size: 0.75rem;
+ font-weight: 700;
+ color: #2d5a27;
 }
-body.dark-mode .completed-tag { 
-  color: #81c784; 
+body.dark-mode .completed-tag {
+ color: #81c784;
 }
+
 
 /* Specific Counties Options Setup */
 .plain-prompt {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  text-align: left;
+ font-size: 1rem;
+ font-weight: 600;
+ margin-bottom: 0.5rem;
+ text-align: left;
 }
+
 
 .radio-group, .checkbox-container {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-start;
-  margin-bottom: 1rem;
+ display: flex;
+ gap: 1rem;
+ justify-content: flex-start;
+ margin-bottom: 1rem;
 }
 
+
 .checkbox-container {
-  flex-direction: column;
-  gap: 0.5rem;
-  align-items: flex-start;
-  background: #f9f9f5;
-  padding: 0.75rem;
-  border-radius: 8px;
-  max-height: 220px;
-  overflow-y: auto;
+ flex-direction: column;
+ gap: 0.5rem;
+ align-items: flex-start;
+ background: #f9f9f5;
+ padding: 0.75rem;
+ border-radius: 8px;
+ max-height: 220px;
+ overflow-y: auto;
 }
-body.dark-mode .checkbox-container { 
-  background: #1f1f1c; 
+body.dark-mode .checkbox-container {
+ background: #1f1f1c;
 }
+
 
 /* Individual county checkbox row (dynamically rendered in script.js) */
 .checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  font-size: 0.9rem;
-  cursor: pointer;
-  padding: 0.2rem 0;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ width: 100%;
+ font-size: 0.9rem;
+ cursor: pointer;
+ padding: 0.2rem 0;
 }
+
 
 .checkbox-label input[type="checkbox"].county-checkbox {
-  /* The label already renders a styled .checkbox-custom box; keep the
-     native input functional but visually out of the way. */
-  width: 1rem;
-  height: 1rem;
-  accent-color: #2d5a27;
-  cursor: pointer;
+ /* The label already renders a styled .checkbox-custom box; keep the
+    native input functional but visually out of the way. */
+ width: 1rem;
+ height: 1rem;
+ accent-color: #2d5a27;
+ cursor: pointer;
 }
 
+
 .county-label-text {
-  flex: 1;
-  text-align: left;
+ flex: 1;
+ text-align: left;
 }
+
 
 /* Mistake-count badge shown next to a county's checkbox */
 .badge-mistake {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #8a4b00;
-  background: #fde3b0;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  white-space: nowrap;
-  flex-shrink: 0;
+ font-size: 0.7rem;
+ font-weight: 700;
+ color: #8a4b00;
+ background: #fde3b0;
+ padding: 0.15rem 0.55rem;
+ border-radius: 999px;
+ white-space: nowrap;
+ flex-shrink: 0;
 }
 body.dark-mode .badge-mistake {
-  color: #ffd699;
-  background: #4a3418;
+ color: #ffd699;
+ background: #4a3418;
 }
 
+
 .btn-launch {
-  background-color: #2d5a27;
-  color: white;
-  border-color: #2d5a27;
-  width: 100%;
-  font-size: 1.1rem;
-  margin-top: 1rem;
+ background-color: #2d5a27;
+ color: white;
+ border-color: #2d5a27;
+ width: 100%;
+ font-size: 1.1rem;
+ margin-top: 1rem;
 }
-.btn-launch:hover { 
-  background-color: #23471f; 
+.btn-launch:hover {
+ background-color: #23471f;
 }
+
 
 /* Map & Game Elements */
 .game-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 1rem;
 }
+
 
 .map-wrapper {
-  max-width: 100%;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
+ max-width: 100%;
+ margin: 0 auto;
+ display: flex;
+ flex-direction: row;
+ flex-wrap: wrap;
+ justify-content: center;
+ align-items: center;
 }
+
 
 /* Base styling for vector map counties.
-   vector-effect: non-scaling-stroke keeps the border a fixed screen-pixel
-   width no matter how much a map's SVG viewBox gets scaled down to fit its
-   display size. Without it, Rhode Island's huge viewBox (thousands of
-   units) shrinks a "2.5px" stroke down to a fraction of a real pixel,
-   making its county borders effectively invisible even though the same
-   value looks fine on Delaware's much smaller viewBox. */
+  vector-effect: non-scaling-stroke keeps the border a fixed screen-pixel
+  width no matter how much a map's SVG viewBox gets scaled down to fit its
+  display size. Without it, Rhode Island's huge viewBox (thousands of
+  units) shrinks a "2.5px" stroke down to a fraction of a real pixel,
+  making its county borders effectively invisible even though the same
+  value looks fine on Delaware's much smaller viewBox. */
 .county {
-  fill: #e8e4d9;
-  stroke: #2b4c32;
-  stroke-width: 2.5px;
-  vector-effect: non-scaling-stroke;
-  cursor: pointer;
-  transition: fill 0.2s ease, stroke 0.2s ease;
+ fill: #e8e4d9;
+ stroke: #2b4c32;
+ stroke-width: 2.5px;
+ vector-effect: non-scaling-stroke;
+ cursor: pointer;
+ transition: fill 0.2s ease, stroke 0.2s ease;
 }
 
+
 /* Newport and Washington counties are drawn as multiple <path> elements
-   nested inside a <g class="county">. stroke and fill are inherited from
-   the group, but vector-effect is not, so it has to be set on the paths
-   directly too. */
+  nested inside a <g class="county">. stroke and fill are inherited from
+  the group, but vector-effect is not, so it has to be set on the paths
+  directly too. */
 .county path {
-  vector-effect: non-scaling-stroke;
+ vector-effect: non-scaling-stroke;
 }
+
 
 /* Hover state */
 .county:hover {
-  fill: #d5cebe;
+ fill: #d5cebe;
 }
+
 
 /* Remove the default click/tap outline box, but keep a visible outline
-   for keyboard (Tab) focus so accessibility isn't lost. */
+  for keyboard (Tab) focus so accessibility isn't lost. */
 .county:focus {
-  outline: none;
+ outline: none;
 }
 
+
 .county:focus-visible {
-  outline: 2px dashed #1b3818;
-  outline-offset: 2px;
+ outline: 2px dashed #1b3818;
+ outline-offset: 2px;
 }
+
 
 /* Correctly guessed county */
 .county.found {
-  fill: #4a7c59;
+ fill: #4a7c59;
 }
 
+
 /* Correct, but only after at least one wrong guess on this target this
-   round — a lighter "you got there eventually" signal instead of the
-   clean green used for a first-try correct answer. */
+  round — a lighter "you got there eventually" signal instead of the
+  clean green used for a first-try correct answer. */
 .county.correct-recovered {
-  fill: #d4a017 !important;
+ fill: #d4a017 !important;
 }
 body.dark-mode .county.correct-recovered {
-  fill: #e0b030 !important;
+ fill: #e0b030 !important;
 }
 body.high-contrast .county.correct-recovered {
-  fill: #ffcc00 !important;
+ fill: #ffcc00 !important;
 }
+
 
 /* Incorrect guess flash */
 .county.wrong {
-  fill: #c94a29;
+ fill: #c94a29;
 }
+
 
 /* Ensure SVG scales inside container */
 .state-map {
-  width: 100%;
-  max-width: 180px;
-  max-height: 500px;
-  display: block;
-  margin: 0 auto;
-  flex: 1 1 140px;
-  padding: 0 0.85rem;
+ width: 100%;
+ max-width: 180px;
+ max-height: 500px;
+ display: block;
+ margin: 0 auto;
+ flex: 1 1 140px;
+ padding: 0 0.85rem;
 }
+
+
+/* Hawaii's county shapes are small and spread across a huge viewBox
+  (Kalawao especially), so it gets more on-screen room than the other
+  states to stay legible. */
+#svg-hawaii {
+ max-width: 320px;
+ flex: 1 1 280px;
+}
+
 
 /* Subtle divider line between two or more maps shown side by side.
-   Applied via JS (switchVisibleSvgMap) only to maps that are actually
-   visible, so a hidden map never leaves a stray line behind. */
+  Applied via JS (switchVisibleSvgMap) only to maps that are actually
+  visible, so a hidden map never leaves a stray line behind. */
 .state-map.map-divider {
-  border-right: 1px solid #ddd;
+ border-right: 1px solid #ddd;
 }
 body.dark-mode .state-map.map-divider {
-  border-right-color: #3f3f38;
-}
-body.dark-mode .county { 
-  fill: #3a3a34; 
-  stroke: #6b6b5f; 
+ border-right-color: #3f3f38;
 }
 
-.county:hover { 
-  fill: #e5e1d3; 
+
+/* Divider for a map that wrapped onto its own new row (e.g. Hawaii
+  dropping below Delaware + Rhode Island when all three are selected).
+  A vertical line would look wrong once the map isn't actually beside
+  its neighbor anymore, so this draws a horizontal rule above it instead,
+  along with a little breathing room on both sides of the line. */
+.state-map.map-divider-top {
+ border-top: 1px solid #ddd;
+ padding-top: 0.85rem;
+ margin-top: 0.85rem;
 }
+body.dark-mode .state-map.map-divider-top {
+ border-top-color: #3f3f38;
+}
+
+
+body.dark-mode .county {
+ fill: #3a3a34;
+ stroke: #6b6b5f;
+}
+
+
+.county:hover {
+ fill: #e5e1d3;
+}
+
 
 /* Standard County State Colors */
-.county.correct { 
-  fill: #2d5a27 !important; 
+.county.correct {
+ fill: #2d5a27 !important;
 }
-.county.wrong { 
-  fill: #6b2d5c !important; 
+.county.wrong {
+ fill: #6b2d5c !important;
 }
+
 
 /* High Contrast Settings Overrides */
-body.high-contrast .county.correct { 
-  fill: #008800 !important; 
+body.high-contrast .county.correct {
+ fill: #008800 !important;
 }
-body.high-contrast .county.wrong { 
-  fill: #ff0055 !important; 
+body.high-contrast .county.wrong {
+ fill: #ff0055 !important;
 }
 
-.county.flash-correct { 
-  animation: flashGreen 0.6s ease-in-out; 
+
+.county.flash-correct {
+ animation: flashGreen 0.6s ease-in-out;
 }
+
 
 @keyframes flashGreen {
-  0%, 100% { fill: #f3f1ea; }
-  50% { fill: #2d5a27; }
+ 0%, 100% { fill: #f3f1ea; }
+ 50% { fill: #2d5a27; }
 }
+
 
 /* Pin (Hard) mode's flash for a correct guess that followed at least one
-   wrong guess on the same target this round. */
+  wrong guess on the same target this round. */
 .county.flash-correct-recovered {
-  animation: flashYellow 0.6s ease-in-out;
+ animation: flashYellow 0.6s ease-in-out;
 }
 
+
 @keyframes flashYellow {
-  0%, 100% { fill: #f3f1ea; }
-  50% { fill: #d4a017; }
+ 0%, 100% { fill: #f3f1ea; }
+ 50% { fill: #d4a017; }
 }
+
+
+/* Kalawao's real shape is tiny, so it gets a bigger, easier-to-click
+  circle out in open water connected back to it with a line. The circle
+  shares .county so it participates fully in hover/found/wrong states;
+  this just nudges its line weight and gives the circle a dashed ring so
+  it visually reads as a "click here" marker rather than actual coastline. */
+.kalawao-callout-line {
+ stroke: #2b4c32;
+ stroke-width: 60;
+ stroke-dasharray: 140 90;
+ vector-effect: non-scaling-stroke;
+}
+body.dark-mode .kalawao-callout-line {
+ stroke: #6b6b5f;
+}
+
+
+.kalawao-callout {
+ stroke-dasharray: 90 60;
+}
+
 
 /* Prominent Target Banner */
 .prompt-box {
-  background: #ffffff;
-  border: 2px solid #2d5a27;
-  border-radius: 16px;
-  padding: 1rem 2rem;
-  margin: 1rem auto 1.5rem auto;
-  max-width: 480px;
-  box-shadow: 0 8px 24px rgba(45, 90, 39, 0.12);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+ background: #ffffff;
+ border: 2px solid #2d5a27;
+ border-radius: 16px;
+ padding: 1rem 2rem;
+ margin: 1rem auto 1.5rem auto;
+ max-width: 480px;
+ box-shadow: 0 8px 24px rgba(45, 90, 39, 0.12);
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ justify-content: center;
 }
+
 
 body.dark-mode .prompt-box {
-  background-color: #1e1e1c;
-  border-color: #45a049;
+ background-color: #1e1e1c;
+ border-color: #45a049;
 }
+
 
 #target-prompt {
-  font-family: 'Roboto Serif', Georgia, serif;
-  font-size: 3.2rem;
-  font-weight: 700;
-  line-height: 1;
-  margin: 0;
-  color: #1b3818;
-  letter-spacing: -0.5px;
-  text-align: center;
+ font-family: 'Roboto Serif', Georgia, serif;
+ font-size: 3.2rem;
+ font-weight: 700;
+ line-height: 1;
+ margin: 0;
+ color: #1b3818;
+ letter-spacing: -0.5px;
+ text-align: center;
 }
 body.dark-mode #target-prompt {
-  color: #fdeca6;
+ color: #fdeca6;
 }
 
+
 #feedback {
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 1rem;
-  font-weight: 600;
-  margin-top: 0.5rem;
-  min-height: 1.3em;
-  text-align: center;
+ font-family: system-ui, -apple-system, sans-serif;
+ font-size: 1rem;
+ font-weight: 600;
+ margin-top: 0.5rem;
+ min-height: 1.3em;
+ text-align: center;
 }
+
 
 /* --- Fixed Modal Overlay Controls --- */
 
+
 .modal, .modal-overlay {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  background: rgba(0, 0, 0, 0.75) !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  z-index: 99999 !important;
-  backdrop-filter: blur(4px);
+ position: fixed !important;
+ top: 0 !important;
+ left: 0 !important;
+ width: 100vw !important;
+ height: 100vh !important;
+ background: rgba(0, 0, 0, 0.75) !important;
+ display: flex !important;
+ justify-content: center !important;
+ align-items: center !important;
+ z-index: 99999 !important;
+ backdrop-filter: blur(4px);
 }
+
 
 .modal.hidden, .modal-overlay.hidden {
-  display: none !important;
+ display: none !important;
 }
 
+
 .modal-content, .modal-card {
-  background: #ffffff;
-  padding: 2.25rem 2rem;
-  border-radius: 16px;
-  width: 90%;
-  max-width: 400px;
-  text-align: center;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  margin: auto;
+ background: #ffffff;
+ padding: 2.25rem 2rem;
+ border-radius: 16px;
+ width: 90%;
+ max-width: 400px;
+ text-align: center;
+ box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+ border: 1px solid rgba(0, 0, 0, 0.1);
+ margin: auto;
 }
+
 
 body.dark-mode .modal-content,
 body.dark-mode .modal-card {
-  background: #242420;
-  border-color: #33332d;
-  color: #ffffff;
+ background: #242420;
+ border-color: #33332d;
+ color: #ffffff;
 }
+
 
 #summary-grade-title, .grade-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0 0 0.5rem 0;
+ font-size: 1.5rem;
+ font-weight: 700;
+ margin: 0 0 0.5rem 0;
 }
+
 
 #summary-percentage {
-  font-size: 3.5rem;
-  font-weight: 800;
-  margin: 0.5rem 0;
-  color: #2d5a27;
-  line-height: 1;
+ font-size: 3.5rem;
+ font-weight: 800;
+ margin: 0.5rem 0;
+ color: #2d5a27;
+ line-height: 1;
 }
+
 
 body.dark-mode #summary-percentage {
-  color: #81c784;
+ color: #81c784;
 }
+
 
 #summary-message, .summary-text {
-  font-size: 0.95rem;
-  line-height: 1.4;
-  margin-bottom: 1.5rem;
-  color: #444;
+ font-size: 0.95rem;
+ line-height: 1.4;
+ margin-bottom: 1.5rem;
+ color: #444;
 }
 body.dark-mode #summary-message,
-body.dark-mode .summary-text { 
-  color: #ccc; 
+body.dark-mode .summary-text {
+ color: #ccc;
 }
+
 
 .modal-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: center;
-  margin-top: 1.5rem;
-  flex-wrap: wrap;
+ display: flex;
+ gap: 0.5rem;
+ justify-content: center;
+ margin-top: 1.5rem;
+ flex-wrap: wrap;
 }
 
+
 .modal-actions button {
-  flex: 1;
-  min-width: 90px;
-  padding: 0.6rem 0.5rem;
-  font-size: 0.85rem;
+ flex: 1;
+ min-width: 90px;
+ padding: 0.6rem 0.5rem;
+ font-size: 0.85rem;
 }
+
 
 /* --- Admire Map Bottom Bar --- */
 
+
 .admire-bar {
-  margin-top: 1.25rem;
-  padding: 1rem;
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  align-items: center;
+ margin-top: 1.25rem;
+ padding: 1rem;
+ background: #ffffff;
+ border-radius: 12px;
+ border: 1px solid rgba(0, 0, 0, 0.1);
+ box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+ display: flex;
+ flex-direction: column;
+ gap: 0.75rem;
+ align-items: center;
 }
+
 
 body.dark-mode .admire-bar {
-  background: #242420;
-  border-color: #33332d;
+ background: #242420;
+ border-color: #33332d;
 }
+
 
 .admire-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
 }
+
 
 .admire-score {
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: #2d5a27;
+ font-size: 1.8rem;
+ font-weight: 800;
+ color: #2d5a27;
 }
+
 
 body.dark-mode .admire-score {
-  color: #81c784;
+ color: #81c784;
 }
+
 
 .admire-subtext {
-  font-size: 0.85rem;
-  color: #555;
-  font-weight: 600;
+ font-size: 0.85rem;
+ color: #555;
+ font-weight: 600;
 }
+
 
 body.dark-mode .admire-subtext {
-  color: #ccc;
+ color: #ccc;
 }
+
 
 .admire-actions {
-  display: flex;
-  gap: 0.5rem;
-  width: 100%;
-  justify-content: center;
-  flex-wrap: wrap;
+ display: flex;
+ gap: 0.5rem;
+ width: 100%;
+ justify-content: center;
+ flex-wrap: wrap;
 }
+
 
 .admire-actions button {
-  padding: 0.55rem 0.6rem;
-  font-size: 0.8rem;
-  flex: 1;
-  min-width: 80px;
+ padding: 0.55rem 0.6rem;
+ font-size: 0.8rem;
+ flex: 1;
+ min-width: 80px;
 }
+
 
 /* Completed AND currently selected — background stays the "completed"
-   green (so progress is still visually obvious), but an inner ring in
-   the "selected" color shows it's also picked for the next game. */
+  green (so progress is still visually obvious), but an inner ring in
+  the "selected" color shows it's also picked for the next game. */
 .state-row.completed.selected {
-  box-shadow: inset 0 0 0 2px #111;
+ box-shadow: inset 0 0 0 2px #111;
 }
 body.dark-mode .state-row.completed.selected {
-  box-shadow: inset 0 0 0 2px #fdeca6;
+ box-shadow: inset 0 0 0 2px #fdeca6;
 }
+
 
 .county-group-header {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #666;
-  margin: 0.6rem 0 0.3rem 0;
-  padding-top: 0.4rem;
-  border-top: 1px solid #e0e0da;
+ font-size: 0.75rem;
+ font-weight: 700;
+ text-transform: uppercase;
+ letter-spacing: 0.04em;
+ color: #666;
+ margin: 0.6rem 0 0.3rem 0;
+ padding-top: 0.4rem;
+ border-top: 1px solid #e0e0da;
 }
 .county-group-header:first-child {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
+ margin-top: 0;
+ padding-top: 0;
+ border-top: none;
 }
 body.dark-mode .county-group-header {
-  color: #aaa;
-  border-top-color: #3f3f38;
+ color: #aaa;
+ border-top-color: #3f3f38;
 }
 
+
 .btn-launch:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background-color: #999;
-  border-color: #999;
+ opacity: 0.5;
+ cursor: not-allowed;
+ background-color: #999;
+ border-color: #999;
 }
 .btn-launch:disabled:hover {
-  background-color: #999;
+ background-color: #999;
 }
