@@ -722,3 +722,13 @@ body.dark-mode .county-group-header {
   color: #aaa;
   border-top-color: #3f3f38;
 }
+
+.btn-launch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #999;
+  border-color: #999;
+}
+.btn-launch:disabled:hover {
+  background-color: #999;
+}
