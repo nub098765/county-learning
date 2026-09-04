@@ -539,18 +539,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateSetupPlayButton() {
-    if (!btnStartGame) return;
-    const specificRadio = document.querySelector('input[name="specific-counties"]:checked');
-    const isSpecificYes = specificRadio ? specificRadio.value === "yes" : false;
+  if (!btnStartGame) return;
 
-    if (!isSpecificYes || document.querySelectorAll(".county-checkbox:checked").length >= 1) {
-      btnStartGame.classList.remove("hidden");
-      btnStartGame.removeAttribute("disabled");
-    } else {
-      btnStartGame.classList.add("hidden");
-      btnStartGame.setAttribute("disabled", "true");
-    }
+  if (activeStateKeys.length === 0) {
+    btnStartGame.classList.remove("hidden");
+    btnStartGame.setAttribute("disabled", "true");
+    return;
   }
+
+  const specificRadio = document.querySelector('input[name="specific-counties"]:checked');
+  const isSpecificYes = specificRadio ? specificRadio.value === "yes" : false;
+
+  if (!isSpecificYes || document.querySelectorAll(".county-checkbox:checked").length >= 1) {
+    btnStartGame.classList.remove("hidden");
+    btnStartGame.removeAttribute("disabled");
+  } else {
+    btnStartGame.classList.add("hidden");
+    btnStartGame.setAttribute("disabled", "true");
+  }
+}
 
   if (btnStartGame) {
     btnStartGame.addEventListener("click", () => {
@@ -560,7 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (isSpecificYes) {
         const checkedIds = Array.from(document.querySelectorAll(".county-checkbox:checked")).map(cb => cb.value);
-        selectedCounties = allActiveCounties.filter(c => checkedIds.includes(c.id));
+        selectedCounties = allActiveCounties.filter(c => !checkedIds.includes(c.id));
       } else {
         selectedCounties = [...allActiveCounties];
       }
