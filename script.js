@@ -583,7 +583,13 @@ function switchVisibleSvgMap() {
   // horizontal divider along its top, separating it from the row above.
   const rows = [];
   domOrderedVisibleMaps.forEach(map => {
-    const top = map.offsetTop;
+    // NOTE: map is an <svg> element (SVGElement), and SVGElement does not
+    // have an .offsetTop property the way HTMLElement does — it's always
+    // undefined, which made every comparison below resolve to NaN < 2
+    // (always false), so every map was treated as starting a new row no
+    // matter where it actually rendered. getBoundingClientRect().top works
+    // on any element type and reflects the real on-screen position.
+    const top = map.getBoundingClientRect().top;
     const lastRow = rows[rows.length - 1];
     if (lastRow && Math.abs(lastRow.top - top) < 2) {
       lastRow.maps.push(map);
@@ -770,8 +776,16 @@ if (btnStartGame) {
     if (selectedCounties.length === 0) return;
 
 
-    switchVisibleSvgMap();
+    // NOTE: showScreen() has to run BEFORE switchVisibleSvgMap(). The maps
+    // live inside #screen-game, which is display:none until it gets the
+    // "active" class — and getBoundingClientRect() (used by
+    // switchVisibleSvgMap() to detect which maps share a visual row)
+    // returns all-zero rects for anything inside a display:none ancestor.
+    // Computing row layout first and only THEN revealing the screen meant
+    // every map measured as {top:0, left:0}, so they all looked like they
+    // were on the same row no matter how they actually wrapped.
     showScreen("screen-game");
+    switchVisibleSvgMap();
     initGame(selectedCounties);
   });
 }
