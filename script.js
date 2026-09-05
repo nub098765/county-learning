@@ -229,6 +229,7 @@ const modeButtons = document.querySelectorAll(".btn-mode");
 const countyPanel = document.getElementById("county-options-panel");
 const statsPanel = document.getElementById("state-stats-panel");
 const statsSections = document.getElementById("state-stats-sections");
+const statsDivider = document.querySelector("#screen-setup .soft-divider");
 const radioSpecific = document.querySelectorAll('input[name="specific-counties"]');
 const checkboxContainer = document.getElementById("checkbox-container");
 const btnStartGame = document.getElementById("btn-start-game");
@@ -620,6 +621,7 @@ function renderStatsPanel() {
 
   if (activeStateKeys.length === 0) {
     statsPanel.classList.add("hidden");
+    if (statsDivider) statsDivider.classList.add("hidden");
     statsSections.innerHTML = "";
     return;
   }
@@ -673,6 +675,7 @@ function renderStatsPanel() {
   statsSections.innerHTML = stateSections;
 
   statsPanel.classList.remove("hidden");
+  if (statsDivider) statsDivider.classList.remove("hidden");
 }
 
 

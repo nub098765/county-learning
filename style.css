@@ -298,6 +298,18 @@ body.dark-mode .state-row.disabled {
 }
 
 
+/* Soft divider — a subtle horizontal rule, e.g. between the Back button
+  and the state progress tables on the setup screen. */
+.soft-divider {
+ border: none;
+ border-top: 1px solid #e0e0da;
+ margin: 1.25rem 0;
+}
+body.dark-mode .soft-divider {
+ border-top-color: #3f3f38;
+}
+
+
 /* Per-state learning stats — shows every currently-selected state at
   once, one section per state, sitting below everything else on the
   setup screen. Hidden entirely when no state is selected. */
