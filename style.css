@@ -343,11 +343,23 @@ body.dark-mode .stats-state-header {
 }
 
 
-/* Row above the first state section holding the "Hide All" button. */
+/* Row above the first state section holding the panel title and the
+  "Hide All" button. */
 .stats-panel-actions {
  display: flex;
- justify-content: flex-end;
+ align-items: center;
+ justify-content: space-between;
  margin-bottom: 0.2rem;
+}
+
+
+.stats-panel-title {
+ font-size: 0.8rem;
+ font-weight: 700;
+ color: #444;
+}
+body.dark-mode .stats-panel-title {
+ color: #ccc;
 }
 
 

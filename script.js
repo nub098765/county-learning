@@ -671,6 +671,7 @@ function renderStatsPanel() {
 
   statsPanel.innerHTML = `
     <div class="stats-panel-actions">
+      <span class="stats-panel-title">State progress tables</span>
       <button type="button" id="btn-hide-all-stats" class="btn-secondary">Hide All</button>
     </div>
     ${stateSections}
