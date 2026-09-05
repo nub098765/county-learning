@@ -228,6 +228,7 @@ const modeButtons = document.querySelectorAll(".btn-mode");
 // --- Setup Screen DOM Elements ---
 const countyPanel = document.getElementById("county-options-panel");
 const statsPanel = document.getElementById("state-stats-panel");
+const statsSections = document.getElementById("state-stats-sections");
 const radioSpecific = document.querySelectorAll('input[name="specific-counties"]');
 const checkboxContainer = document.getElementById("checkbox-container");
 const btnStartGame = document.getElementById("btn-start-game");
@@ -615,11 +616,11 @@ function markCountyLearned(countyId, mode) {
 // be individually collapsed via its Hide/Show button (or all at once via
 // Hide All) — see isStatsHidden()/statsHiddenOverride above.
 function renderStatsPanel() {
-  if (!statsPanel) return;
+  if (!statsPanel || !statsSections) return;
 
   if (activeStateKeys.length === 0) {
     statsPanel.classList.add("hidden");
-    statsPanel.innerHTML = "";
+    statsSections.innerHTML = "";
     return;
   }
 
@@ -669,13 +670,7 @@ function renderStatsPanel() {
     `;
   }).join("");
 
-  statsPanel.innerHTML = `
-    <div class="stats-panel-actions">
-      <span class="stats-panel-title">State progress tables</span>
-      <button type="button" id="btn-hide-all-stats" class="btn-secondary">Hide All</button>
-    </div>
-    ${stateSections}
-  `;
+  statsSections.innerHTML = stateSections;
 
   statsPanel.classList.remove("hidden");
 }

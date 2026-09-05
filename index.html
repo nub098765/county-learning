@@ -255,7 +255,13 @@
         section per state (like the county checkbox groups above),
         rendered dynamically by script.js. Sits below everything else on
         this screen. -->
-   <div id="state-stats-panel" class="state-stats-panel hidden"></div>
+   <div id="state-stats-panel" class="state-stats-panel hidden">
+     <div class="stats-panel-actions">
+       <span class="stats-panel-title">State progress tables</span>
+       <button type="button" id="btn-hide-all-stats" class="btn-secondary">Hide All</button>
+     </div>
+     <div id="state-stats-sections"></div>
+   </div>
  </section>
 
 
