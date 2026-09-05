@@ -1193,11 +1193,15 @@ function handleCountyClick(pathEl) {
   if (clickedId === currentTarget.id) {
     scoreRight++;
     playSound("correct");
-    markCountyLearned(currentTarget.id, selectedMode);
     // currentAttemptMistakes counts wrong guesses made on THIS target
     // before it was finally found. pickNextTarget() (called below)
     // resets it to 0, so it has to be read here first.
     const recoveredFromMistake = currentAttemptMistakes > 0;
+    // Only counts as "learned" if it was found with zero mistakes on
+    // this attempt — i.e. first try (or, during Retry Missed, first
+    // try within that retry). Getting it right only after guessing
+    // wrong first doesn't earn the checkmark.
+    if (!recoveredFromMistake) markCountyLearned(currentTarget.id, selectedMode);
 
 
     if (feedbackEl) {
@@ -1278,7 +1282,8 @@ function acceptTypedMatches(matchedCounties) {
   }
 
   matchedCounties.forEach(matchedCounty => {
-    markCountyLearned(matchedCounty.id, selectedMode);
+    // Same "first try only" rule as click mode — see handleCountyClick.
+    if (!recoveredFromMistake) markCountyLearned(matchedCounty.id, selectedMode);
     getCountyElements(matchedCounty.id).forEach(el => {
       el.classList.remove("typing-highlight");
       el.classList.add(recoveredFromMistake ? "correct-recovered" : "correct", "found");
