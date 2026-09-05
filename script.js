@@ -485,15 +485,15 @@ function renderStateListUI() {
 // actually visible in the DOM (getBBox needs a rendered element).
 function setupKalawaoCallout(hawaiiSvg) {
   const kalawaoPath = document.getElementById("kalawao");
-  if (!kalawaoPath || !hawaiiSvg) return;
+  if (!kalawaoPath || !hawaiiSvg) return false;
 
   let bbox;
   try {
     bbox = kalawaoPath.getBBox();
   } catch (e) {
-    return; // Bail quietly if the browser can't compute it yet.
+    return false; // Bail quietly if the browser can't compute it yet.
   }
-  if (!bbox || (bbox.width === 0 && bbox.height === 0)) return;
+  if (!bbox || (bbox.width === 0 && bbox.height === 0)) return false;
 
   const cx = bbox.x + bbox.width / 2;
   const cy = bbox.y + bbox.height / 2;
@@ -504,15 +504,60 @@ function setupKalawaoCallout(hawaiiSvg) {
   const calloutY = cy - 3200;
   const calloutRadius = Math.max(bbox.width, bbox.height) * 1.6 + 350;
 
+  // Stop the shaft just shy of Kalawao's actual center — close enough that
+  // the arrowhead reads as touching the shape, not just gesturing vaguely
+  // toward the middle of the strait.
+  const dx = cx - calloutX;
+  const dy = cy - calloutY;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const ux = dx / dist;
+  const uy = dy / dist;
+  const stopShort = 150;
+  const tipX = cx - ux * stopShort;
+  const tipY = cy - uy * stopShort;
+
+  // Start the shaft at the circle's EDGE, not its center — the circle's
+  // radius is large enough relative to the total distance to Kalawao that
+  // starting from dead-center would leave the circle covering almost the
+  // entire line, hiding the shaft with only the arrowhead poking out (or
+  // not even that).
+  const startX = calloutX + ux * calloutRadius;
+  const startY = calloutY + uy * calloutRadius;
+
   const svgNS = "http://www.w3.org/2000/svg";
   const targetGroup = hawaiiSvg.querySelector("g") || hawaiiSvg;
 
+  // Arrowhead marker, defined once and referenced by the line below via
+  // marker-end. markerUnits="strokeWidth" (the default) means its size
+  // automatically scales with the line's own stroke-width, so it stays
+  // proportional to the shaft without needing separate tuning per state.
+  let defs = hawaiiSvg.querySelector("defs");
+  if (!defs) {
+    defs = document.createElementNS(svgNS, "defs");
+    hawaiiSvg.insertBefore(defs, hawaiiSvg.firstChild);
+  }
+  if (!document.getElementById("kalawao-arrowhead")) {
+    const marker = document.createElementNS(svgNS, "marker");
+    marker.setAttribute("id", "kalawao-arrowhead");
+    marker.setAttribute("markerWidth", "8");
+    marker.setAttribute("markerHeight", "8");
+    marker.setAttribute("refX", "6.5");
+    marker.setAttribute("refY", "4");
+    marker.setAttribute("orient", "auto-start-reverse");
+    const arrowHead = document.createElementNS(svgNS, "path");
+    arrowHead.setAttribute("d", "M0,0 L8,4 L0,8 Z");
+    arrowHead.setAttribute("class", "kalawao-arrowhead-fill");
+    marker.appendChild(arrowHead);
+    defs.appendChild(marker);
+  }
+
   const line = document.createElementNS(svgNS, "line");
-  line.setAttribute("x1", calloutX);
-  line.setAttribute("y1", calloutY);
-  line.setAttribute("x2", cx);
-  line.setAttribute("y2", cy);
+  line.setAttribute("x1", startX);
+  line.setAttribute("y1", startY);
+  line.setAttribute("x2", tipX);
+  line.setAttribute("y2", tipY);
   line.setAttribute("class", "kalawao-callout-line");
+  line.setAttribute("marker-end", "url(#kalawao-arrowhead)");
   line.setAttribute("pointer-events", "none");
   targetGroup.appendChild(line);
 
@@ -534,6 +579,7 @@ function setupKalawaoCallout(hawaiiSvg) {
   // like every other county, then wire up its click/tap/keyboard handling.
   countyPaths = document.querySelectorAll(".county");
   bindCountyInteractivity(circle);
+  return true;
 }
 
 
@@ -554,9 +600,16 @@ function switchVisibleSvgMap() {
       visibleMaps.push(targetSvg);
 
 
+      // setupKalawaoCallout() needs the Hawaii SVG to actually be
+      // rendered (getBBox() only works on visible elements), but this
+      // can run while we're still on the setup screen — before
+      // #screen-game (and this SVG) is actually shown. If it bails out
+      // early for that reason, only its own return value tells us so;
+      // kalawaoCalloutCreated must stay false so the very next call
+      // (once the screen is genuinely visible) tries again instead of
+      // silently giving up forever.
       if (key === "hawaii" && !kalawaoCalloutCreated) {
-        setupKalawaoCallout(targetSvg);
-        kalawaoCalloutCreated = true;
+        kalawaoCalloutCreated = setupKalawaoCallout(targetSvg);
       }
     }
   });

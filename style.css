@@ -596,13 +596,26 @@ body.high-contrast .county.wrong {
   this just nudges its line weight and gives the circle a dashed ring so
   it visually reads as a "click here" marker rather than actual coastline. */
 .kalawao-callout-line {
- stroke: #2b4c32;
- stroke-width: 60;
- stroke-dasharray: 140 90;
+ stroke: #b5651d;
+ stroke-width: 3px;
+ fill: none;
  vector-effect: non-scaling-stroke;
 }
 body.dark-mode .kalawao-callout-line {
- stroke: #6b6b5f;
+ stroke: #e0954a;
+}
+body.high-contrast .kalawao-callout-line {
+ stroke: #ff8800;
+}
+
+.kalawao-arrowhead-fill {
+ fill: #b5651d;
+}
+body.dark-mode .kalawao-arrowhead-fill {
+ fill: #e0954a;
+}
+body.high-contrast .kalawao-arrowhead-fill {
+ fill: #ff8800;
 }
 
 
