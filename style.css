@@ -590,6 +590,33 @@ body.high-contrast .county.wrong {
 }
 
 
+/* "Type (Hard)" mode: the county the player has to name from memory,
+  without giving away its name in text. A slow pulse between the
+  default fill and a distinct blue keeps it noticeably different from
+  the green/red found/wrong states so it can't be mistaken for either. */
+.county.typing-highlight {
+ animation: pulseTypingTarget 1.6s ease-in-out infinite;
+}
+@keyframes pulseTypingTarget {
+ 0%, 100% { fill: #e8e4d9; }
+ 50% { fill: #3a6ea5; }
+}
+body.dark-mode .county.typing-highlight {
+ animation: pulseTypingTargetDark 1.6s ease-in-out infinite;
+}
+@keyframes pulseTypingTargetDark {
+ 0%, 100% { fill: #3a3a34; }
+ 50% { fill: #5b8fc9; }
+}
+body.high-contrast .county.typing-highlight {
+ animation: pulseTypingTargetHC 1.6s ease-in-out infinite;
+}
+@keyframes pulseTypingTargetHC {
+ 0%, 100% { fill: #e8e4d9; }
+ 50% { fill: #0066ff; }
+}
+
+
 /* Kalawao's real shape is tiny, so it gets a bigger, easier-to-click
   circle out in open water connected back to it with a line. The circle
   shares .county so it participates fully in hover/found/wrong states;
@@ -643,6 +670,50 @@ body.high-contrast .kalawao-arrowhead-fill {
 body.dark-mode .prompt-box {
  background-color: #1e1e1c;
  border-color: #45a049;
+}
+
+
+#type-input-box {
+ margin-top: 0.75rem;
+ width: 100%;
+ display: flex;
+ justify-content: center;
+}
+
+
+#type-input {
+ width: 100%;
+ max-width: 300px;
+ font-family: system-ui, -apple-system, sans-serif;
+ font-size: 1.1rem;
+ padding: 0.55rem 0.9rem;
+ border: 2px solid #2d5a27;
+ border-radius: 10px;
+ background: #fff;
+ color: #111;
+ text-align: center;
+}
+#type-input:focus {
+ outline: none;
+ border-color: #4a7c59;
+ box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.25);
+}
+body.dark-mode #type-input {
+ background-color: #2a2a26;
+ border-color: #45a049;
+ color: #fdeca6;
+}
+
+
+#type-input-box.shake {
+ animation: shakeInput 0.4s ease-in-out;
+}
+@keyframes shakeInput {
+ 0%, 100% { transform: translateX(0); }
+ 20% { transform: translateX(-8px); }
+ 40% { transform: translateX(8px); }
+ 60% { transform: translateX(-6px); }
+ 80% { transform: translateX(6px); }
 }
 
 

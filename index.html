@@ -67,6 +67,14 @@
 
 
    <div class="setting-item">
+     <label for="toggle-instant-check">Instant Check (Type modes)</label>
+     <input type="checkbox" id="toggle-instant-check">
+   </div>
+
+
+
+
+   <div class="setting-item">
      <label>Progress</label>
      <button id="btn-reset-progress" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Reset Saved States</button>
    </div>
@@ -90,6 +98,14 @@
      <button class="btn-mode" data-mode="pin-hard">
        <strong>Pin (Hard)</strong>
        <span>Counties flash briefly when found.</span>
+     </button>
+     <button class="btn-mode" data-mode="type">
+       <strong>Type</strong>
+       <span>Type any county's name to find it on the map.</span>
+     </button>
+     <button class="btn-mode" data-mode="type-hard">
+       <strong>Type (Hard)</strong>
+       <span>A county is highlighted — type its name from memory.</span>
      </button>
    </div>
    <button class="btn-back" data-target="screen-home">Back</button>
@@ -195,7 +211,7 @@
        <div id="suggestion-box" class="hidden" style="margin-bottom: 0.8rem; font-size: 0.85rem;">
          <span id="suggestion-text">Counties you already know well:</span>
          <button id="btn-select-suggested" type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; margin-left: 0.5rem;">Select your 5 best-known</button>
-         <button id="btn-deselect-all" type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; margin-left: 0.5rem;">Deselect all</button>
+         <button id="btn-deselect-all" type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; margin-left: 0.5rem;">Deselect All</button>
        </div>
     
        <!-- Checkboxes rendered dynamically via script.js -->
@@ -225,6 +241,9 @@
    <div class="prompt-box">
      <p id="target-prompt">Ready?</p>
      <p id="feedback" aria-live="polite"></p>
+     <div id="type-input-box" class="hidden">
+       <input type="text" id="type-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type a county name…" aria-label="Type the county name">
+     </div>
    </div>
 
 

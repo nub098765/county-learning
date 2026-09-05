@@ -36,7 +36,12 @@ const stateData = {
 
 
 // --- Game Configuration & State Variables ---
-let selectedMode = "pin"; // "pin" or "pin-hard"
+let selectedMode = "pin"; // "pin" | "pin-hard" | "type" | "type-hard"
+// Modes where the player types the county name instead of clicking the
+// map — checked in a few places (input box visibility, disabling
+// click-to-solve, resetting classes between games) so it's kept as one
+// Set rather than repeating the string comparisons everywhere.
+const TYPE_MODES = new Set(["type", "type-hard"]);
 let activeStateKeys = [];
 let selectedCounties = [];
 let targetPool = [];
@@ -97,6 +102,44 @@ function getDisplayParts(county) {
 }
 
 
+// Normalizes a typed guess for comparison: lowercase, trims, strips the
+// Hawaiian 'okina and other curly/straight apostrophe variants (so
+// players don't need to hunt down a special character to type "Hawaiʻi"
+// or "Kauaʻi"), and collapses repeated whitespace.
+function normalizeTypedName(str) {
+  return str
+    .toLowerCase()
+    .replace(/[\u02BB\u2018\u2019'`´]/g, "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+
+// "Type" mode match: any county still left in the pool whose name
+// matches, regardless of which state it's in. If two different
+// counties in play happen to share a bare name (e.g. two "Kent"s from
+// two active states), the first one still in the pool wins — requiring
+// the state too was deliberately left out (see the mode's design) so
+// players aren't stuck typing "Washington, Rhode Island" for the
+// dozens of Washington counties nationwide; this can occasionally
+// resolve a same-name tie arbitrarily, which is an acceptable trade-off.
+function findPoolMatchByName(normalized) {
+  return targetPool.find(c => normalizeTypedName(c.name) === normalized) || null;
+}
+
+
+// "Type (Hard)" mode match: must specifically be the highlighted
+// county, not just any remaining pool member.
+function getTypedGuessMatch(normalized) {
+  if (selectedMode === "type-hard") {
+    return currentTarget && normalizeTypedName(currentTarget.name) === normalized
+      ? currentTarget
+      : null;
+  }
+  return findPoolMatchByName(normalized);
+}
+
+
 // Looks up a county object by its path id across ALL states (not just the
 // active ones), so feedback text is always correct even mid-game.
 function findCountyById(id) {
@@ -131,8 +174,12 @@ let gameSettings = JSON.parse(localStorage.getItem("gameSettings")) || {
   darkMode: false,
   highContrast: false,
   soundVolume: 50,
-  speedrunMode: false
+  speedrunMode: false,
+  instantTypeCheck: true
 };
+// Backfills the new setting for anyone with an existing saved
+// gameSettings blob from before Type mode existed.
+if (gameSettings.instantTypeCheck === undefined) gameSettings.instantTypeCheck = true;
 
 
 // --- Navigation & Screen DOM Elements ---
@@ -162,12 +209,15 @@ const toggleDark = document.getElementById("toggle-dark");
 const toggleContrast = document.getElementById("toggle-contrast");
 const sliderSound = document.getElementById("slider-sound");
 const toggleSpeedrun = document.getElementById("toggle-speedrun");
+const toggleInstantCheck = document.getElementById("toggle-instant-check");
 const btnResetProgress = document.getElementById("btn-reset-progress");
 
 
 // --- Game Screen DOM Elements ---
 const targetPrompt = document.getElementById("target-prompt");
 const feedbackEl = document.getElementById("feedback");
+const typeInputBox = document.getElementById("type-input-box");
+const typeInput = document.getElementById("type-input");
 const btnQuitGame = document.getElementById("btn-quit-game");
 const btnGameSettings = document.getElementById("btn-game-settings");
 const btnNewGame = document.getElementById("btn-new-game");
@@ -269,6 +319,7 @@ function applySettings() {
   if (toggleContrast) toggleContrast.checked = gameSettings.highContrast;
   if (sliderSound) sliderSound.value = gameSettings.soundVolume;
   if (toggleSpeedrun) toggleSpeedrun.checked = gameSettings.speedrunMode;
+  if (toggleInstantCheck) toggleInstantCheck.checked = gameSettings.instantTypeCheck;
 
 
   document.body.classList.toggle("dark-mode", gameSettings.darkMode);
@@ -392,6 +443,14 @@ if (sliderSound) {
 if (toggleSpeedrun) {
   toggleSpeedrun.addEventListener("change", (e) => {
     gameSettings.speedrunMode = e.target.checked;
+    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+  });
+}
+
+
+if (toggleInstantCheck) {
+  toggleInstantCheck.addEventListener("change", (e) => {
+    gameSettings.instantTypeCheck = e.target.checked;
     localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
   });
 }
@@ -917,8 +976,11 @@ function initGame(countiesToPlay) {
 
 
   countyPaths.forEach(path => {
-    path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered");
-    path.style.pointerEvents = "auto";
+    path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered", "typing-highlight");
+    // Typing modes are solved by typing, not clicking — disabling
+    // pointer events also removes the hover highlight so the map
+    // doesn't look clickable when it isn't.
+    path.style.pointerEvents = TYPE_MODES.has(selectedMode) ? "none" : "auto";
     path.setAttribute("tabindex", "0");
     path.setAttribute("role", "button");
     path.setAttribute("aria-label", "County path");
@@ -931,6 +993,13 @@ function initGame(countiesToPlay) {
 
 function pickNextTarget() {
   currentAttemptMistakes = 0;
+
+  // Clear any leftover "Type (Hard)" highlight before picking the next
+  // target — otherwise the previous target would stay pulsing blue.
+  document.querySelectorAll(".county.typing-highlight").forEach(el => {
+    el.classList.remove("typing-highlight");
+  });
+
   if (targetPool.length === 0) {
     isGameActive = false;
     showSummaryModal();
@@ -943,18 +1012,39 @@ function pickNextTarget() {
 
 
   if (targetPrompt) {
-    const { name, state } = getDisplayParts(currentTarget);
-    targetPrompt.innerHTML = `
-      <span class="find-label">Find:</span>
-      <span class="target-name">${name}</span>
-      ${state ? `<span class="target-state">(${state})</span>` : ""}
-    `;
+    if (selectedMode === "type") {
+      // Open-ended: any remaining county counts, so there's no single
+      // name to reveal here — the prompt just explains what to do.
+      targetPrompt.innerHTML = `<span class="find-label">Type any county below</span>`;
+    } else if (selectedMode === "type-hard") {
+      targetPrompt.innerHTML = `<span class="find-label">Type the highlighted county</span>`;
+    } else {
+      const { name, state } = getDisplayParts(currentTarget);
+      targetPrompt.innerHTML = `
+        <span class="find-label">Find:</span>
+        <span class="target-name">${name}</span>
+        ${state ? `<span class="target-state">(${state})</span>` : ""}
+      `;
+    }
+  }
+
+  if (selectedMode === "type-hard") {
+    getCountyElements(currentTarget.id).forEach(el => el.classList.add("typing-highlight"));
+  }
+
+  if (typeInputBox) {
+    typeInputBox.classList.toggle("hidden", !TYPE_MODES.has(selectedMode));
+  }
+  if (TYPE_MODES.has(selectedMode) && typeInput) {
+    typeInput.value = "";
+    typeInput.focus();
   }
 }
 
 
 function handleCountyClick(pathEl) {
   if (!isGameActive || !currentTarget) return;
+  if (TYPE_MODES.has(selectedMode)) return; // clicking doesn't solve typing modes
 
 
   // The Kalawao callout circle carries data-county-id="kalawao" so it
@@ -1022,6 +1112,98 @@ function handleCountyClick(pathEl) {
     pathEl.classList.add("wrong");
     setTimeout(() => pathEl.classList.remove("wrong"), 600);
   }
+}
+
+
+// --- Typing Modes ("Type" and "Type (Hard)") ---
+// A correct guess is shared logic between the two modes; only how the
+// match is *found* differs (getTypedGuessMatch, defined earlier).
+function acceptTypedMatch(matchedCounty) {
+  scoreRight++;
+  playSound("correct");
+  const recoveredFromMistake = currentAttemptMistakes > 0;
+
+  if (feedbackEl) {
+    feedbackEl.textContent = `Correct! That's ${getDisplayName(matchedCounty)}.`;
+    feedbackEl.className = "feedback-message success";
+  }
+
+  getCountyElements(matchedCounty.id).forEach(el => {
+    el.classList.remove("typing-highlight");
+    el.classList.add(recoveredFromMistake ? "correct-recovered" : "correct", "found");
+    el.style.pointerEvents = "none";
+  });
+
+  targetPool = targetPool.filter(c => c.id !== matchedCounty.id);
+  pickNextTarget();
+}
+
+function registerWrongTypedGuess() {
+  scoreWrong++;
+  currentAttemptMistakes++;
+  playSound("wrong");
+
+  if (feedbackEl) {
+    feedbackEl.textContent = "Not quite — try again.";
+    feedbackEl.className = "feedback-message error";
+  }
+
+  // Attributed to whatever county is currently "in focus" (the
+  // highlighted one in Type (Hard), or the arbitrarily pre-picked one
+  // in Type) so the mistake still feeds the "5 best-known" suggestions
+  // and the missed-counties summary, same as click-based modes.
+  if (currentTarget) {
+    missedCounties.add(currentTarget);
+    countyMistakes[currentTarget.id] = (countyMistakes[currentTarget.id] || 0) + 1;
+    localStorage.setItem("countyMistakes", JSON.stringify(countyMistakes));
+  }
+
+  if (typeInputBox) {
+    typeInputBox.classList.remove("shake");
+    // Force a reflow so the animation can re-trigger on consecutive
+    // wrong guesses, not just the first one.
+    void typeInputBox.offsetWidth;
+    typeInputBox.classList.add("shake");
+  }
+}
+
+// Live-check (as-you-type) path: only ever silently accepts an exact
+// match. Never fires the "wrong" buzz/shake for partial input — that's
+// reserved for an explicit Enter press, otherwise every half-typed
+// word would falsely register as a mistake.
+function tryAutoMatchTypedInput() {
+  if (!isGameActive || !typeInput) return;
+  const normalized = normalizeTypedName(typeInput.value);
+  if (!normalized) return;
+  const matchedCounty = getTypedGuessMatch(normalized);
+  if (matchedCounty) acceptTypedMatch(matchedCounty);
+}
+
+// Submit path (Enter key, always available regardless of the Instant
+// Check setting): checks the full current input and treats a mismatch
+// as a real wrong guess.
+function submitTypedGuess() {
+  if (!isGameActive || !typeInput) return;
+  const normalized = normalizeTypedName(typeInput.value);
+  if (!normalized) return;
+  const matchedCounty = getTypedGuessMatch(normalized);
+  if (matchedCounty) {
+    acceptTypedMatch(matchedCounty);
+  } else {
+    registerWrongTypedGuess();
+  }
+}
+
+if (typeInput) {
+  typeInput.addEventListener("input", () => {
+    if (gameSettings.instantTypeCheck) tryAutoMatchTypedInput();
+  });
+  typeInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submitTypedGuess();
+    }
+  });
 }
 
 
