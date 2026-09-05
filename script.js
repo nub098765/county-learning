@@ -22,7 +22,7 @@ const stateData = {
     ]
   },
   hawaii: {
-    name: "Hawai\u02BBi",
+    name: "Hawaii",
     svgId: "svg-hawaii",
     counties: [
       { id: "hawaii-county", name: "Hawai\u02BBi", stateKey: "hawaii" },
