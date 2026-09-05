@@ -298,8 +298,9 @@ body.dark-mode .state-row.disabled {
 }
 
 
-/* Per-state learning stats panel — appears below the whole states list
-  once a row has been clicked, showing per-mode / per-county progress. */
+/* Per-state learning stats — shows every currently-selected state at
+  once, one section per state, sitting below everything else on the
+  setup screen. Hidden entirely when no state is selected. */
 .state-stats-panel {
  text-align: left;
  background: #f9f9f5;
@@ -314,34 +315,26 @@ body.dark-mode .state-stats-panel {
 }
 
 
-.stats-panel-header {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 0.5rem;
-}
-
-
-.stats-panel-title {
+/* State-name divider between sections — matches .county-group-header's
+  look so the two groupings read as the same pattern. */
+.stats-state-header {
+ font-size: 0.75rem;
  font-weight: 700;
- font-size: 0.95rem;
+ text-transform: uppercase;
+ letter-spacing: 0.04em;
+ color: #666;
+ margin: 0.6rem 0 0.4rem 0;
+ padding-top: 0.5rem;
+ border-top: 1px solid #e0e0da;
 }
-
-
-.stats-panel-close {
- background: transparent;
- border: none;
- color: inherit;
- font-size: 1.1rem;
- line-height: 1;
- padding: 0.1rem 0.4rem;
- font-weight: 700;
+.stats-state-header:first-child {
+ margin-top: 0;
+ padding-top: 0;
+ border-top: none;
 }
-.stats-panel-close:hover {
- background: rgba(0, 0, 0, 0.08);
-}
-body.dark-mode .stats-panel-close:hover {
- background: rgba(255, 255, 255, 0.1);
+body.dark-mode .stats-state-header {
+ color: #aaa;
+ border-top-color: #3f3f38;
 }
 
 

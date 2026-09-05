@@ -482,7 +482,7 @@ btnResetProgress.addEventListener("click", () => {
     localStorage.removeItem("countyMistakes");
     renderStateListUI();
     renderCountyCheckboxes(); // redraw checkboxes so mistake badges clear too
-    refreshStatsPanelIfOpen();
+    renderStatsPanel();
     if (suggestionBox) suggestionBox.classList.add("hidden"); // stale "top 5 missed" no longer applies
     alert("Progress and mistake history reset successfully!");
   }
@@ -520,9 +520,8 @@ function renderStateListUI() {
 
     // Toggle this state in/out of the active set — lets more than one
     // state be selected at once, so both maps can show and both counties
-    // pools get combined. Also opens/refreshes the stats panel for
-    // whichever state was just clicked, whether that click selected or
-    // deselected it.
+    // pools get combined. Also refreshes the stats panel, which always
+    // shows every currently-selected state.
     const toggleState = () => {
       const idx = activeStateKeys.indexOf(stateKey);
       if (idx === -1) {
@@ -542,7 +541,7 @@ function renderStateListUI() {
       }
       updateSetupPlayButton();
       switchVisibleSvgMap();
-      showStateStatsPanel(stateKey);
+      renderStatsPanel();
     };
 
 
@@ -572,89 +571,64 @@ function markCountyLearned(countyId, mode) {
   if (!countyProgress[countyId]) countyProgress[countyId] = {};
   countyProgress[countyId][mode] = true;
   localStorage.setItem("countyProgress", JSON.stringify(countyProgress));
-  refreshStatsPanelIfOpen();
+  renderStatsPanel();
 }
 
 
-// Which state's stats are currently showing in the panel (or null if
-// it's closed). Kept so a fresh guess made mid-game can live-update an
-// already-open panel, and so a progress reset knows what to redraw.
-let statsPanelStateKey = null;
-
-
-function renderStatsPanel(stateKey) {
+// Renders one stats section (state name header + per-mode/per-county
+// table) for every currently-selected state, back to back — the same
+// "grouped by state, in selection order" layout renderCountyCheckboxes()
+// uses. Hidden entirely when nothing is selected.
+function renderStatsPanel() {
   if (!statsPanel) return;
-  const state = stateData[stateKey];
-  if (!state) {
+
+  if (activeStateKeys.length === 0) {
     statsPanel.classList.add("hidden");
+    statsPanel.innerHTML = "";
     return;
   }
 
-
-  const sortedCounties = [...state.counties].sort((a, b) => a.name.localeCompare(b.name));
-  const total = sortedCounties.length;
-
-
   const headerCells = MODE_LIST.map(mode => `<th>${MODE_LABELS[mode]}</th>`).join("");
 
+  statsPanel.innerHTML = activeStateKeys.map(stateKey => {
+    const state = stateData[stateKey];
+    if (!state) return "";
 
-  const summaryCells = MODE_LIST.map(mode => {
-    const learnedCount = sortedCounties.filter(c => isCountyLearned(c.id, mode)).length;
-    const complete = learnedCount === total;
-    const label = complete ? "Completed" : `${learnedCount}/${total} learned`;
-    return `<td class="stats-summary-cell${complete ? " stats-complete" : ""}">${label}</td>`;
-  }).join("");
+    const sortedCounties = [...state.counties].sort((a, b) => a.name.localeCompare(b.name));
+    const total = sortedCounties.length;
 
-
-  const countyRows = sortedCounties.map(c => {
-    const cells = MODE_LIST.map(mode => {
-      const learned = isCountyLearned(c.id, mode);
-      return `<td class="stats-check-cell ${learned ? "stats-yes" : "stats-no"}" aria-label="${learned ? "Learned" : "Not learned"}">${learned ? "✓" : "✗"}</td>`;
+    const summaryCells = MODE_LIST.map(mode => {
+      const learnedCount = sortedCounties.filter(c => isCountyLearned(c.id, mode)).length;
+      const complete = learnedCount === total;
+      const label = complete ? "Completed" : `${learnedCount}/${total} learned`;
+      return `<td class="stats-summary-cell${complete ? " stats-complete" : ""}">${label}</td>`;
     }).join("");
-    return `<tr><td class="stats-county-name">${c.name}</td>${cells}</tr>`;
+
+    const countyRows = sortedCounties.map(c => {
+      const cells = MODE_LIST.map(mode => {
+        const learned = isCountyLearned(c.id, mode);
+        return `<td class="stats-check-cell ${learned ? "stats-yes" : "stats-no"}" aria-label="${learned ? "Learned" : "Not learned"}">${learned ? "✓" : "✗"}</td>`;
+      }).join("");
+      return `<tr><td class="stats-county-name">${c.name}</td>${cells}</tr>`;
+    }).join("");
+
+    return `
+      <div class="stats-state-header">${state.name}</div>
+      <div class="stats-table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr><th></th>${headerCells}</tr>
+          </thead>
+          <tbody>
+            <tr class="stats-summary-row"><td></td>${summaryCells}</tr>
+            ${countyRows}
+          </tbody>
+        </table>
+      </div>
+    `;
   }).join("");
-
-
-  statsPanel.innerHTML = `
-    <div class="stats-panel-header">
-      <span class="stats-panel-title">${state.name}</span>
-      <button type="button" class="stats-panel-close" aria-label="Close stats">&times;</button>
-    </div>
-    <div class="stats-table-wrap">
-      <table class="stats-table">
-        <thead>
-          <tr><th></th>${headerCells}</tr>
-        </thead>
-        <tbody>
-          <tr class="stats-summary-row"><td></td>${summaryCells}</tr>
-          ${countyRows}
-        </tbody>
-      </table>
-    </div>
-  `;
-
-
-  const closeBtn = statsPanel.querySelector(".stats-panel-close");
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      statsPanel.classList.add("hidden");
-      statsPanelStateKey = null;
-    });
-  }
-
 
   statsPanel.classList.remove("hidden");
-}
-
-
-function showStateStatsPanel(stateKey) {
-  statsPanelStateKey = stateKey;
-  renderStatsPanel(stateKey);
-}
-
-
-function refreshStatsPanelIfOpen() {
-  if (statsPanelStateKey) renderStatsPanel(statsPanelStateKey);
 }
 
 
@@ -1514,7 +1488,7 @@ function showSummaryModal() {
 
 
     renderStateListUI();
-    refreshStatsPanelIfOpen();
+    renderStatsPanel();
 
 
     appendModalButton("Admire Map", "btn-secondary", enableAdmireBar);
