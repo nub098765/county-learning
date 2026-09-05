@@ -137,6 +137,7 @@ const checkboxContainer = document.getElementById("checkbox-container");
 const btnStartGame = document.getElementById("btn-start-game");
 const suggestionBox = document.getElementById("suggestion-box");
 const btnSelectSuggested = document.getElementById("btn-select-suggested");
+const btnDeselectAll = document.getElementById("btn-deselect-all");
 // FIX #1: there is no #state-list container in index.html — the state rows
 // (#state-delaware, #state-rhode_island, ...) are already
 // hardcoded in the markup. renderStateListUI() now wires up the existing rows
@@ -777,9 +778,26 @@ radioSpecific.forEach(radio => {
 
 if (btnSelectSuggested) {
   btnSelectSuggested.addEventListener("click", () => {
+    // Deselect everything first so it's obvious the button reset the
+    // selection, then check only the suggested 5 — even if some of them
+    // happened to already be checked.
+    document.querySelectorAll(".county-checkbox").forEach(cb => {
+      cb.checked = false;
+    });
+
     const topMistakeIds = getLowestMistakeCountyIds(SUGGESTION_LIMIT);
     document.querySelectorAll(".county-checkbox").forEach(cb => {
-      cb.checked = topMistakeIds.includes(cb.value);
+      if (topMistakeIds.includes(cb.value)) cb.checked = true;
+    });
+    updateSetupPlayButton();
+  });
+}
+
+
+if (btnDeselectAll) {
+  btnDeselectAll.addEventListener("click", () => {
+    document.querySelectorAll(".county-checkbox").forEach(cb => {
+      cb.checked = false;
     });
     updateSetupPlayButton();
   });
