@@ -189,11 +189,32 @@ let gameSettings = JSON.parse(localStorage.getItem("gameSettings")) || {
   highContrast: false,
   soundVolume: 50,
   speedrunMode: false,
-  instantTypeCheck: true
+  instantTypeCheck: true,
+  hideStatsByDefault: false
 };
 // Backfills the new setting for anyone with an existing saved
 // gameSettings blob from before Type mode existed.
 if (gameSettings.instantTypeCheck === undefined) gameSettings.instantTypeCheck = true;
+// Backfills the new setting for anyone with an existing saved
+// gameSettings blob from before per-state progress tables could be
+// collapsed.
+if (gameSettings.hideStatsByDefault === undefined) gameSettings.hideStatsByDefault = false;
+
+
+// Per-state "collapsed" choice for the setup screen's progress tables.
+// Keyed by stateKey; only holds an entry once the player has explicitly
+// clicked that state's Hide/Show button (or Hide All) — until then,
+// isStatsHidden() falls back to gameSettings.hideStatsByDefault, so
+// flipping that setting immediately affects any state the player hasn't
+// manually overridden yet.
+let statsHiddenOverride = {};
+
+
+function isStatsHidden(stateKey) {
+  return Object.prototype.hasOwnProperty.call(statsHiddenOverride, stateKey)
+    ? statsHiddenOverride[stateKey]
+    : gameSettings.hideStatsByDefault;
+}
 
 
 // --- Navigation & Screen DOM Elements ---
@@ -225,6 +246,7 @@ const toggleContrast = document.getElementById("toggle-contrast");
 const sliderSound = document.getElementById("slider-sound");
 const toggleSpeedrun = document.getElementById("toggle-speedrun");
 const toggleInstantCheck = document.getElementById("toggle-instant-check");
+const toggleHideStatsDefault = document.getElementById("toggle-hide-stats-default");
 const btnResetProgress = document.getElementById("btn-reset-progress");
 
 
@@ -337,6 +359,7 @@ function applySettings() {
   if (sliderSound) sliderSound.value = gameSettings.soundVolume;
   if (toggleSpeedrun) toggleSpeedrun.checked = gameSettings.speedrunMode;
   if (toggleInstantCheck) toggleInstantCheck.checked = gameSettings.instantTypeCheck;
+  if (toggleHideStatsDefault) toggleHideStatsDefault.checked = gameSettings.hideStatsByDefault;
 
 
   document.body.classList.toggle("dark-mode", gameSettings.darkMode);
@@ -473,11 +496,21 @@ if (toggleInstantCheck) {
 }
 
 
+if (toggleHideStatsDefault) {
+  toggleHideStatsDefault.addEventListener("change", (e) => {
+    gameSettings.hideStatsByDefault = e.target.checked;
+    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+    renderStatsPanel(); // re-render so states without a manual override pick up the new default right away
+  });
+}
+
+
 if (btnResetProgress) {
 btnResetProgress.addEventListener("click", () => {
   if (confirm("Are you sure you want to reset all saved progress and mistakes?")) {
     countyProgress = {};
     countyMistakes = {};
+    statsHiddenOverride = {};
     localStorage.removeItem("countyProgress");
     localStorage.removeItem("countyMistakes");
     renderStateListUI();
@@ -578,7 +611,9 @@ function markCountyLearned(countyId, mode) {
 // Renders one stats section (state name header + per-mode/per-county
 // table) for every currently-selected state, back to back — the same
 // "grouped by state, in selection order" layout renderCountyCheckboxes()
-// uses. Hidden entirely when nothing is selected.
+// uses. Hidden entirely when nothing is selected. Each state's table can
+// be individually collapsed via its Hide/Show button (or all at once via
+// Hide All) — see isStatsHidden()/statsHiddenOverride above.
 function renderStatsPanel() {
   if (!statsPanel) return;
 
@@ -590,12 +625,13 @@ function renderStatsPanel() {
 
   const headerCells = MODE_LIST.map(mode => `<th>${MODE_LABELS[mode]}</th>`).join("");
 
-  statsPanel.innerHTML = activeStateKeys.map(stateKey => {
+  const stateSections = activeStateKeys.map(stateKey => {
     const state = stateData[stateKey];
     if (!state) return "";
 
     const sortedCounties = [...state.counties].sort((a, b) => a.name.localeCompare(b.name));
     const total = sortedCounties.length;
+    const hidden = isStatsHidden(stateKey);
 
     const summaryCells = MODE_LIST.map(mode => {
       const learnedCount = sortedCounties.filter(c => isCountyLearned(c.id, mode)).length;
@@ -613,7 +649,11 @@ function renderStatsPanel() {
     }).join("");
 
     return `
-      <div class="stats-state-header">${state.name}</div>
+      <div class="stats-state-header">
+        <span class="stats-state-name">${state.name}</span>
+        <button type="button" class="btn-secondary btn-stats-toggle" data-state-key="${stateKey}" aria-expanded="${!hidden}">${hidden ? "Show" : "Hide"}</button>
+      </div>
+      ${hidden ? "" : `
       <div class="stats-table-wrap">
         <table class="stats-table">
           <thead>
@@ -625,10 +665,41 @@ function renderStatsPanel() {
           </tbody>
         </table>
       </div>
+      `}
     `;
   }).join("");
 
+  statsPanel.innerHTML = `
+    <div class="stats-panel-actions">
+      <button type="button" id="btn-hide-all-stats" class="btn-secondary">Hide All</button>
+    </div>
+    ${stateSections}
+  `;
+
   statsPanel.classList.remove("hidden");
+}
+
+
+// Single delegated listener for the Hide/Show buttons rendered inside
+// the stats panel — attached once here (rather than re-bound on every
+// renderStatsPanel() call) since the buttons themselves are recreated
+// each time statsPanel.innerHTML is replaced.
+if (statsPanel) {
+  statsPanel.addEventListener("click", (e) => {
+    const hideAllBtn = e.target.closest("#btn-hide-all-stats");
+    if (hideAllBtn) {
+      activeStateKeys.forEach(stateKey => { statsHiddenOverride[stateKey] = true; });
+      renderStatsPanel();
+      return;
+    }
+
+    const toggleBtn = e.target.closest(".btn-stats-toggle");
+    if (toggleBtn) {
+      const stateKey = toggleBtn.dataset.stateKey;
+      statsHiddenOverride[stateKey] = !isStatsHidden(stateKey);
+      renderStatsPanel();
+    }
+  });
 }
 
 

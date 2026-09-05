@@ -316,8 +316,13 @@ body.dark-mode .state-stats-panel {
 
 
 /* State-name divider between sections — matches .county-group-header's
-  look so the two groupings read as the same pattern. */
+  look so the two groupings read as the same pattern. Now a flex row so
+  the per-state Hide/Show button can sit at the right edge. */
 .stats-state-header {
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ gap: 0.5rem;
  font-size: 0.75rem;
  font-weight: 700;
  text-transform: uppercase;
@@ -335,6 +340,26 @@ body.dark-mode .state-stats-panel {
 body.dark-mode .stats-state-header {
  color: #aaa;
  border-top-color: #3f3f38;
+}
+
+
+/* Row above the first state section holding the "Hide All" button. */
+.stats-panel-actions {
+ display: flex;
+ justify-content: flex-end;
+ margin-bottom: 0.2rem;
+}
+
+
+/* Per-state Hide/Show and the Hide All button — small, understated,
+  and not shouty in uppercase like the header text next to it. */
+.btn-stats-toggle,
+#btn-hide-all-stats {
+ text-transform: none;
+ letter-spacing: normal;
+ font-weight: 600;
+ font-size: 0.68rem;
+ padding: 0.15rem 0.55rem;
 }
 
 
