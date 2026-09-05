@@ -84,6 +84,19 @@ function getDisplayName(county) {
 }
 
 
+// Same disambiguation logic as getDisplayName, but split into parts so
+// the county name and the state qualifier can be styled differently
+// (used by the "Find:" prompt).
+function getDisplayParts(county) {
+  if (!county) return { name: "", state: null };
+  if (ambiguousCountyNames.has(county.name)) {
+    const stateName = stateData[county.stateKey]?.name || county.stateKey;
+    return { name: county.name, state: stateName };
+  }
+  return { name: county.name, state: null };
+}
+
+
 // Looks up a county object by its path id across ALL states (not just the
 // active ones), so feedback text is always correct even mid-game.
 function findCountyById(id) {
@@ -930,7 +943,12 @@ function pickNextTarget() {
 
 
   if (targetPrompt) {
-    targetPrompt.innerHTML = `Find: <strong>${getDisplayName(currentTarget)}</strong>`;
+    const { name, state } = getDisplayParts(currentTarget);
+    targetPrompt.innerHTML = `
+      <span class="find-label">Find:</span>
+      <span class="target-name">${name}</span>
+      ${state ? `<span class="target-state">(${state})</span>` : ""}
+    `;
   }
 }
 
