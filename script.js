@@ -42,6 +42,14 @@ let selectedMode = "pin"; // "pin" | "pin-hard" | "type" | "type-hard"
 // click-to-solve, resetting classes between games) so it's kept as one
 // Set rather than repeating the string comparisons everywhere.
 const TYPE_MODES = new Set(["type", "type-hard"]);
+// All four modes, in the order they should appear as stats-panel columns.
+const MODE_LIST = ["pin", "pin-hard", "type", "type-hard"];
+const MODE_LABELS = {
+  pin: "Pin",
+  "pin-hard": "Pin (Hard)",
+  type: "Type",
+  "type-hard": "Type (Hard)"
+};
 let activeStateKeys = [];
 let selectedCounties = [];
 let targetPool = [];
@@ -169,7 +177,12 @@ function getCountyElements(id) {
 
 
 // --- Persistent Data Storage ---
-let completedStates = JSON.parse(localStorage.getItem("completedStates")) || [];
+// Per-county, per-mode "learned" flags — e.g. countyProgress["kent"].pin
+// is true once Kent has been correctly guessed at least once in Pin
+// mode. Drives the per-state stats panel (see below); replaces the old
+// single whole-state "completed" flag so progress can be shown mode by
+// mode instead of one all-or-nothing badge.
+let countyProgress = JSON.parse(localStorage.getItem("countyProgress")) || {};
 let countyMistakes = JSON.parse(localStorage.getItem("countyMistakes")) || {};
 let gameSettings = JSON.parse(localStorage.getItem("gameSettings")) || {
   darkMode: false,
@@ -193,6 +206,7 @@ const modeButtons = document.querySelectorAll(".btn-mode");
 
 // --- Setup Screen DOM Elements ---
 const countyPanel = document.getElementById("county-options-panel");
+const statsPanel = document.getElementById("state-stats-panel");
 const radioSpecific = document.querySelectorAll('input[name="specific-counties"]');
 const checkboxContainer = document.getElementById("checkbox-container");
 const btnStartGame = document.getElementById("btn-start-game");
@@ -462,12 +476,13 @@ if (toggleInstantCheck) {
 if (btnResetProgress) {
 btnResetProgress.addEventListener("click", () => {
   if (confirm("Are you sure you want to reset all saved progress and mistakes?")) {
-    completedStates = [];
+    countyProgress = {};
     countyMistakes = {};
-    localStorage.removeItem("completedStates");
+    localStorage.removeItem("countyProgress");
     localStorage.removeItem("countyMistakes");
     renderStateListUI();
     renderCountyCheckboxes(); // redraw checkboxes so mistake badges clear too
+    refreshStatsPanelIfOpen();
     if (suggestionBox) suggestionBox.classList.add("hidden"); // stale "top 5 missed" no longer applies
     alert("Progress and mistake history reset successfully!");
   }
@@ -489,26 +504,12 @@ function renderStateListUI() {
     if (!stateRow) return;
 
 
-    const isCompleted = completedStates.includes(stateKey);
     const isSelected = activeStateKeys.includes(stateKey);
 
-
     stateRow.classList.toggle("selected", isSelected);
-    stateRow.classList.toggle("completed", isCompleted);
     stateRow.setAttribute("tabindex", "0");
     stateRow.setAttribute("role", "button");
     stateRow.setAttribute("aria-pressed", isSelected);
-
-
-    // Swap the "N counties" label for a "COMPLETED" tag and back, without
-    // touching the rest of the row's markup.
-    const countSpan = stateRow.querySelector(".state-count");
-    const completedTag = stateRow.querySelector(".completed-tag");
-    if (isCompleted && countSpan) {
-      countSpan.outerHTML = '<span class="completed-tag">✓ COMPLETED</span>';
-    } else if (!isCompleted && completedTag) {
-      completedTag.outerHTML = `<span class="state-count">${state.counties.length} counties</span>`;
-    }
 
 
     // Only attach listeners once per row, even though this function can
@@ -519,7 +520,9 @@ function renderStateListUI() {
 
     // Toggle this state in/out of the active set — lets more than one
     // state be selected at once, so both maps can show and both counties
-    // pools get combined.
+    // pools get combined. Also opens/refreshes the stats panel for
+    // whichever state was just clicked, whether that click selected or
+    // deselected it.
     const toggleState = () => {
       const idx = activeStateKeys.indexOf(stateKey);
       if (idx === -1) {
@@ -539,6 +542,7 @@ function renderStateListUI() {
       }
       updateSetupPlayButton();
       switchVisibleSvgMap();
+      showStateStatsPanel(stateKey);
     };
 
 
@@ -550,6 +554,107 @@ function renderStateListUI() {
       }
     });
   });
+}
+
+
+// --- Per-County, Per-Mode Learning Stats ---
+function isCountyLearned(countyId, mode) {
+  return !!(countyProgress[countyId] && countyProgress[countyId][mode]);
+}
+
+
+// Marks a county learned for whichever mode it was just correctly
+// guessed in. Idempotent (re-marking an already-learned county/mode
+// pair is a no-op) so it's safe to call on every correct guess without
+// spamming localStorage writes.
+function markCountyLearned(countyId, mode) {
+  if (isCountyLearned(countyId, mode)) return;
+  if (!countyProgress[countyId]) countyProgress[countyId] = {};
+  countyProgress[countyId][mode] = true;
+  localStorage.setItem("countyProgress", JSON.stringify(countyProgress));
+  refreshStatsPanelIfOpen();
+}
+
+
+// Which state's stats are currently showing in the panel (or null if
+// it's closed). Kept so a fresh guess made mid-game can live-update an
+// already-open panel, and so a progress reset knows what to redraw.
+let statsPanelStateKey = null;
+
+
+function renderStatsPanel(stateKey) {
+  if (!statsPanel) return;
+  const state = stateData[stateKey];
+  if (!state) {
+    statsPanel.classList.add("hidden");
+    return;
+  }
+
+
+  const sortedCounties = [...state.counties].sort((a, b) => a.name.localeCompare(b.name));
+  const total = sortedCounties.length;
+
+
+  const headerCells = MODE_LIST.map(mode => `<th>${MODE_LABELS[mode]}</th>`).join("");
+
+
+  const summaryCells = MODE_LIST.map(mode => {
+    const learnedCount = sortedCounties.filter(c => isCountyLearned(c.id, mode)).length;
+    const complete = learnedCount === total;
+    const label = complete ? "Completed" : `${learnedCount}/${total} learned`;
+    return `<td class="stats-summary-cell${complete ? " stats-complete" : ""}">${label}</td>`;
+  }).join("");
+
+
+  const countyRows = sortedCounties.map(c => {
+    const cells = MODE_LIST.map(mode => {
+      const learned = isCountyLearned(c.id, mode);
+      return `<td class="stats-check-cell ${learned ? "stats-yes" : "stats-no"}" aria-label="${learned ? "Learned" : "Not learned"}">${learned ? "✓" : "✗"}</td>`;
+    }).join("");
+    return `<tr><td class="stats-county-name">${c.name}</td>${cells}</tr>`;
+  }).join("");
+
+
+  statsPanel.innerHTML = `
+    <div class="stats-panel-header">
+      <span class="stats-panel-title">${state.name}</span>
+      <button type="button" class="stats-panel-close" aria-label="Close stats">&times;</button>
+    </div>
+    <div class="stats-table-wrap">
+      <table class="stats-table">
+        <thead>
+          <tr><th></th>${headerCells}</tr>
+        </thead>
+        <tbody>
+          <tr class="stats-summary-row"><td></td>${summaryCells}</tr>
+          ${countyRows}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+
+  const closeBtn = statsPanel.querySelector(".stats-panel-close");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      statsPanel.classList.add("hidden");
+      statsPanelStateKey = null;
+    });
+  }
+
+
+  statsPanel.classList.remove("hidden");
+}
+
+
+function showStateStatsPanel(stateKey) {
+  statsPanelStateKey = stateKey;
+  renderStatsPanel(stateKey);
+}
+
+
+function refreshStatsPanelIfOpen() {
+  if (statsPanelStateKey) renderStatsPanel(statsPanelStateKey);
 }
 
 
@@ -1114,6 +1219,7 @@ function handleCountyClick(pathEl) {
   if (clickedId === currentTarget.id) {
     scoreRight++;
     playSound("correct");
+    markCountyLearned(currentTarget.id, selectedMode);
     // currentAttemptMistakes counts wrong guesses made on THIS target
     // before it was finally found. pickNextTarget() (called below)
     // resets it to 0, so it has to be read here first.
@@ -1198,6 +1304,7 @@ function acceptTypedMatches(matchedCounties) {
   }
 
   matchedCounties.forEach(matchedCounty => {
+    markCountyLearned(matchedCounty.id, selectedMode);
     getCountyElements(matchedCounty.id).forEach(el => {
       el.classList.remove("typing-highlight");
       el.classList.add(recoveredFromMistake ? "correct-recovered" : "correct", "found");
@@ -1406,20 +1513,8 @@ function showSummaryModal() {
     if (targetPrompt) targetPrompt.textContent = "Complete!";
 
 
-    // Save completion state
-    activeStateKeys.forEach(stateKey => {
-      const totalStateCounties = stateData[stateKey].counties.length;
-      const playedStateCounties = selectedCounties.filter(c => c.stateKey === stateKey).length;
-
-
-      if (playedStateCounties === totalStateCounties && !completedStates.includes(stateKey)) {
-        completedStates.push(stateKey);
-      }
-    });
-
-
-    localStorage.setItem("completedStates", JSON.stringify(completedStates));
     renderStateListUI();
+    refreshStatsPanelIfOpen();
 
 
     appendModalButton("Admire Map", "btn-secondary", enableAdmireBar);

@@ -111,11 +111,11 @@
    <div class="mode-options">
      <button class="btn-mode" data-mode="pin">
        <strong>Pin</strong>
-       <span>Click the county you are given; once found, it will stay filled.</span>
+       <span>Counties stay filled when found.</span>
      </button>
      <button class="btn-mode" data-mode="pin-hard">
        <strong>Pin (Hard)</strong>
-       <span>Click the county you are given; once found, it will briefly flash.</span>
+       <span>Counties flash briefly when found.</span>
      </button>
      <button class="btn-mode" data-mode="type">
        <strong>Type</strong>
@@ -211,6 +211,12 @@
      <div class="state-row disabled"><span class="state-name">Wisconsin</span><small class="wip-tag">WORK IN PROGRESS</small></div>
      <div class="state-row disabled"><span class="state-name">Wyoming</span><small class="wip-tag">WORK IN PROGRESS</small></div>
    </div>
+
+
+   <!-- Per-state learning stats: filled in dynamically by script.js
+        whenever a state row is clicked. Lives below the whole list
+        rather than inline in each row, per the mock. -->
+   <div id="state-stats-panel" class="state-stats-panel hidden"></div>
 
 
 

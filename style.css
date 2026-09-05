@@ -298,36 +298,139 @@ body.dark-mode .state-row.disabled {
 }
 
 
+/* Per-state learning stats panel — appears below the whole states list
+  once a row has been clicked, showing per-mode / per-county progress. */
+.state-stats-panel {
+ text-align: left;
+ background: #f9f9f5;
+ border: 1px solid #e0e0da;
+ border-radius: 8px;
+ padding: 0.75rem 0.85rem;
+ margin-bottom: 1.25rem;
+}
+body.dark-mode .state-stats-panel {
+ background: #1f1f1c;
+ border-color: #3f3f38;
+}
+
+
+.stats-panel-header {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 0.5rem;
+}
+
+
+.stats-panel-title {
+ font-weight: 700;
+ font-size: 0.95rem;
+}
+
+
+.stats-panel-close {
+ background: transparent;
+ border: none;
+ color: inherit;
+ font-size: 1.1rem;
+ line-height: 1;
+ padding: 0.1rem 0.4rem;
+ font-weight: 700;
+}
+.stats-panel-close:hover {
+ background: rgba(0, 0, 0, 0.08);
+}
+body.dark-mode .stats-panel-close:hover {
+ background: rgba(255, 255, 255, 0.1);
+}
+
+
+/* Horizontally scrollable so the four mode columns never force the
+  whole app wider than its fixed max-width on small screens. */
+.stats-table-wrap {
+ overflow-x: auto;
+}
+
+
+.stats-table {
+ border-collapse: collapse;
+ width: 100%;
+ font-size: 0.75rem;
+}
+
+
+.stats-table th,
+.stats-table td {
+ padding: 0.3rem 0.5rem;
+ text-align: center;
+ white-space: nowrap;
+}
+
+
+.stats-table thead th {
+ font-size: 0.68rem;
+ font-weight: 700;
+ text-transform: uppercase;
+ letter-spacing: 0.02em;
+ color: #666;
+ border-bottom: 1px solid #e0e0da;
+}
+body.dark-mode .stats-table thead th {
+ color: #aaa;
+ border-color: #3f3f38;
+}
+
+
+.stats-county-name {
+ text-align: left;
+ font-weight: 600;
+}
+
+
+.stats-summary-row td {
+ font-size: 0.7rem;
+ font-weight: 700;
+ color: #8a4b00;
+ border-bottom: 1px solid #e0e0da;
+ padding-bottom: 0.45rem;
+}
+body.dark-mode .stats-summary-row td {
+ color: #ffd699;
+ border-color: #3f3f38;
+}
+
+
+.stats-summary-cell.stats-complete {
+ color: #2d5a27;
+}
+body.dark-mode .stats-summary-cell.stats-complete {
+ color: #81c784;
+}
+
+
+.stats-check-cell.stats-yes {
+ color: #2d5a27;
+ font-weight: 700;
+}
+body.dark-mode .stats-check-cell.stats-yes {
+ color: #81c784;
+}
+
+
+.stats-check-cell.stats-no {
+ color: #b0453a;
+ opacity: 0.6;
+}
+body.dark-mode .stats-check-cell.stats-no {
+ color: #e0857a;
+}
+
+
 .wip-tag {
  font-size: 0.65rem;
  font-weight: 700;
  color: #c62828;
  letter-spacing: 0.03em;
-}
-
-
-/* Completed State Highlight */
-.state-row.completed {
- border-color: #2d5a27;
- background-color: #eaf4e9;
- color: #1b3818;
-}
-
-
-body.dark-mode .state-row.completed {
- background-color: #1e331c;
- color: #d1f2ce;
- border-color: #2d5a27;
-}
-
-
-.completed-tag {
- font-size: 0.75rem;
- font-weight: 700;
- color: #2d5a27;
-}
-body.dark-mode .completed-tag {
- color: #81c784;
 }
 
 
@@ -954,17 +1057,6 @@ body.dark-mode .admire-subtext {
  font-size: 0.8rem;
  flex: 1;
  min-width: 80px;
-}
-
-
-/* Completed AND currently selected — background stays the "completed"
-  green (so progress is still visually obvious), but an inner ring in
-  the "selected" color shows it's also picked for the next game. */
-.state-row.completed.selected {
- box-shadow: inset 0 0 0 2px #111;
-}
-body.dark-mode .state-row.completed.selected {
- box-shadow: inset 0 0 0 2px #fdeca6;
 }
 
 
