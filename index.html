@@ -39,11 +39,17 @@
  <section id="screen-settings" class="screen">
    <h2>Settings</h2>
     <div class="setting-item">
-     <label for="toggle-dark">Dark Mode</label>
+     <div class="setting-text">
+       <label for="toggle-dark">Dark Mode</label>
+       <p class="setting-desc">Switch the whole app to a darker color scheme.</p>
+     </div>
      <input type="checkbox" id="toggle-dark">
    </div>
     <div class="setting-item">
-     <label for="toggle-contrast">High Contrast Colors</label>
+     <div class="setting-text">
+       <label for="toggle-contrast">High Contrast Colors</label>
+       <p class="setting-desc">Use bolder, more distinct colors for correct and incorrect counties.</p>
+     </div>
      <input type="checkbox" id="toggle-contrast">
    </div>
 
@@ -51,7 +57,10 @@
 
 
    <div class="setting-item">
-     <label for="slider-sound">Sound Volume</label>
+     <div class="setting-text">
+       <label for="slider-sound">Sound Volume</label>
+       <p class="setting-desc">How loud the correct/incorrect sound effects play.</p>
+     </div>
      <input type="range" id="slider-sound" min="0" max="100" value="50" step="1">
    </div>
 
@@ -59,7 +68,10 @@
 
 
    <div class="setting-item">
-     <label for="toggle-speedrun">Speedrun Mode</label>
+     <div class="setting-text">
+       <label for="toggle-speedrun">Speedrun Mode</label>
+       <p class="setting-desc">Register a guess the instant you press down on a county, instead of waiting for you to release.</p>
+     </div>
      <input type="checkbox" id="toggle-speedrun">
    </div>
 
@@ -67,7 +79,10 @@
 
 
    <div class="setting-item">
-     <label for="toggle-instant-check">Instant Check (Type modes)</label>
+     <div class="setting-text">
+       <label for="toggle-instant-check">Instant Check (Type modes)</label>
+       <p class="setting-desc">Check what you've typed as you type it, instead of waiting for you to press Enter.</p>
+     </div>
      <input type="checkbox" id="toggle-instant-check">
    </div>
 
@@ -75,7 +90,10 @@
 
 
    <div class="setting-item">
-     <label>Progress</label>
+     <div class="setting-text">
+       <label>Progress</label>
+       <p class="setting-desc">Clear completed states, mistake history, and best-known suggestions.</p>
+     </div>
      <button id="btn-reset-progress" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Reset Saved States</button>
    </div>
 
@@ -101,11 +119,11 @@
      </button>
      <button class="btn-mode" data-mode="type">
        <strong>Type</strong>
-       <span>Type any county's name to find it on the map.</span>
+       <span>Type the name of any county.</span>
      </button>
      <button class="btn-mode" data-mode="type-hard">
        <strong>Type (Hard)</strong>
-       <span>A county is highlighted — type its name from memory.</span>
+       <span>Type the name of a specific highlighted county.</span>
      </button>
    </div>
    <button class="btn-back" data-target="screen-home">Back</button>
@@ -232,6 +250,7 @@
  <section id="screen-game" class="screen">
    <div class="game-header">
      <button id="btn-quit-game" class="btn-secondary">Quit</button>
+     <button id="btn-give-up" class="btn-secondary">Give Up</button>
      <button id="btn-game-settings" class="btn-secondary">Settings</button>
    </div>
 
@@ -388,6 +407,10 @@
 </main>
 
 
+
+
+<!-- Cursor-following tooltip shown when hovering a county revealed by Give Up -->
+<div id="county-hover-tooltip" class="county-hover-tooltip hidden"></div>
 
 
 <!-- MODAL SUMMARY OUTSIDE APP CONTAINER -->

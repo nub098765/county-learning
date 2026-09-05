@@ -115,28 +115,29 @@ function normalizeTypedName(str) {
 }
 
 
-// "Type" mode match: any county still left in the pool whose name
+// "Type" mode match: EVERY county still left in the pool whose name
 // matches, regardless of which state it's in. If two different
 // counties in play happen to share a bare name (e.g. two "Kent"s from
-// two active states), the first one still in the pool wins — requiring
-// the state too was deliberately left out (see the mode's design) so
-// players aren't stuck typing "Washington, Rhode Island" for the
-// dozens of Washington counties nationwide; this can occasionally
-// resolve a same-name tie arbitrarily, which is an acceptable trade-off.
-function findPoolMatchByName(normalized) {
-  return targetPool.find(c => normalizeTypedName(c.name) === normalized) || null;
+// two active states), typing "Kent" resolves both of them at once —
+// requiring the state too was deliberately left out (see the mode's
+// design) so players aren't stuck typing "Washington, Rhode Island" for
+// the dozens of Washington counties nationwide.
+function findAllPoolMatchesByName(normalized) {
+  return targetPool.filter(c => normalizeTypedName(c.name) === normalized);
 }
 
 
-// "Type (Hard)" mode match: must specifically be the highlighted
-// county, not just any remaining pool member.
-function getTypedGuessMatch(normalized) {
+// Returns every county the current typed guess should resolve, as an
+// array (empty if it doesn't match anything). "Type (Hard)" can only
+// ever resolve the single highlighted county; plain "Type" can resolve
+// several counties at once if their bare names are identical.
+function getTypedGuessMatches(normalized) {
   if (selectedMode === "type-hard") {
-    return currentTarget && normalizeTypedName(currentTarget.name) === normalized
-      ? currentTarget
-      : null;
+    return (currentTarget && normalizeTypedName(currentTarget.name) === normalized)
+      ? [currentTarget]
+      : [];
   }
-  return findPoolMatchByName(normalized);
+  return findAllPoolMatchesByName(normalized);
 }
 
 
@@ -219,8 +220,10 @@ const feedbackEl = document.getElementById("feedback");
 const typeInputBox = document.getElementById("type-input-box");
 const typeInput = document.getElementById("type-input");
 const btnQuitGame = document.getElementById("btn-quit-game");
+const btnGiveUp = document.getElementById("btn-give-up");
 const btnGameSettings = document.getElementById("btn-game-settings");
 const btnNewGame = document.getElementById("btn-new-game");
+const hoverTooltip = document.getElementById("county-hover-tooltip");
 // NOTE: countyPaths is a `let` (not `const`) because the Kalawao callout
 // circle is added to the DOM after this first query runs — once it's
 // built we re-run querySelectorAll(".county") so the callout gets the
@@ -953,6 +956,56 @@ if (btnNewGame) {
 }
 
 
+// --- Give Up ---
+// Reveals every county still left in the pool as missed (in red), then
+// shows the same end-of-game summary (percentage + options) the player
+// would get from finishing normally. Works the same way in every mode,
+// including the Type modes where counties normally aren't clickable —
+// each revealed county gets its pointer-events force-enabled so hovering
+// it still pops out its name, even though isGameActive being false means
+// clicking or typing can no longer register a guess.
+function giveUp() {
+  if (!isGameActive) return;
+
+  document.querySelectorAll(".county.typing-highlight").forEach(el => {
+    el.classList.remove("typing-highlight");
+  });
+
+  targetPool.forEach(c => {
+    missedCounties.add(c);
+    scoreWrong++;
+    countyMistakes[c.id] = (countyMistakes[c.id] || 0) + 1;
+    getCountyElements(c.id).forEach(el => {
+      el.classList.add("given-up-missed");
+      el.style.pointerEvents = "auto";
+    });
+  });
+  localStorage.setItem("countyMistakes", JSON.stringify(countyMistakes));
+
+  targetPool = [];
+  currentTarget = null;
+  isGameActive = false;
+
+  if (typeInputBox) typeInputBox.classList.add("hidden");
+  if (feedbackEl) {
+    feedbackEl.textContent = "";
+    feedbackEl.className = "feedback-message";
+  }
+  if (targetPrompt) targetPrompt.textContent = "Game over.";
+
+  showSummaryModal();
+}
+
+if (btnGiveUp) {
+  btnGiveUp.addEventListener("click", () => {
+    if (!isGameActive) return;
+    if (confirm("Give up? Every remaining county will be revealed as missed.")) {
+      giveUp();
+    }
+  });
+}
+
+
 // --- Game Loop Functions ---
 function initGame(countiesToPlay) {
   targetPool = [...countiesToPlay];
@@ -973,10 +1026,11 @@ function initGame(countiesToPlay) {
     feedbackEl.textContent = "";
     feedbackEl.className = "feedback-message";
   }
+  hideHoverTooltip();
 
 
   countyPaths.forEach(path => {
-    path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered", "typing-highlight");
+    path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered", "typing-highlight", "given-up-missed");
     // Typing modes are solved by typing, not clicking — disabling
     // pointer events also removes the hover highlight so the map
     // doesn't look clickable when it isn't.
@@ -1117,24 +1171,42 @@ function handleCountyClick(pathEl) {
 
 // --- Typing Modes ("Type" and "Type (Hard)") ---
 // A correct guess is shared logic between the two modes; only how the
-// match is *found* differs (getTypedGuessMatch, defined earlier).
-function acceptTypedMatch(matchedCounty) {
+// match(es) are *found* differs (getTypedGuessMatches, defined earlier).
+// matchedCounties is always an array — length 1 for "Type (Hard)" (and
+// usually for "Type" too), but "Type" can hand back several counties at
+// once when their bare names are identical (e.g. two "Kent"s in play).
+function acceptTypedMatches(matchedCounties) {
   scoreRight++;
   playSound("correct");
   const recoveredFromMistake = currentAttemptMistakes > 0;
 
   if (feedbackEl) {
-    feedbackEl.textContent = `Correct! That's ${getDisplayName(matchedCounty)}.`;
+    if (selectedMode === "type-hard") {
+      // There's exactly one specific target here, so naming it is useful
+      // confirmation.
+      feedbackEl.textContent = `Correct! That's ${getDisplayName(matchedCounties[0])}.`;
+    } else {
+      // Plain "Type" mode: the player typed the name themselves, so
+      // repeating it back as "Correct! That's Kent!" is redundant — just
+      // confirm the guess, and note the count if it resolved more than
+      // one county at once.
+      feedbackEl.textContent = matchedCounties.length > 1
+        ? `Correct! That matched ${matchedCounties.length} counties.`
+        : "Correct!";
+    }
     feedbackEl.className = "feedback-message success";
   }
 
-  getCountyElements(matchedCounty.id).forEach(el => {
-    el.classList.remove("typing-highlight");
-    el.classList.add(recoveredFromMistake ? "correct-recovered" : "correct", "found");
-    el.style.pointerEvents = "none";
+  matchedCounties.forEach(matchedCounty => {
+    getCountyElements(matchedCounty.id).forEach(el => {
+      el.classList.remove("typing-highlight");
+      el.classList.add(recoveredFromMistake ? "correct-recovered" : "correct", "found");
+      el.style.pointerEvents = "none";
+    });
   });
 
-  targetPool = targetPool.filter(c => c.id !== matchedCounty.id);
+  const matchedIds = new Set(matchedCounties.map(c => c.id));
+  targetPool = targetPool.filter(c => !matchedIds.has(c.id));
   pickNextTarget();
 }
 
@@ -1175,8 +1247,8 @@ function tryAutoMatchTypedInput() {
   if (!isGameActive || !typeInput) return;
   const normalized = normalizeTypedName(typeInput.value);
   if (!normalized) return;
-  const matchedCounty = getTypedGuessMatch(normalized);
-  if (matchedCounty) acceptTypedMatch(matchedCounty);
+  const matches = getTypedGuessMatches(normalized);
+  if (matches.length > 0) acceptTypedMatches(matches);
 }
 
 // Submit path (Enter key, always available regardless of the Instant
@@ -1186,9 +1258,9 @@ function submitTypedGuess() {
   if (!isGameActive || !typeInput) return;
   const normalized = normalizeTypedName(typeInput.value);
   if (!normalized) return;
-  const matchedCounty = getTypedGuessMatch(normalized);
-  if (matchedCounty) {
-    acceptTypedMatch(matchedCounty);
+  const matches = getTypedGuessMatches(normalized);
+  if (matches.length > 0) {
+    acceptTypedMatches(matches);
   } else {
     registerWrongTypedGuess();
   }
@@ -1204,6 +1276,28 @@ if (typeInput) {
       submitTypedGuess();
     }
   });
+}
+
+
+// --- Cursor-Following Tooltip (Give Up-revealed counties) ---
+// Only ever shown for counties carrying "given-up-missed" — normal
+// unplayed/found/wrong counties never trigger it.
+function showHoverTooltip(text, x, y) {
+  if (!hoverTooltip) return;
+  hoverTooltip.textContent = text;
+  hoverTooltip.style.left = `${x}px`;
+  hoverTooltip.style.top = `${y}px`;
+  hoverTooltip.classList.remove("hidden");
+}
+
+function moveHoverTooltip(x, y) {
+  if (!hoverTooltip || hoverTooltip.classList.contains("hidden")) return;
+  hoverTooltip.style.left = `${x}px`;
+  hoverTooltip.style.top = `${y}px`;
+}
+
+function hideHoverTooltip() {
+  if (hoverTooltip) hoverTooltip.classList.add("hidden");
 }
 
 
@@ -1239,6 +1333,26 @@ function bindCountyInteractivity(path) {
       handleCountyClick(e.currentTarget);
     }
   });
+
+
+  // Cursor-following name popout — only does anything once Give Up has
+  // marked this county "given-up-missed"; otherwise these are no-ops.
+  path.addEventListener("mouseenter", (e) => {
+    const el = e.currentTarget;
+    if (!el.classList.contains("given-up-missed")) return;
+    const id = el.dataset.countyId || el.id;
+    const county = findCountyById(id);
+    const name = county ? getDisplayName(county) : (el.getAttribute("data-name") || "");
+    showHoverTooltip(name, e.clientX, e.clientY);
+  });
+
+
+  path.addEventListener("mousemove", (e) => {
+    moveHoverTooltip(e.clientX, e.clientY);
+  });
+
+
+  path.addEventListener("mouseleave", hideHoverTooltip);
 }
 
 
