@@ -753,12 +753,14 @@ radioSpecific.forEach(radio => {
       if (checkboxContainer) checkboxContainer.classList.remove("hidden");
 
 
-      const topMistakeIds = getLowestMistakeCountyIds(SUGGESTION_LIMIT);
+      // Start with nothing selected — the user can check counties
+      // manually, or use the "Select your 5 best-known" button.
       countyCheckboxes.forEach(cb => {
-        cb.checked = topMistakeIds.includes(cb.value);
+        cb.checked = false;
       });
 
 
+      const topMistakeIds = getLowestMistakeCountyIds(SUGGESTION_LIMIT);
       if (suggestionBox) {
         if (topMistakeIds.length > 0) {
           suggestionBox.classList.remove("hidden");
