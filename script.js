@@ -1372,7 +1372,7 @@ function registerWrongTypedGuess() {
   playSound("wrong");
 
   if (feedbackEl) {
-    feedbackEl.textContent = "Not quite — try again.";
+    feedbackEl.textContent = "Not quite. Try again.";
     feedbackEl.className = "feedback-message error";
   }
 
