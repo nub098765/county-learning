@@ -25,10 +25,10 @@ const stateData = {
     name: "Hawaii",
     svgId: "svg-hawaii",
     counties: [
-      { id: "hawaii-county", name: "Hawai\u02BBi", stateKey: "hawaii" },
+      { id: "hawaii-county", name: "Hawai'i", stateKey: "hawaii" },
       { id: "honolulu", name: "Honolulu", stateKey: "hawaii" },
       { id: "kalawao", name: "Kalawao", stateKey: "hawaii" },
-      { id: "kauai", name: "Kaua\u02BBi", stateKey: "hawaii" },
+      { id: "kauai", name: "Kaua'i", stateKey: "hawaii" },
       { id: "maui-county", name: "Maui", stateKey: "hawaii" }
     ]
   }
@@ -44,11 +44,15 @@ let selectedMode = "pin"; // "pin" | "pin-hard" | "type" | "type-hard"
 const TYPE_MODES = new Set(["type", "type-hard"]);
 // All four modes, in the order they should appear as stats-panel columns.
 const MODE_LIST = ["pin", "pin-hard", "type", "type-hard"];
+// NOTE: the mode ids ("type" / "type-hard") are unchanged so saved
+// progress/localStorage keeps working — only the display labels swapped:
+// "type" (free, any-order typing) is now shown as "List Mode", and
+// "type-hard" (single highlighted target) is now shown as "Type".
 const MODE_LABELS = {
   pin: "Pin",
   "pin-hard": "Pin (Hard)",
-  type: "Type",
-  "type-hard": "Type (Hard)"
+  type: "List Mode",
+  "type-hard": "Type"
 };
 let activeStateKeys = [];
 let selectedCounties = [];
@@ -59,6 +63,10 @@ let scoreWrong = 0;
 let isGameActive = false;
 let missedCounties = new Set();
 let currentAttemptMistakes = 0;
+// Total counties in play for the current game, fixed at initGame() time,
+// so the "found/total" progress counter has a stable denominator even as
+// targetPool shrinks.
+let totalTargetsCount = 0;
 
 // Whether the Kalawao "click here" callout (circle + line, added because
 // the real Kalawao shape is tiny on the Hawaii map) has been built yet.
@@ -110,14 +118,17 @@ function getDisplayParts(county) {
 }
 
 
-// Normalizes a typed guess for comparison: lowercase, trims, strips the
-// Hawaiian 'okina and other curly/straight apostrophe variants (so
-// players don't need to hunt down a special character to type "Hawaiʻi"
-// or "Kauaʻi"), and collapses repeated whitespace.
+// Normalizes a typed guess for comparison: lowercase, trims, collapses
+// repeated whitespace, and folds apostrophe-*like* characters (okina,
+// curly quotes, backtick, acute accent) down to a single plain
+// apostrophe — so it doesn't matter which mark you actually type, but
+// the mark itself is still required. Kaua'i's official name (per the
+// Census) uses a plain apostrophe, not an okina, but typing "kauai"
+// with nothing there is still wrong.
 function normalizeTypedName(str) {
   return str
     .toLowerCase()
-    .replace(/[\u02BB\u2018\u2019'`´]/g, "")
+    .replace(/[\u02BB\u2018\u2019'`´]/g, "'")
     .trim()
     .replace(/\s+/g, " ");
 }
@@ -136,7 +147,7 @@ function findAllPoolMatchesByName(normalized) {
 
 
 // Returns every county the current typed guess should resolve, as an
-// array (empty if it doesn't match anything). "Type (Hard)" can only
+// array (empty if it doesn't match anything). "Type" (formerly "Type (Hard)") can only
 // ever resolve the single highlighted county; plain "Type" can resolve
 // several counties at once if their bare names are identical.
 function getTypedGuessMatches(normalized) {
@@ -253,6 +264,7 @@ const btnResetProgress = document.getElementById("btn-reset-progress");
 
 
 // --- Game Screen DOM Elements ---
+const progressCounter = document.getElementById("progress-counter");
 const targetPrompt = document.getElementById("target-prompt");
 const feedbackEl = document.getElementById("feedback");
 const typeInputBox = document.getElementById("type-input-box");
@@ -1158,6 +1170,7 @@ if (btnGiveUp) {
 // --- Game Loop Functions ---
 function initGame(countiesToPlay) {
   targetPool = [...countiesToPlay];
+  totalTargetsCount = targetPool.length;
   scoreRight = 0;
   scoreWrong = 0;
   isGameActive = true;
@@ -1194,10 +1207,19 @@ function initGame(countiesToPlay) {
 }
 
 
+// Shows how many counties have been found so far out of the total in
+// this game (e.g. "1/3"), regardless of mode.
+function updateProgressCounter() {
+  if (!progressCounter) return;
+  const found = totalTargetsCount - targetPool.length;
+  progressCounter.textContent = `${found}/${totalTargetsCount}`;
+}
+
 function pickNextTarget() {
   currentAttemptMistakes = 0;
+  updateProgressCounter();
 
-  // Clear any leftover "Type (Hard)" highlight before picking the next
+  // Clear any leftover "Type" (type-hard) highlight before picking the next
   // target — otherwise the previous target would stay pulsing blue.
   document.querySelectorAll(".county.typing-highlight").forEach(el => {
     el.classList.remove("typing-highlight");
@@ -1323,10 +1345,10 @@ function handleCountyClick(pathEl) {
 }
 
 
-// --- Typing Modes ("Type" and "Type (Hard)") ---
+// --- Typing Modes ("List Mode" / type + "Type" / type-hard) ---
 // A correct guess is shared logic between the two modes; only how the
 // match(es) are *found* differs (getTypedGuessMatches, defined earlier).
-// matchedCounties is always an array — length 1 for "Type (Hard)" (and
+// matchedCounties is always an array — length 1 for "Type" (type-hard) (and
 // usually for "Type" too), but "Type" can hand back several counties at
 // once when their bare names are identical (e.g. two "Kent"s in play).
 function acceptTypedMatches(matchedCounties) {
@@ -1377,7 +1399,7 @@ function registerWrongTypedGuess() {
   }
 
   // Attributed to whatever county is currently "in focus" (the
-  // highlighted one in Type (Hard), or the arbitrarily pre-picked one
+  // highlighted one in "Type" (type-hard), or the arbitrarily pre-picked one
   // in Type) so the mistake still feeds the "5 best-known" suggestions
   // and the missed-counties summary, same as click-based modes.
   if (currentTarget) {
@@ -1392,6 +1414,16 @@ function registerWrongTypedGuess() {
     // wrong guesses, not just the first one.
     void typeInputBox.offsetWidth;
     typeInputBox.classList.add("shake");
+  }
+
+  // Clear the box after a wrong Enter submission so the next attempt
+  // starts clean. Without this, leftover text from a mistyped guess
+  // (e.g. "keenyt") sticks around and silently gets prepended to
+  // whatever's typed next (e.g. "keenytsussex"), so a perfectly good
+  // second guess like "sussex" reads as wrong too.
+  if (typeInput) {
+    typeInput.value = "";
+    typeInput.focus();
   }
 }
 
@@ -1424,7 +1456,12 @@ function submitTypedGuess() {
 
 if (typeInput) {
   typeInput.addEventListener("input", () => {
-    if (gameSettings.instantTypeCheck) tryAutoMatchTypedInput();
+    // "Type" (selectedMode === "type-hard") is the harder, Seterra-style
+    // mode: it always requires an explicit Enter press to submit, so a
+    // wrong guess is actually registered as wrong (see
+    // registerWrongTypedGuess) instead of just sitting there unmatched.
+    // The Instant Check setting only ever applies to List Mode.
+    if (selectedMode === "type" && gameSettings.instantTypeCheck) tryAutoMatchTypedInput();
   });
   typeInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -1583,15 +1620,14 @@ function showSummaryModal() {
     });
   } else {
     // Mistakes Flow
-    const missedNames = missedArray.slice(0, 3).map(c => getDisplayName(c));
+    // Full list, not truncated — the whole point is being able to see
+    // everything you missed so you know what to study.
+    const missedNames = missedArray.map(c => getDisplayName(c));
     let formattedMissed = "";
     if (missedNames.length === 1) formattedMissed = missedNames[0];
     else if (missedNames.length === 2) formattedMissed = `${missedNames[0]} and ${missedNames[1]}`;
-    else formattedMissed = `${missedNames[0]}, ${missedNames[1]}, and ${missedNames[2]}`;
-
-
-    if (missedArray.length > 3) {
-      formattedMissed += `, and ${missedArray.length - 3} other${missedArray.length - 3 > 1 ? 's' : ''}`;
+    else {
+      formattedMissed = `${missedNames.slice(0, -1).join(", ")}, and ${missedNames[missedNames.length - 1]}`;
     }
 
 
