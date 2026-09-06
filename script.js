@@ -912,25 +912,32 @@ function switchVisibleSvgMap() {
 
 
   // Group the visible maps into their actual visual rows by comparing
-  // offsetTop (reading it here forces the browser to lay things out, so
-  // this reflects where .map-wrapper's flex-wrap really put each map —
-  // not just DOM order). Two maps on the same row get a vertical divider
-  // between them; a map that wrapped onto a new row instead gets a
-  // horizontal divider along its top, separating it from the row above.
+  // vertical center (top + height/2), not top. Reading getBoundingClientRect
+  // here forces the browser to lay things out, so this reflects where
+  // .map-wrapper's flex-wrap really put each map — not just DOM order.
+  // Two maps on the same row get a vertical divider between them; a map
+  // that wrapped onto a new row instead gets a horizontal divider along
+  // its top, separating it from the row above.
+  //
+  // NOTE: .map-wrapper uses align-items: center, so maps of different
+  // heights (e.g. Delaware next to the shorter Rhode Island) share a
+  // vertical CENTER when on the same row, not the same top edge —
+  // comparing top here would wrongly treat every map as its own row.
   const rows = [];
   domOrderedVisibleMaps.forEach(map => {
     // NOTE: map is an <svg> element (SVGElement), and SVGElement does not
     // have an .offsetTop property the way HTMLElement does — it's always
     // undefined, which made every comparison below resolve to NaN < 2
     // (always false), so every map was treated as starting a new row no
-    // matter where it actually rendered. getBoundingClientRect().top works
+    // matter where it actually rendered. getBoundingClientRect() works
     // on any element type and reflects the real on-screen position.
-    const top = map.getBoundingClientRect().top;
+    const rect = map.getBoundingClientRect();
+    const center = rect.top + rect.height / 2;
     const lastRow = rows[rows.length - 1];
-    if (lastRow && Math.abs(lastRow.top - top) < 2) {
+    if (lastRow && Math.abs(lastRow.center - center) < 2) {
       lastRow.maps.push(map);
     } else {
-      rows.push({ top, maps: [map] });
+      rows.push({ center, maps: [map] });
     }
   });
 
