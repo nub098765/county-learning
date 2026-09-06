@@ -1503,12 +1503,14 @@ function acceptTypedMatches(matchedCounties) {
     if (!recoveredFromMistake) markCountyLearned(matchedCounty.id, selectedMode);
     getCountyElements(matchedCounty.id).forEach(el => {
       el.classList.remove("typing-highlight");
-      // Typing modes never use the yellow "correct-recovered" color,
-      // unlike Pin mode: a wrong *typed* guess doesn't reliably tell you
-      // what the player meant to type, so there's nothing meaningful for
-      // the yellow to represent here — it just adds noise. Always plain
-      // green once it's right.
-      el.classList.add("correct", "found");
+      // Only "Type (Hard)" (type-strict) gets the yellow "recovered"
+      // treatment: it's the one mode where a wrong guess actually
+      // penalizes you (counts against you), so the color means
+      // something there. "Type" (type-hard) doesn't punish a wrong
+      // guess the same way, and List's wrong guesses aren't reliably
+      // about whichever county ends up matching — both stay plain green.
+      const useRecoveredColor = recoveredFromMistake && selectedMode === "type-strict";
+      el.classList.add(useRecoveredColor ? "correct-recovered" : "correct", "found");
       el.style.pointerEvents = "none";
     });
   });
@@ -1519,7 +1521,13 @@ function acceptTypedMatches(matchedCounties) {
 }
 
 function registerWrongTypedGuess() {
-  scoreWrong++;
+  // Only "Type (Hard)" (type-strict) actually penalizes your percentage
+  // for a wrong guess — that's the one mode explicitly billed as "wrong
+  // guesses count against you". List ("type") and "Type" (type-hard)
+  // still track the mistake below (for the shake/sound, the "recovered"
+  // state, missed-county suggestions, etc.) but it shouldn't move
+  // scoreWrong, since only giving up should knock those modes below 100%.
+  if (selectedMode === "type-strict") scoreWrong++;
   currentAttemptMistakes++;
   playSound("wrong");
 
@@ -1530,10 +1538,17 @@ function registerWrongTypedGuess() {
 
   // Attributed to whatever county is currently "in focus" (the
   // highlighted one in "Type" (type-hard), or the arbitrarily pre-picked one
-  // in Type) so the mistake still feeds the "5 best-known" suggestions
-  // and the missed-counties summary, same as click-based modes.
+  // in Type) so the persistent countyMistakes counter still feeds the
+  // "5 best-known" suggestions, same as click-based modes. missedCounties
+  // (the set that drives the end-of-game "You missed X" summary) only
+  // gets a wrong guess added in "Type (Hard)" (type-strict) — that's the
+  // one mode where a wrong guess is a real, permanent miss. In List and
+  // "Type", a wrong guess is just a retry: if you land on the right
+  // answer afterward, nothing should count against you, so we leave
+  // missedCounties alone here and let giveUp() be the only way a
+  // List/Type county ends up "missed".
   if (currentTarget) {
-    missedCounties.add(currentTarget);
+    if (selectedMode === "type-strict") missedCounties.add(currentTarget);
     countyMistakes[currentTarget.id] = (countyMistakes[currentTarget.id] || 0) + 1;
     localStorage.setItem("countyMistakes", JSON.stringify(countyMistakes));
   }
@@ -1714,10 +1729,15 @@ function showSummaryModal() {
 
 
     if (summaryMessage) {
+      // List ("type") is a free-recall mode — you're naming counties
+      // from memory, not being tested on ones you're shown — so
+      // "listed" reads more accurately than "learned" there. Every
+      // other mode keeps "learned".
+      const verb = selectedMode === "type" ? "listed" : "learned";
       if (activeStateNames.length === 1) {
-        summaryMessage.textContent = `You've learned all the counties in ${activeStateNames[0]}! Good job!`;
+        summaryMessage.textContent = `You've ${verb} all the counties in ${activeStateNames[0]}! Good job!`;
       } else {
-        summaryMessage.textContent = `You've learned all the counties across ${activeStateNames.length} states! Good job!`;
+        summaryMessage.textContent = `You've ${verb} all the counties across ${activeStateNames.length} states! Good job!`;
       }
     }
 
