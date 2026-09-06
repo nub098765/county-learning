@@ -96,6 +96,15 @@
    </div>
 
 
+   <div class="setting-item">
+     <div class="setting-text">
+       <label for="toggle-list-by-state">Separate List Mode Checklist by State</label>
+       <p class="setting-desc">Group the county checklist in List Mode into a section per state, instead of one mixed alphabetical list.</p>
+     </div>
+     <input type="checkbox" id="toggle-list-by-state">
+   </div>
+
+
 
 
    <div class="setting-item">
@@ -296,10 +305,6 @@
 
 
    <div class="game-body">
-     <aside id="county-list-panel" class="county-list-panel hidden">
-       <h3>Counties</h3>
-       <ul id="county-list-items"></ul>
-     </aside>
      <div class="map-wrapper">
      <!-- Delaware SVG Map -->
      <svg
@@ -440,6 +445,18 @@
 
 
 
+<!-- List Mode's optional county checklist: deliberately OUTSIDE the
+    <main class="app-container"> rounded rectangle, as its own separate
+    rounded rectangle sitting beside it, not another panel stuffed inside
+    the same box. -->
+<aside id="county-list-panel" class="county-list-panel hidden">
+  <h3>Counties</h3>
+  <table id="county-list-items"><tbody></tbody></table>
+</aside>
+
+
+
+
 <!-- Cursor-following tooltip shown when hovering a county revealed by Give Up -->
 <div id="county-hover-tooltip" class="county-hover-tooltip hidden"></div>
 
@@ -450,6 +467,10 @@
    <h2 id="summary-grade-title">Good job!</h2>
    <div id="summary-percentage">100%</div>
    <p id="summary-message">You've learned all the counties!</p>
+   <div id="summary-missed-section" class="summary-missed-section hidden">
+     <h3>What you missed</h3>
+     <div id="summary-missed-list"></div>
+   </div>
     <div class="modal-actions">
      <button id="btn-modal-admire" class="btn-secondary">Admire Map</button>
      <button id="btn-modal-retry" class="btn-primary hidden">Retry Missed</button>

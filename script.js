@@ -218,7 +218,8 @@ let gameSettings = JSON.parse(localStorage.getItem("gameSettings")) || {
   soundVolume: 50,
   speedrunMode: false,
   instantTypeCheck: true,
-  hideStatsByDefault: false
+  hideStatsByDefault: false,
+  listByState: true
 };
 // Backfills the new setting for anyone with an existing saved
 // gameSettings blob from before Type mode existed.
@@ -227,6 +228,10 @@ if (gameSettings.instantTypeCheck === undefined) gameSettings.instantTypeCheck =
 // gameSettings blob from before per-state progress tables could be
 // collapsed.
 if (gameSettings.hideStatsByDefault === undefined) gameSettings.hideStatsByDefault = false;
+// Backfills the new setting for anyone with an existing saved
+// gameSettings blob from before the List Mode checklist could be
+// grouped by state. Defaults to ON.
+if (gameSettings.listByState === undefined) gameSettings.listByState = true;
 
 
 // Per-state "collapsed" choice for the setup screen's progress tables.
@@ -277,6 +282,7 @@ const sliderSound = document.getElementById("slider-sound");
 const toggleSpeedrun = document.getElementById("toggle-speedrun");
 const toggleInstantCheck = document.getElementById("toggle-instant-check");
 const toggleHideStatsDefault = document.getElementById("toggle-hide-stats-default");
+const toggleListByState = document.getElementById("toggle-list-by-state");
 const btnResetProgress = document.getElementById("btn-reset-progress");
 
 
@@ -333,6 +339,8 @@ const modalSummary = document.getElementById("modal-summary");
 const summaryPercentage = document.getElementById("summary-percentage");
 const summaryGradeTitle = document.getElementById("summary-grade-title");
 const summaryMessage = document.getElementById("summary-message");
+const summaryMissedSection = document.getElementById("summary-missed-section");
+const summaryMissedList = document.getElementById("summary-missed-list");
 const modalActions = document.querySelector(".modal-actions");
 
 
@@ -394,6 +402,7 @@ function applySettings() {
   if (toggleSpeedrun) toggleSpeedrun.checked = gameSettings.speedrunMode;
   if (toggleInstantCheck) toggleInstantCheck.checked = gameSettings.instantTypeCheck;
   if (toggleHideStatsDefault) toggleHideStatsDefault.checked = gameSettings.hideStatsByDefault;
+  if (toggleListByState) toggleListByState.checked = gameSettings.listByState;
 
 
   document.body.classList.toggle("dark-mode", gameSettings.darkMode);
@@ -433,6 +442,13 @@ function showScreen(screenId) {
   if (activeScreen) {
     activeScreen.classList.add("active");
     activeScreen.focus();
+  }
+  // The county-list sidebar now lives outside .app-container as its own
+  // card, so it's no longer a descendant of screen-game and doesn't get
+  // hidden automatically when another screen becomes active — force it
+  // closed any time we're not on the game screen.
+  if (countyListPanel && screenId !== "screen-game") {
+    countyListPanel.classList.add("hidden");
   }
 }
 
@@ -535,6 +551,16 @@ if (toggleHideStatsDefault) {
     gameSettings.hideStatsByDefault = e.target.checked;
     localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
     renderStatsPanel(); // re-render so states without a manual override pick up the new default right away
+  });
+}
+
+
+if (toggleListByState) {
+  toggleListByState.addEventListener("change", (e) => {
+    gameSettings.listByState = e.target.checked;
+    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+    // Re-render immediately if the checklist happens to be open right now.
+    renderCountyListPanel();
   });
 }
 
@@ -1256,19 +1282,57 @@ function updateProgressCounter() {
   progressCounter.textContent = `${found}/${totalTargetsCount}`;
 }
 
-// Refreshes the optional List Mode sidebar: every county in this game,
-// alphabetically, struck through once it's been found (i.e. no longer in
-// targetPool). Cheap enough to just re-render in full each time rather
-// than diffing.
+// Refreshes the optional List Mode sidebar: one blank cell per county in
+// this game. A cell stays blank (no name shown) until that county has
+// actually been typed correctly (i.e. it's no longer in targetPool) —
+// only then does its cell fill in with the name. Nothing about an
+// unfound county (which letter, how long the name is) leaks out early;
+// filling in a cell is the reward for the guess, not a running spoiler.
+// When gameSettings.listByState is on (the default), counties are
+// grouped into a labeled section per state instead of one mixed
+// alphabetical list. Cheap enough to just re-render in full each time
+// rather than diffing.
 function renderCountyListPanel() {
   if (!countyListItems) return;
+  const tbody = countyListItems.querySelector("tbody") || countyListItems;
   const remainingIds = new Set(targetPool.map(c => c.id));
-  const sorted = [...originalTargetList].sort((a, b) =>
-    getDisplayName(a).localeCompare(getDisplayName(b))
-  );
-  countyListItems.innerHTML = sorted
-    .map(c => `<li class="${remainingIds.has(c.id) ? "" : "found"}">${getDisplayName(c)}</li>`)
-    .join("");
+
+  const cellRow = (c) => {
+    const found = !remainingIds.has(c.id);
+    return `<tr><td class="${found ? "found" : "blank"}">${found ? getDisplayName(c) : ""}</td></tr>`;
+  };
+
+  if (gameSettings.listByState) {
+    const byState = {};
+    originalTargetList.forEach(c => {
+      (byState[c.stateKey] = byState[c.stateKey] || []).push(c);
+    });
+    const stateKeys = Object.keys(byState).sort((a, b) => {
+      const nameA = stateData[a]?.name || a;
+      const nameB = stateData[b]?.name || b;
+      return nameA.localeCompare(nameB);
+    });
+    // Within a grouped-by-state section the header already gives the
+    // state, so cells use the plain county name rather than
+    // getDisplayName's "Kent, Rhode Island" disambiguation.
+    const groupedCellRow = (c) => {
+      const found = !remainingIds.has(c.id);
+      return `<tr><td class="${found ? "found" : "blank"}">${found ? c.name : ""}</td></tr>`;
+    };
+    tbody.innerHTML = stateKeys
+      .map(stateKey => {
+        const stateName = stateData[stateKey]?.name || stateKey;
+        const sorted = byState[stateKey].sort((a, b) => a.name.localeCompare(b.name));
+        const header = `<tr class="county-list-state-row"><th colspan="1">${stateName}</th></tr>`;
+        return header + sorted.map(groupedCellRow).join("");
+      })
+      .join("");
+  } else {
+    const sorted = [...originalTargetList].sort((a, b) =>
+      getDisplayName(a).localeCompare(getDisplayName(b))
+    );
+    tbody.innerHTML = sorted.map(cellRow).join("");
+  }
 }
 
 function pickNextTarget() {
@@ -1641,6 +1705,7 @@ function showSummaryModal() {
 
   const missedArray = Array.from(missedCounties);
   if (modalActions) modalActions.innerHTML = "";
+  if (summaryMissedSection) summaryMissedSection.classList.add("hidden");
 
 
   if (missedArray.length === 0) {
@@ -1688,18 +1753,32 @@ function showSummaryModal() {
   } else {
     // Mistakes Flow
     // Full list, not truncated — the whole point is being able to see
-    // everything you missed so you know what to study.
-    const missedNames = missedArray.map(c => getDisplayName(c));
-    let formattedMissed = "";
-    if (missedNames.length === 1) formattedMissed = missedNames[0];
-    else if (missedNames.length === 2) formattedMissed = `${missedNames[0]} and ${missedNames[1]}`;
-    else {
-      formattedMissed = `${missedNames.slice(0, -1).join(", ")}, and ${missedNames[missedNames.length - 1]}`;
-    }
-
-
+    // everything you missed so you know what to study. It lives in its
+    // own "What you missed" section under the main message, grouped into
+    // an actual per-state list rather than one long comma-separated
+    // sentence — same grouping idea as the List Mode checklist.
     if (summaryMessage) {
-      summaryMessage.textContent = `You missed ${missedArray.length} county target${missedArray.length > 1 ? 's' : ''} (${formattedMissed}). What would you like to do?`;
+      summaryMessage.textContent = `You missed ${missedArray.length} county target${missedArray.length > 1 ? 's' : ''}. What would you like to do?`;
+    }
+    if (summaryMissedSection && summaryMissedList) {
+      const byState = {};
+      missedArray.forEach(c => {
+        (byState[c.stateKey] = byState[c.stateKey] || []).push(c);
+      });
+      const stateKeys = Object.keys(byState).sort((a, b) => {
+        const nameA = stateData[a]?.name || a;
+        const nameB = stateData[b]?.name || b;
+        return nameA.localeCompare(nameB);
+      });
+      summaryMissedList.innerHTML = stateKeys
+        .map(stateKey => {
+          const stateName = stateData[stateKey]?.name || stateKey;
+          const sorted = byState[stateKey].sort((a, b) => a.name.localeCompare(b.name));
+          const items = sorted.map(c => `<li>${c.name}</li>`).join("");
+          return `<div class="summary-missed-state"><h4>${stateName}</h4><ul>${items}</ul></div>`;
+        })
+        .join("");
+      summaryMissedSection.classList.remove("hidden");
     }
 
 

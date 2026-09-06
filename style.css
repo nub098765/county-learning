@@ -8,8 +8,11 @@ body {
  background-color: #fdeca6;
  font-family: 'Roboto Serif', Georgia, serif;
  display: flex;
+ flex-direction: row;
+ flex-wrap: wrap;
  justify-content: center;
  align-items: center;
+ gap: 1.5rem;
  min-height: 100vh;
  margin: 0;
  color: #1c1c1a;
@@ -582,9 +585,9 @@ body.dark-mode .badge-mistake {
 }
 
 
-/* Flex row holding the optional county-list sidebar next to the maps.
-  Wraps to stack the sidebar above the maps on narrow screens instead of
-  squeezing both side by side. */
+/* Holds the map(s) for the active game. The county-list sidebar used to
+  live in here as a flex sibling, but now lives outside .app-container
+  entirely as its own card — see .county-list-panel. */
 .game-body {
  display: flex;
  flex-direction: row;
@@ -596,22 +599,29 @@ body.dark-mode .badge-mistake {
 }
 
 
-/* Optional "Show List" sidebar for List Mode: a plain checklist of every
-  county in the current game, struck through once found, so a player can
-  see at a glance what's left without the map giving anything away. */
+/* Optional "Show List" sidebar for List Mode. Lives OUTSIDE
+  .app-container entirely — as its own separate rounded-rectangle card,
+  sitting beside the main card rather than inside it — with one blank
+  cell per county. Every cell starts blank — the point is that it only
+  tells you how many counties are left, never which ones, so typing a
+  name never feels like it "used up" a spoiler. A cell fills in with the
+  county's name only once that county has actually been guessed
+  correctly, as a little reveal/reward rather than a running answer key. */
 .county-list-panel {
  background: #ffffff;
- border: 2px solid #2d5a27;
- border-radius: 12px;
- padding: 0.75rem 1.1rem;
+ padding: 1.25rem 1.1rem;
+ border-radius: 16px;
+ box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+ border: 1px solid rgba(0, 0, 0, 0.05);
  min-width: 160px;
  max-width: 220px;
  max-height: 480px;
  overflow-y: auto;
+ align-self: center;
 }
 body.dark-mode .county-list-panel {
- background-color: #1e1e1c;
- border-color: #45a049;
+ background: #242420;
+ border-color: #33332d;
 }
 .county-list-panel h3 {
  margin: 0 0 0.5rem 0;
@@ -621,21 +631,55 @@ body.dark-mode .county-list-panel {
  text-transform: uppercase;
  opacity: 0.7;
 }
-.county-list-panel ul {
- list-style: none;
- margin: 0;
- padding: 0;
- display: flex;
- flex-direction: column;
- gap: 0.35rem;
+.county-list-panel table {
+ border-collapse: separate;
+ border-spacing: 0 0.35rem;
+ width: 100%;
 }
-.county-list-panel li {
+.county-list-panel td {
  font-family: system-ui, -apple-system, sans-serif;
  font-size: 0.85rem;
+ height: 1.9rem;
+ padding: 0 0.5rem;
+ border: 1.5px dashed #b9c9b4;
+ border-radius: 6px;
+ background: #f4f2e8;
+ vertical-align: middle;
+ text-align: center;
 }
-.county-list-panel li.found {
- text-decoration: line-through;
- opacity: 0.4;
+body.dark-mode .county-list-panel td {
+ border-color: #3a4a37;
+ background: #26261f;
+}
+.county-list-panel td.found {
+ border-style: solid;
+ border-color: #4a7c59;
+ background: rgba(74, 124, 89, 0.15);
+ font-weight: 600;
+ /* A quick pop when a cell fills in, so it reads as a small reveal. */
+ animation: county-cell-fill 0.35s ease;
+}
+body.dark-mode .county-list-panel td.found {
+ border-color: #45a049;
+ background: rgba(69, 160, 73, 0.18);
+}
+@keyframes county-cell-fill {
+ from { transform: scale(0.9); opacity: 0.4; }
+ to { transform: scale(1); opacity: 1; }
+}
+/* State-section headers shown above each group of cells when the
+  "Separate List Mode Checklist by State" setting is on. */
+.county-list-panel th {
+ text-align: center;
+ font-size: 0.7rem;
+ font-weight: 700;
+ letter-spacing: 0.05em;
+ text-transform: uppercase;
+ opacity: 0.65;
+ padding: 0.6rem 0 0.15rem;
+}
+.county-list-state-row:first-child th {
+ padding-top: 0;
 }
 
 
@@ -1055,6 +1099,51 @@ body.dark-mode .modal-card {
  background: #242420;
  border-color: #33332d;
  color: #ffffff;
+}
+
+
+/* "What you missed" section on the end-of-game summary popup: its own
+  block under the main pass/fail message, rather than a parenthetical
+  crammed into that sentence. */
+.summary-missed-section {
+ margin: 1rem 0;
+ padding: 0.75rem 1rem;
+ background: rgba(0, 0, 0, 0.04);
+ border-radius: 10px;
+ text-align: left;
+ max-height: 220px;
+ overflow-y: auto;
+}
+body.dark-mode .summary-missed-section {
+ background: rgba(255, 255, 255, 0.06);
+}
+.summary-missed-section h3 {
+ margin: 0 0 0.35rem 0;
+ font-size: 0.75rem;
+ font-weight: 700;
+ letter-spacing: 0.05em;
+ text-transform: uppercase;
+ opacity: 0.7;
+}
+.summary-missed-state + .summary-missed-state {
+ margin-top: 0.6rem;
+}
+.summary-missed-state h4 {
+ margin: 0 0 0.2rem 0;
+ font-size: 0.7rem;
+ font-weight: 700;
+ letter-spacing: 0.03em;
+ text-transform: uppercase;
+ opacity: 0.6;
+}
+.summary-missed-state ul {
+ margin: 0;
+ padding: 0;
+ list-style: none;
+}
+.summary-missed-state li {
+ font-size: 0.9rem;
+ padding: 0.1rem 0;
 }
 
 
