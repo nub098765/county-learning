@@ -36,7 +36,33 @@ body.dark-mode {
  text-align: center;
  max-width: 460px;
  width: 90%;
+ /* NOTE: max-width used to be transitioned here too, but that's what was
+    causing the Hawaii/Rhode Island divider bug: switchVisibleSvgMap()
+    calls getBoundingClientRect() on the maps immediately after the
+    "wide-map" class is toggled on this element, and while max-width is
+    mid-transition the container (and therefore .map-wrapper) is still
+    close to its old, narrower width — often narrow enough that Hawaii
+    doesn't fit beside its neighbor yet and gets measured as having
+    wrapped onto its own row, even though the transition finishes a
+    moment later with it correctly beside the other map. Only animating
+    background-color avoids that mismatch between measured and final
+    layout. */
  transition: background-color 0.3s ease;
+}
+
+
+/* Applied to .app-container only while #screen-game is active AND more
+  than one state's map is in play (toggled in script.js's showScreen()).
+  width: fit-content lets the card hug however wide the row of maps in
+  .map-wrapper/.game-body actually is — two small states stay narrow,
+  several large ones spread out further — rather than jumping to some
+  arbitrary fixed width regardless of how much room the maps need.
+  max-width still caps it at the viewport so it can't overflow the
+  screen; .map-wrapper's own flex-wrap takes over and drops maps onto a
+  new row once they no longer fit within that cap. */
+.app-container.wide-map {
+ width: fit-content;
+ max-width: 96vw;
 }
 
 
@@ -634,6 +660,7 @@ body.dark-mode .badge-mistake {
   live in here as a flex sibling, but now lives outside .app-container
   entirely as its own card — see .county-list-panel. */
 .game-body {
+ position: relative;
  display: flex;
  flex-direction: row;
  flex-wrap: wrap;
@@ -641,6 +668,65 @@ body.dark-mode .badge-mistake {
  align-items: flex-start;
  gap: 1rem;
  max-width: 100%;
+ /* FIX: the info button below is absolutely positioned in this corner
+   with no reserved space of its own, so it was sitting right on top of
+   the map's bottom-right counties whenever a map's own bottom edge
+   reached that far down — most noticeably with California's bigger solo
+   size. This padding gives the button its own clear strip under the
+   map(s) instead of overlapping them. */
+ padding-bottom: 2.75rem;
+}
+
+
+/* "i"-in-a-circle help button, pinned to the bottom-right corner of the
+  play area (.game-body, which is why that got position: relative
+  above). Sits above the map itself since it comes right after
+  .map-wrapper in source order and .map-wrapper doesn't set its own
+  z-index. */
+.info-button {
+ position: absolute;
+ bottom: 0.75rem;
+ right: 0.75rem;
+ width: 2.1rem;
+ height: 2.1rem;
+ border-radius: 50%;
+ border: 2px solid #2d5a27;
+ background: #ffffff;
+ color: #2d5a27;
+ font-family: 'Roboto Serif', Georgia, serif;
+ font-style: italic;
+ font-weight: 700;
+ font-size: 1.1rem;
+ line-height: 1;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ cursor: pointer;
+ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+ z-index: 10;
+}
+.info-button:hover {
+ background: #eef3ec;
+}
+body.dark-mode .info-button {
+ background: #242420;
+ border-color: #45a049;
+ color: #7bc47f;
+}
+body.dark-mode .info-button:hover {
+ background: #2c2c27;
+}
+
+
+.info-list {
+ text-align: left;
+ margin: 0 0 0.5rem 0;
+ padding-left: 1.2rem;
+ display: flex;
+ flex-direction: column;
+ gap: 0.6rem;
+ font-size: 0.9rem;
+ line-height: 1.4;
 }
 
 
@@ -832,6 +918,31 @@ body.high-contrast .county.correct-recovered {
 }
 
 
+/* California has 58 densely-packed counties, so it needs considerably
+  more on-screen room than the smaller states to stay legible/clickable.
+  This base size is what's used whenever California shares the screen
+  with other states — the bigger, solo-only size lives in the
+  .solo-california rule right below. */
+#svg-california {
+ max-width: 520px;
+ max-height: 720px;
+ flex: 1 1 460px;
+}
+
+
+/* California gets extra room on top of the base size above when it's
+  the ONLY map in play (see showScreen()'s "solo-california" toggle in
+  script.js) — otherwise it stays cramped even with the wide card, since
+  its own max-width was still the limiting factor. Kept separate from the
+  base rule so adding other states back in shrinks it back down instead
+  of leaving it oversized next to them. */
+.app-container.solo-california #svg-california {
+ max-width: 640px;
+ max-height: 840px;
+ flex-basis: 600px;
+}
+
+
 /* Subtle divider line between two or more maps shown side by side.
   Applied via JS (switchVisibleSvgMap) only to maps that are actually
   visible, so a hidden map never leaves a stray line behind. */
@@ -855,6 +966,81 @@ body.dark-mode .state-map.map-divider {
 }
 body.dark-mode .state-map.map-divider-top {
  border-top-color: #3f3f38;
+}
+
+
+/* FIX: every .state-map has flex-grow: 1 (see "flex: 1 1 ..." rules
+  above), so with several maps sharing a row they don't just sit at their
+  natural max-width-capped size — they keep growing to soak up whatever
+  free space is left, and different maps hit their own max-width cap
+  (180 / 320 / 520) at different points. That uneven growth is what was
+  pulling Rhode Island off-center against its divider and leaving a big
+  uneven gap around Hawaii that read as "disconnected" once all four
+  states were active. Growth is only useful for a single map filling its
+  card (see #svg-california below); once .wide-map confirms more than
+  one map is in play, turn it off so every map renders at its own natural
+  size and .map-wrapper's justify-content: center spaces the row evenly.
+  FIX 2: this alone didn't actually reach Hawaii or California — their
+  own #svg-hawaii / #svg-california rules set flex-grow: 1 via an ID
+  selector, and an ID always outranks any number of classes, so the
+  class-only override below was silently losing to those and Hawaii kept
+  growing unevenly while Rhode Island (no ID rule of its own) got
+  flattened correctly. Repeating the override with those IDs included
+  gives it equal ID-specificity (1 ID + extra classes beats 1 ID alone),
+  so it actually wins now. */
+.app-container.wide-map .state-map {
+ flex-grow: 0;
+}
+.app-container.wide-map #svg-hawaii,
+.app-container.wide-map #svg-california {
+ flex-grow: 0;
+}
+
+
+/* Right-click-to-zoom overlay (see the zoom-backdrop / enterMapZoom
+  setup in script.js, right after svgMaps is defined). The backdrop
+  dims everything else and catches clicks to close the zoom; the
+  zoomed map itself gets pulled out of the page flow and centered as a
+  large, easy-to-click overlay. !important is used for the sizing
+  properties because they need to win over each state's own more
+  specific max-width/flex rules (e.g. #svg-california, #svg-hawaii). */
+.zoom-backdrop {
+ position: fixed;
+ inset: 0;
+ background: rgba(20, 20, 15, 0.6);
+ z-index: 999;
+ display: none;
+}
+.zoom-backdrop.active {
+ display: block;
+}
+
+/* FIX: was centered on the full viewport (top: 50%), which put its top
+  edge above the fixed target banner (body.map-zoomed .prompt-box below)
+  and let the banner cover the state's northern counties. Anchoring to a
+  fixed top offset instead keeps the whole map below the banner. 12rem
+  clears the banner's tallest state (label + 3.2rem target name + state
+  line + feedback line + Type mode's input box + padding/border) with
+  room to spare. The vh-bound dimension is shrunk by that same offset so
+  the map is only a touch smaller, not cramped. */
+.state-map.zoomed {
+ position: fixed !important;
+ top: 12rem;
+ left: 50%;
+ transform: translateX(-50%);
+ z-index: 1000;
+ width: min(88vw, calc(90vh - 12rem)) !important;
+ max-width: min(88vw, calc(90vh - 12rem)) !important;
+ max-height: calc(90vh - 12rem) !important;
+ flex: none !important;
+ background: #ffffff;
+ border-radius: 16px;
+ box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+ padding: 1.5rem;
+ cursor: zoom-out;
+}
+body.dark-mode .state-map.zoomed {
+ background: #242420;
 }
 
 
@@ -951,8 +1137,17 @@ body.high-contrast .county.typing-highlight {
 /* Kalawao's real shape is tiny, so it gets a bigger, easier-to-click
   circle out in open water connected back to it with a line. The circle
   shares .county so it participates fully in hover/found/wrong states;
-  this just nudges its line weight and gives the circle a dashed ring so
-  it visually reads as a "click here" marker rather than actual coastline. */
+  this just gives the circle (and San Francisco's, further down) the
+  same solid orange stroke as its leader line/arrowhead, instead of the
+  default green county border, so it still visually reads as a "click
+  here" marker rather than actual coastline.
+  A dashed ring was tried here first, but Hawaii's and California's
+  viewBoxes differ in scale by roughly 70x, and no single dasharray
+  read as clearly "dashed" on both — it either left a visible gap
+  before completing one lap around San Francisco's small circle, or
+  came out so fine-grained on Kalawao's that it visually collapsed
+  into a solid-looking ring anyway. A solid stroke in a distinct color
+  sidesteps that scale-dependence entirely. */
 .kalawao-callout-line {
  stroke: #b5651d;
  stroke-width: 3px;
@@ -976,9 +1171,58 @@ body.high-contrast .kalawao-arrowhead-fill {
  fill: #ff8800;
 }
 
-
 .kalawao-callout {
- stroke-dasharray: 90 60;
+ stroke: #b5651d;
+}
+body.dark-mode .kalawao-callout {
+ stroke: #e0954a;
+}
+body.high-contrast .kalawao-callout {
+ stroke: #ff8800;
+}
+
+
+/* San Francisco is the same story as Kalawao above: its real shape is
+  tiny and boxed in by Marin, San Mateo, and Alameda, so it gets the
+  same "click here" circle-and-line treatment out in the open Pacific
+  just west of the city. Same colors as Kalawao's callout so the two
+  read as the same kind of UI element wherever they show up.
+  NOTE: stroke-width here is much smaller than Kalawao's 3px — the
+  arrowhead marker's actual size is markerWidth × stroke-width (in the
+  SVG's own coordinate units), and California's map uses a viewBox only
+  about 1/70th the size of Hawaii's, so reusing 3px would draw an
+  arrowhead many times larger than San Francisco's own real shape. */
+.sf-callout-line {
+ stroke: #b5651d;
+ stroke-width: 0.6px;
+ fill: none;
+ vector-effect: non-scaling-stroke;
+}
+body.dark-mode .sf-callout-line {
+ stroke: #e0954a;
+}
+body.high-contrast .sf-callout-line {
+ stroke: #ff8800;
+}
+
+.sf-arrowhead-fill {
+ fill: #b5651d;
+}
+body.dark-mode .sf-arrowhead-fill {
+ fill: #e0954a;
+}
+body.high-contrast .sf-arrowhead-fill {
+ fill: #ff8800;
+}
+
+.sf-callout {
+ stroke: #b5651d;
+}
+body.dark-mode .sf-callout {
+ stroke: #e0954a;
+}
+body.high-contrast .sf-callout {
+ stroke: #ff8800;
 }
 
 
@@ -995,12 +1239,38 @@ body.high-contrast .kalawao-arrowhead-fill {
  flex-direction: column;
  align-items: center;
  justify-content: center;
+ /* Stays pinned to the top of the viewport while the page scrolls (e.g.
+   a tall map like California's), instead of scrolling out of view. It
+   naturally stops sticking once the bottom of #screen-game scrolls past,
+   since sticky positioning is bound to that ancestor. */
+ position: sticky;
+ top: 0.5rem;
+ z-index: 20;
 }
 
 
 body.dark-mode .prompt-box {
  background-color: #1e1e1c;
  border-color: #45a049;
+}
+
+
+/* While a map is right-click-zoomed (see enterMapZoom/exitMapZoom in
+  script.js, which toggle "map-zoomed" on <body>), pull the target
+  banner out of the normal page flow and pin it to the top of the
+  viewport, above both the zoom backdrop (z-index 999) and the zoomed
+  map itself (z-index 1000). Otherwise the banner stays behind them —
+  dimmed by the backdrop or covered outright by the enlarged map — right
+  when you need it most, since zooming in is usually to hunt for one
+  particular small county. */
+body.map-zoomed .prompt-box {
+ position: fixed;
+ top: 0.75rem;
+ left: 50%;
+ transform: translateX(-50%);
+ width: min(92vw, 480px);
+ margin: 0;
+ z-index: 1001;
 }
 
 

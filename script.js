@@ -31,6 +31,70 @@ const stateData = {
       { id: "kauai", name: "Kaua'i", stateKey: "hawaii" },
       { id: "maui-county", name: "Maui", stateKey: "hawaii" }
     ]
+  },
+  california: {
+    name: "California",
+    svgId: "svg-california",
+    counties: [
+      { id: "alameda", name: "Alameda", stateKey: "california" },
+      { id: "alpine", name: "Alpine", stateKey: "california" },
+      { id: "amador", name: "Amador", stateKey: "california" },
+      { id: "butte", name: "Butte", stateKey: "california" },
+      { id: "calaveras", name: "Calaveras", stateKey: "california" },
+      { id: "colusa", name: "Colusa", stateKey: "california" },
+      { id: "contra-costa", name: "Contra Costa", stateKey: "california" },
+      { id: "del-norte", name: "Del Norte", stateKey: "california" },
+      { id: "el-dorado", name: "El Dorado", stateKey: "california" },
+      { id: "fresno", name: "Fresno", stateKey: "california" },
+      { id: "glenn", name: "Glenn", stateKey: "california" },
+      { id: "humboldt", name: "Humboldt", stateKey: "california" },
+      { id: "imperial", name: "Imperial", stateKey: "california" },
+      { id: "inyo", name: "Inyo", stateKey: "california" },
+      { id: "kern", name: "Kern", stateKey: "california" },
+      { id: "kings", name: "Kings", stateKey: "california" },
+      { id: "lake", name: "Lake", stateKey: "california" },
+      { id: "lassen", name: "Lassen", stateKey: "california" },
+      { id: "los-angeles", name: "Los Angeles", stateKey: "california" },
+      { id: "madera", name: "Madera", stateKey: "california" },
+      { id: "marin", name: "Marin", stateKey: "california" },
+      { id: "mariposa", name: "Mariposa", stateKey: "california" },
+      { id: "mendocino", name: "Mendocino", stateKey: "california" },
+      { id: "merced", name: "Merced", stateKey: "california" },
+      { id: "modoc", name: "Modoc", stateKey: "california" },
+      { id: "mono", name: "Mono", stateKey: "california" },
+      { id: "monterey", name: "Monterey", stateKey: "california" },
+      { id: "napa", name: "Napa", stateKey: "california" },
+      { id: "nevada", name: "Nevada", stateKey: "california" },
+      { id: "orange", name: "Orange", stateKey: "california" },
+      { id: "placer", name: "Placer", stateKey: "california" },
+      { id: "plumas", name: "Plumas", stateKey: "california" },
+      { id: "riverside", name: "Riverside", stateKey: "california" },
+      { id: "sacramento", name: "Sacramento", stateKey: "california" },
+      { id: "san-benito", name: "San Benito", stateKey: "california" },
+      { id: "san-bernardino", name: "San Bernardino", stateKey: "california" },
+      { id: "san-diego", name: "San Diego", stateKey: "california" },
+      { id: "san-francisco", name: "San Francisco", stateKey: "california" },
+      { id: "san-joaquin", name: "San Joaquin", stateKey: "california" },
+      { id: "san-luis-obispo", name: "San Luis Obispo", stateKey: "california" },
+      { id: "san-mateo", name: "San Mateo", stateKey: "california" },
+      { id: "santa-barbara", name: "Santa Barbara", stateKey: "california" },
+      { id: "santa-clara", name: "Santa Clara", stateKey: "california" },
+      { id: "santa-cruz", name: "Santa Cruz", stateKey: "california" },
+      { id: "shasta", name: "Shasta", stateKey: "california" },
+      { id: "sierra", name: "Sierra", stateKey: "california" },
+      { id: "siskiyou", name: "Siskiyou", stateKey: "california" },
+      { id: "solano", name: "Solano", stateKey: "california" },
+      { id: "sonoma", name: "Sonoma", stateKey: "california" },
+      { id: "stanislaus", name: "Stanislaus", stateKey: "california" },
+      { id: "sutter", name: "Sutter", stateKey: "california" },
+      { id: "tehama", name: "Tehama", stateKey: "california" },
+      { id: "trinity", name: "Trinity", stateKey: "california" },
+      { id: "tulare", name: "Tulare", stateKey: "california" },
+      { id: "tuolumne", name: "Tuolumne", stateKey: "california" },
+      { id: "ventura", name: "Ventura", stateKey: "california" },
+      { id: "yolo", name: "Yolo", stateKey: "california" },
+      { id: "yuba", name: "Yuba", stateKey: "california" }
+    ]
   }
 };
 
@@ -95,6 +159,12 @@ let originalTargetList = [];
 // since SVG getBBox() needs the element to be rendered (not display:none)
 // to return real numbers.
 let kalawaoCalloutCreated = false;
+
+// Same idea as kalawaoCalloutCreated, but for the San Francisco "click
+// here" callout on the California map — San Francisco's real shape is
+// tiny (and boxed in by Marin, San Mateo, and Alameda) so it's just as
+// hard to click at normal zoom as Kalawao is.
+let sfCalloutCreated = false;
 
 
 // Names that are ambiguous *within the counties currently being played*
@@ -313,6 +383,95 @@ let countyPaths = document.querySelectorAll(".county");
 const svgMaps = document.querySelectorAll(".state-map");
 
 
+// --- Right-click-to-zoom on state maps ---
+// Small counties (Kalawao, San Francisco, etc.) are hard to click
+// precisely at the map's normal on-screen size, so right-clicking any
+// state map blows it up to a large, centered overlay — like a lightbox
+// — so individual counties are easier to see and click. Right-clicking
+// it again, clicking the dimmed backdrop, or pressing Escape restores
+// the normal layout. The backdrop element is created once here (rather
+// than living in index.html) since it's purely a JS-driven UI, not
+// meaningful markup.
+const zoomBackdrop = document.createElement("div");
+zoomBackdrop.className = "zoom-backdrop";
+document.body.appendChild(zoomBackdrop);
+let zoomedMap = null;
+
+function exitMapZoom() {
+  if (zoomedMap) {
+    zoomedMap.classList.remove("zoomed");
+    zoomedMap = null;
+  }
+  zoomBackdrop.classList.remove("active");
+  // See enterMapZoom below for what this class does.
+  document.body.classList.remove("map-zoomed");
+}
+
+function enterMapZoom(svg) {
+  // Only one map can be zoomed at a time — swap instead of stacking.
+  if (zoomedMap && zoomedMap !== svg) {
+    zoomedMap.classList.remove("zoomed");
+  }
+  svg.classList.add("zoomed");
+  zoomedMap = svg;
+  zoomBackdrop.classList.add("active");
+  // The zoom backdrop and the enlarged map both sit at a z-index well
+  // above .prompt-box's normal one, so without this the target banner
+  // gets dimmed behind the backdrop (or covered outright by the
+  // enlarged map) right when you need it most — while zoomed in and
+  // hunting for a specific county. This class lets style.css lift
+  // .prompt-box above both of them for as long as any map is zoomed.
+  document.body.classList.add("map-zoomed");
+}
+
+svgMaps.forEach(svg => {
+  svg.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    if (svg.classList.contains("zoomed")) {
+      exitMapZoom();
+    } else {
+      enterMapZoom(svg);
+    }
+  });
+});
+
+zoomBackdrop.addEventListener("click", exitMapZoom);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && zoomedMap) exitMapZoom();
+});
+
+
+// --- "How to Play" info button/modal (bottom-right of the play area) ---
+const btnGameInfo = document.getElementById("btn-game-info");
+const modalInfo = document.getElementById("modal-info");
+const btnModalInfoClose = document.getElementById("btn-modal-info-close");
+
+if (btnGameInfo && modalInfo) {
+  btnGameInfo.addEventListener("click", () => {
+    modalInfo.classList.remove("hidden");
+  });
+}
+if (btnModalInfoClose && modalInfo) {
+  btnModalInfoClose.addEventListener("click", () => {
+    modalInfo.classList.add("hidden");
+  });
+}
+// Clicking the dimmed backdrop closes it too, same as the other modals —
+// .modal already stretches to fill the viewport, so a click anywhere
+// outside .modal-content is a click on the modal itself.
+if (modalInfo) {
+  modalInfo.addEventListener("click", (e) => {
+    if (e.target === modalInfo) modalInfo.classList.add("hidden");
+  });
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && modalInfo && !modalInfo.classList.contains("hidden")) {
+    modalInfo.classList.add("hidden");
+  }
+});
+
+
 // Which screen (and, if relevant, which finished-game overlay) the
 // Settings "Back" button should return to. Defaults to Home, but is set
 // to "screen-game" whenever Settings is opened from mid-game (the header
@@ -346,7 +505,12 @@ const summaryGradeTitle = document.getElementById("summary-grade-title");
 const summaryMessage = document.getElementById("summary-message");
 const summaryMissedSection = document.getElementById("summary-missed-section");
 const summaryMissedList = document.getElementById("summary-missed-list");
-const modalActions = document.querySelector(".modal-actions");
+// FIX: was document.querySelector(".modal-actions"), which grabs the
+// FIRST .modal-actions in the whole document — that's modal-info's (the
+// "How to Play" popup), not this one. showSummaryModal() was building
+// its buttons into the wrong modal, leaving the actual summary popup's
+// buttons dead with no click handlers at all.
+const modalActions = document.getElementById("modal-summary-actions");
 
 
 // --- Bottom Admire Bar DOM Elements ---
@@ -441,6 +605,7 @@ if (systemPrefersDark) {
 
 
 // --- Screen Navigation ---
+const appContainer = document.querySelector(".app-container");
 function showScreen(screenId) {
   screens.forEach(s => s.classList.remove("active"));
   const activeScreen = document.getElementById(screenId);
@@ -448,12 +613,43 @@ function showScreen(screenId) {
     activeScreen.classList.add("active");
     activeScreen.focus();
   }
+  // Leaving the game screen (or restarting within it) should never leave
+  // a map stuck zoomed-in with its backdrop still covering everything.
+  exitMapZoom();
   // The county-list sidebar now lives outside .app-container as its own
   // card, so it's no longer a descendant of screen-game and doesn't get
   // hidden automatically when another screen becomes active — force it
   // closed any time we're not on the game screen.
   if (countyListPanel && screenId !== "screen-game") {
     countyListPanel.classList.add("hidden");
+  }
+  // Give the app-container extra horizontal room on the game screen when
+  // more than one state's map is in play, so the maps spread out sideways
+  // before wrapping to a new row instead of always stacking straight down.
+  // Only applies on screen-game itself — every other screen (setup,
+  // settings, etc.) keeps the normal narrow card width.
+  // FIX: California alone was staying in the default narrow card (no
+  // "> 1" states selected), which caps out well under #svg-california's
+  // own max-width — so it rendered smaller than intended instead of
+  // bigger. California needs the wide card even solo, since it's sized
+  // for far more room than the other three states.
+  if (appContainer) {
+    appContainer.classList.toggle(
+      "wide-map",
+      screenId === "screen-game" &&
+        (activeStateKeys.length > 1 || activeStateKeys.includes("california"))
+    );
+    // A separate, narrower flag from "wide-map" above: California's extra-
+    // large sizing (see #svg-california in style.css) is only meant for
+    // when it's the ONLY map on screen. With other states also in play it
+    // was ballooning past the room the other maps need, so that bigger
+    // sizing now only applies under this class.
+    appContainer.classList.toggle(
+      "solo-california",
+      screenId === "screen-game" &&
+        activeStateKeys.length === 1 &&
+        activeStateKeys[0] === "california"
+    );
   }
 }
 
@@ -765,19 +961,30 @@ if (statsPanel) {
 }
 
 
-// Builds the "click here" stand-in for Kalawao County: a circle placed
-// out in open water plus a line pointing at the real (tiny) shape, so
-// the county is actually clickable at normal zoom levels. Uses getBBox()
-// to find Kalawao's real position/size, so it's positioned correctly no
-// matter the exact path geometry — this only runs once the Hawaii SVG is
-// actually visible in the DOM (getBBox needs a rendered element).
-function setupKalawaoCallout(hawaiiSvg) {
-  const kalawaoPath = document.getElementById("kalawao");
-  if (!kalawaoPath || !hawaiiSvg) return false;
+// Builds a "click here" stand-in for a county whose real shape is too
+// tiny to click reliably at normal zoom: a circle placed out in open
+// water plus a line pointing at the real shape. Uses getBBox() to find
+// the real position/size, so it's positioned correctly no matter the
+// exact path geometry — this only runs once the target SVG is actually
+// visible in the DOM (getBBox needs a rendered element).
+//
+// `key` is a short identifier (e.g. "kalawao", "sf") used to namespace
+// the generated element ids/classes so multiple callouts on different
+// maps don't collide. `offsetX`/`offsetY` place the callout circle
+// relative to the real shape's center, in the target SVG's own
+// coordinate system (i.e. viewBox units, not screen pixels) — pick a
+// spot that's open water/blank space on that particular map.
+// `radiusPadding` is added on top of the real shape's own size to get
+// the callout circle's radius; how much "extra" room it needs depends
+// on that map's own coordinate scale, so it's passed in per-county
+// rather than derived from the offset.
+function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPadding, stopShort) {
+  const countyPath = document.getElementById(countyId);
+  if (!countyPath || !targetSvg) return false;
 
   let bbox;
   try {
-    bbox = kalawaoPath.getBBox();
+    bbox = countyPath.getBBox();
   } catch (e) {
     return false; // Bail quietly if the browser can't compute it yet.
   }
@@ -786,47 +993,45 @@ function setupKalawaoCallout(hawaiiSvg) {
   const cx = bbox.x + bbox.width / 2;
   const cy = bbox.y + bbox.height / 2;
 
-  // Open ocean between Moloka'i and O'ahu, north (negative-y) of the
-  // real shape — clear of every other county's path.
-  const calloutX = cx - 1400;
-  const calloutY = cy - 3200;
-  const calloutRadius = Math.max(bbox.width, bbox.height) * 1.6 + 350;
+  const calloutX = cx + offsetX;
+  const calloutY = cy + offsetY;
+  const calloutRadius = Math.max(bbox.width, bbox.height) * 1.6 + radiusPadding;
 
-  // Stop the shaft just shy of Kalawao's actual center — close enough that
-  // the arrowhead reads as touching the shape, not just gesturing vaguely
-  // toward the middle of the strait.
+  // Stop the shaft just shy of the real county's actual center — close
+  // enough that the arrowhead reads as touching the shape, not just
+  // gesturing vaguely toward the middle of the strait.
   const dx = cx - calloutX;
   const dy = cy - calloutY;
   const dist = Math.sqrt(dx * dx + dy * dy) || 1;
   const ux = dx / dist;
   const uy = dy / dist;
-  const stopShort = 150;
   const tipX = cx - ux * stopShort;
   const tipY = cy - uy * stopShort;
 
   // Start the shaft at the circle's EDGE, not its center — the circle's
-  // radius is large enough relative to the total distance to Kalawao that
-  // starting from dead-center would leave the circle covering almost the
-  // entire line, hiding the shaft with only the arrowhead poking out (or
-  // not even that).
+  // radius is large enough relative to the total distance to the real
+  // shape that starting from dead-center would leave the circle covering
+  // almost the entire line, hiding the shaft with only the arrowhead
+  // poking out (or not even that).
   const startX = calloutX + ux * calloutRadius;
   const startY = calloutY + uy * calloutRadius;
 
   const svgNS = "http://www.w3.org/2000/svg";
-  const targetGroup = hawaiiSvg.querySelector("g") || hawaiiSvg;
+  const targetGroup = targetSvg.querySelector("g") || targetSvg;
 
   // Arrowhead marker, defined once and referenced by the line below via
   // marker-end. markerUnits="strokeWidth" (the default) means its size
   // automatically scales with the line's own stroke-width, so it stays
   // proportional to the shaft without needing separate tuning per state.
-  let defs = hawaiiSvg.querySelector("defs");
+  let defs = targetSvg.querySelector("defs");
   if (!defs) {
     defs = document.createElementNS(svgNS, "defs");
-    hawaiiSvg.insertBefore(defs, hawaiiSvg.firstChild);
+    targetSvg.insertBefore(defs, targetSvg.firstChild);
   }
-  if (!document.getElementById("kalawao-arrowhead")) {
+  const arrowheadId = `${key}-arrowhead`;
+  if (!document.getElementById(arrowheadId)) {
     const marker = document.createElementNS(svgNS, "marker");
-    marker.setAttribute("id", "kalawao-arrowhead");
+    marker.setAttribute("id", arrowheadId);
     marker.setAttribute("markerWidth", "8");
     marker.setAttribute("markerHeight", "8");
     marker.setAttribute("refX", "6.5");
@@ -834,7 +1039,7 @@ function setupKalawaoCallout(hawaiiSvg) {
     marker.setAttribute("orient", "auto-start-reverse");
     const arrowHead = document.createElementNS(svgNS, "path");
     arrowHead.setAttribute("d", "M0,0 L8,4 L0,8 Z");
-    arrowHead.setAttribute("class", "kalawao-arrowhead-fill");
+    arrowHead.setAttribute("class", `${key}-arrowhead-fill`);
     marker.appendChild(arrowHead);
     defs.appendChild(marker);
   }
@@ -844,22 +1049,23 @@ function setupKalawaoCallout(hawaiiSvg) {
   line.setAttribute("y1", startY);
   line.setAttribute("x2", tipX);
   line.setAttribute("y2", tipY);
-  line.setAttribute("class", "kalawao-callout-line");
-  line.setAttribute("marker-end", "url(#kalawao-arrowhead)");
+  line.setAttribute("class", `${key}-callout-line`);
+  line.setAttribute("marker-end", `url(#${arrowheadId})`);
   line.setAttribute("pointer-events", "none");
   targetGroup.appendChild(line);
 
+  const countyName = countyPath.getAttribute("data-name") || countyId;
   const circle = document.createElementNS(svgNS, "circle");
   circle.setAttribute("cx", calloutX);
   circle.setAttribute("cy", calloutY);
   circle.setAttribute("r", calloutRadius);
-  circle.setAttribute("id", "kalawao-callout");
-  circle.setAttribute("class", "county kalawao-callout");
-  circle.setAttribute("data-county-id", "kalawao");
-  circle.setAttribute("data-name", "Kalawao");
+  circle.setAttribute("id", `${key}-callout`);
+  circle.setAttribute("class", `county ${key}-callout`);
+  circle.setAttribute("data-county-id", countyId);
+  circle.setAttribute("data-name", countyName);
   circle.setAttribute("tabindex", "0");
   circle.setAttribute("role", "button");
-  circle.setAttribute("aria-label", "Kalawao County (click here — the real county outline is very small)");
+  circle.setAttribute("aria-label", `${countyName} County (click here — the real county outline is very small)`);
   targetGroup.appendChild(circle);
 
   // Re-collect every ".county" element so the new circle gets reset
@@ -888,16 +1094,28 @@ function switchVisibleSvgMap() {
       visibleMaps.push(targetSvg);
 
 
-      // setupKalawaoCallout() needs the Hawaii SVG to actually be
+      // setupCountyCallout() needs the target SVG to actually be
       // rendered (getBBox() only works on visible elements), but this
       // can run while we're still on the setup screen — before
       // #screen-game (and this SVG) is actually shown. If it bails out
       // early for that reason, only its own return value tells us so;
-      // kalawaoCalloutCreated must stay false so the very next call
-      // (once the screen is genuinely visible) tries again instead of
-      // silently giving up forever.
+      // kalawaoCalloutCreated/sfCalloutCreated must stay false so the
+      // very next call (once the screen is genuinely visible) tries
+      // again instead of silently giving up forever.
       if (key === "hawaii" && !kalawaoCalloutCreated) {
-        kalawaoCalloutCreated = setupKalawaoCallout(targetSvg);
+        // Open ocean north of Moloka'i, clear of every other island —
+        // pulled out further from the real shape than a first pass so
+        // the leader line actually reads as a line pointing to a
+        // distant marker, rather than a circle sitting right on top of
+        // the coastline with the arrowhead barely poking out.
+        kalawaoCalloutCreated = setupCountyCallout(targetSvg, "kalawao", "kalawao", -3000, -6800, 350, 150);
+      }
+      if (key === "california" && !sfCalloutCreated) {
+        // Open Pacific water just west of the city, clear of Marin
+        // (north), San Mateo (south), and Alameda (east) — the three
+        // counties boxing San Francisco in and making its real shape
+        // easy to miss at normal zoom.
+        sfCalloutCreated = setupCountyCallout(targetSvg, "san-francisco", "sf", -90, -10, 6, 9);
       }
     }
   });
@@ -916,18 +1134,25 @@ function switchVisibleSvgMap() {
   const domOrderedVisibleMaps = Array.from(svgMaps).filter(map => visibleMaps.includes(map));
 
 
-  // Group the visible maps into their actual visual rows by comparing
-  // vertical center (top + height/2), not top. Reading getBoundingClientRect
-  // here forces the browser to lay things out, so this reflects where
-  // .map-wrapper's flex-wrap really put each map — not just DOM order.
-  // Two maps on the same row get a vertical divider between them; a map
-  // that wrapped onto a new row instead gets a horizontal divider along
-  // its top, separating it from the row above.
+  // Group the visible maps into their actual visual rows by checking
+  // whether their vertical spans overlap, not by comparing top edges.
+  // Reading getBoundingClientRect here forces the browser to lay things
+  // out, so this reflects where .map-wrapper's flex-wrap really put each
+  // map — not just DOM order. Two maps on the same row get a vertical
+  // divider between them; a map that wrapped onto a new row instead gets
+  // a horizontal divider along its top, separating it from the row above.
   //
   // NOTE: .map-wrapper uses align-items: center, so maps of different
-  // heights (e.g. Delaware next to the shorter Rhode Island) share a
-  // vertical CENTER when on the same row, not the same top edge —
-  // comparing top here would wrongly treat every map as its own row.
+  // heights (e.g. Delaware next to the shorter Rhode Island, or Hawaii
+  // next to Rhode Island) still overlap heavily in their vertical span
+  // when on the same row, even though their centers can land a few
+  // pixels apart due to sub-pixel rounding — comparing centers with a
+  // tight 2px tolerance was enough to misclassify Hawaii (a much wider,
+  // shorter map) as its own row even when it was genuinely beside Rhode
+  // Island, giving it the wrong (horizontal) divider style. Checking for
+  // real overlap between vertical spans is a much more forgiving, more
+  // accurate test for "these are actually on the same row" — comparing
+  // top here would wrongly treat every map as its own row.
   const rows = [];
   domOrderedVisibleMaps.forEach(map => {
     // NOTE: map is an <svg> element (SVGElement), and SVGElement does not
@@ -937,13 +1162,18 @@ function switchVisibleSvgMap() {
     // matter where it actually rendered. getBoundingClientRect() works
     // on any element type and reflects the real on-screen position.
     const rect = map.getBoundingClientRect();
-    const center = rect.top + rect.height / 2;
     const lastRow = rows[rows.length - 1];
-    if (lastRow && Math.abs(lastRow.center - center) < 2) {
-      lastRow.maps.push(map);
-    } else {
-      rows.push({ center, maps: [map] });
+    if (lastRow) {
+      const overlap = Math.min(lastRow.bottom, rect.bottom) - Math.max(lastRow.top, rect.top);
+      const smallerHeight = Math.min(lastRow.bottom - lastRow.top, rect.height);
+      if (overlap > smallerHeight * 0.5) {
+        lastRow.maps.push(map);
+        lastRow.top = Math.min(lastRow.top, rect.top);
+        lastRow.bottom = Math.max(lastRow.bottom, rect.bottom);
+        return;
+      }
     }
+    rows.push({ top: rect.top, bottom: rect.bottom, maps: [map] });
   });
 
 
