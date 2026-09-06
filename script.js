@@ -36,23 +36,34 @@ const stateData = {
 
 
 // --- Game Configuration & State Variables ---
-let selectedMode = "pin"; // "pin" | "pin-hard" | "type" | "type-hard"
+let selectedMode = "pin"; // "pin" | "pin-hard" | "type" | "type-hard" | "type-strict"
 // Modes where the player types the county name instead of clicking the
 // map — checked in a few places (input box visibility, disabling
 // click-to-solve, resetting classes between games) so it's kept as one
 // Set rather than repeating the string comparisons everywhere.
-const TYPE_MODES = new Set(["type", "type-hard"]);
-// All four modes, in the order they should appear as stats-panel columns.
-const MODE_LIST = ["pin", "pin-hard", "type", "type-hard"];
-// NOTE: the mode ids ("type" / "type-hard") are unchanged so saved
-// progress/localStorage keeps working — only the display labels swapped:
-// "type" (free, any-order typing) is now shown as "List Mode", and
-// "type-hard" (single highlighted target) is now shown as "Type".
+const TYPE_MODES = new Set(["type", "type-hard", "type-strict"]);
+// Typing modes where only the single highlighted county counts as a
+// match — as opposed to "type" (List), where typing any remaining
+// county's name resolves it. Both "type-hard" (Type) and "type-strict"
+// (Type (Hard)) work this way; they differ in submission behavior (see
+// the Instant Check listener) and in how unforgivingly they treat a
+// wrong guess.
+const SINGLE_TARGET_TYPE_MODES = new Set(["type-hard", "type-strict"]);
+// All five modes, in the order they should appear as stats-panel columns.
+const MODE_LIST = ["pin", "pin-hard", "type", "type-hard", "type-strict"];
+// NOTE: the "type" / "type-hard" mode ids are unchanged from before so
+// saved progress/localStorage keeps working — only the display labels
+// swapped: "type" (free, any-order typing) is now shown as "List",
+// and "type-hard" (single highlighted target) is now shown as "Type".
+// "type-strict" is a brand-new mode, separate from "type-hard": same
+// single-target typing, but it always requires pressing Enter (no
+// Instant Check) and treats a wrong guess as a real miss.
 const MODE_LABELS = {
   pin: "Pin",
   "pin-hard": "Pin (Hard)",
-  type: "List Mode",
-  "type-hard": "Type"
+  type: "List",
+  "type-hard": "Type",
+  "type-strict": "Type (Hard)"
 };
 let activeStateKeys = [];
 let selectedCounties = [];
@@ -67,6 +78,11 @@ let currentAttemptMistakes = 0;
 // so the "found/total" progress counter has a stable denominator even as
 // targetPool shrinks.
 let totalTargetsCount = 0;
+// The full set of counties in play for the current game, fixed at
+// initGame() time — used to render the optional List Mode sidebar
+// (targetPool itself shrinks as counties are found, so it can't double
+// as the "everything in this game" list on its own).
+let originalTargetList = [];
 
 // Whether the Kalawao "click here" callout (circle + line, added because
 // the real Kalawao shape is tiny on the Hawaii map) has been built yet.
@@ -147,11 +163,12 @@ function findAllPoolMatchesByName(normalized) {
 
 
 // Returns every county the current typed guess should resolve, as an
-// array (empty if it doesn't match anything). "Type" (formerly "Type (Hard)") can only
-// ever resolve the single highlighted county; plain "Type" can resolve
-// several counties at once if their bare names are identical.
+// array (empty if it doesn't match anything). Single-target modes
+// ("Type" / type-hard and "Type (Hard)" / type-strict) can only ever
+// resolve the one highlighted county; "List" can resolve several
+// counties at once if their bare names are identical.
 function getTypedGuessMatches(normalized) {
-  if (selectedMode === "type-hard") {
+  if (SINGLE_TARGET_TYPE_MODES.has(selectedMode)) {
     return (currentTarget && normalizeTypedName(currentTarget.name) === normalized)
       ? [currentTarget]
       : [];
@@ -273,6 +290,9 @@ const btnQuitGame = document.getElementById("btn-quit-game");
 const btnGiveUp = document.getElementById("btn-give-up");
 const btnGameSettings = document.getElementById("btn-game-settings");
 const btnNewGame = document.getElementById("btn-new-game");
+const btnToggleCountyList = document.getElementById("btn-toggle-county-list");
+const countyListPanel = document.getElementById("county-list-panel");
+const countyListItems = document.getElementById("county-list-items");
 const hoverTooltip = document.getElementById("county-hover-tooltip");
 // NOTE: countyPaths is a `let` (not `const`) because the Kalawao callout
 // circle is added to the DOM after this first query runs — once it's
@@ -1110,6 +1130,15 @@ if (btnQuitGame) {
 }
 
 
+if (btnToggleCountyList) {
+  btnToggleCountyList.addEventListener("click", () => {
+    if (!countyListPanel) return;
+    const nowHidden = countyListPanel.classList.toggle("hidden");
+    btnToggleCountyList.textContent = nowHidden ? "Show List" : "Hide List";
+  });
+}
+
+
 if (btnNewGame) {
   btnNewGame.addEventListener("click", () => {
     initGame(selectedCounties);
@@ -1171,6 +1200,7 @@ if (btnGiveUp) {
 function initGame(countiesToPlay) {
   targetPool = [...countiesToPlay];
   totalTargetsCount = targetPool.length;
+  originalTargetList = [...targetPool];
   scoreRight = 0;
   scoreWrong = 0;
   isGameActive = true;
@@ -1189,6 +1219,17 @@ function initGame(countiesToPlay) {
     feedbackEl.className = "feedback-message";
   }
   hideHoverTooltip();
+
+
+  // The optional county-list sidebar only makes sense in List Mode
+  // (every other mode either shows the answer up front or hides it on
+  // purpose) — hide the toggle button entirely outside it, and always
+  // start a fresh game with the sidebar itself collapsed.
+  if (btnToggleCountyList) {
+    btnToggleCountyList.classList.toggle("hidden", selectedMode !== "type");
+    btnToggleCountyList.textContent = "Show List";
+  }
+  if (countyListPanel) countyListPanel.classList.add("hidden");
 
 
   countyPaths.forEach(path => {
@@ -1215,9 +1256,25 @@ function updateProgressCounter() {
   progressCounter.textContent = `${found}/${totalTargetsCount}`;
 }
 
+// Refreshes the optional List Mode sidebar: every county in this game,
+// alphabetically, struck through once it's been found (i.e. no longer in
+// targetPool). Cheap enough to just re-render in full each time rather
+// than diffing.
+function renderCountyListPanel() {
+  if (!countyListItems) return;
+  const remainingIds = new Set(targetPool.map(c => c.id));
+  const sorted = [...originalTargetList].sort((a, b) =>
+    getDisplayName(a).localeCompare(getDisplayName(b))
+  );
+  countyListItems.innerHTML = sorted
+    .map(c => `<li class="${remainingIds.has(c.id) ? "" : "found"}">${getDisplayName(c)}</li>`)
+    .join("");
+}
+
 function pickNextTarget() {
   currentAttemptMistakes = 0;
   updateProgressCounter();
+  renderCountyListPanel();
 
   // Clear any leftover "Type" (type-hard) highlight before picking the next
   // target — otherwise the previous target would stay pulsing blue.
@@ -1243,6 +1300,8 @@ function pickNextTarget() {
       targetPrompt.innerHTML = `<span class="find-label">Type any county below</span>`;
     } else if (selectedMode === "type-hard") {
       targetPrompt.innerHTML = `<span class="find-label">Type the highlighted county</span>`;
+    } else if (selectedMode === "type-strict") {
+      targetPrompt.innerHTML = `<span class="find-label">Type the highlighted county</span>`;
     } else {
       const { name, state } = getDisplayParts(currentTarget);
       targetPrompt.innerHTML = `
@@ -1253,7 +1312,7 @@ function pickNextTarget() {
     }
   }
 
-  if (selectedMode === "type-hard") {
+  if (SINGLE_TARGET_TYPE_MODES.has(selectedMode)) {
     getCountyElements(currentTarget.id).forEach(el => el.classList.add("typing-highlight"));
   }
 
@@ -1345,27 +1404,29 @@ function handleCountyClick(pathEl) {
 }
 
 
-// --- Typing Modes ("List Mode" / type + "Type" / type-hard) ---
-// A correct guess is shared logic between the two modes; only how the
-// match(es) are *found* differs (getTypedGuessMatches, defined earlier).
-// matchedCounties is always an array — length 1 for "Type" (type-hard) (and
-// usually for "Type" too), but "Type" can hand back several counties at
-// once when their bare names are identical (e.g. two "Kent"s in play).
+// --- Typing Modes ("List" / type, "Type" / type-hard, "Type (Hard)" / type-strict) ---
+// A correct guess is shared logic across all three modes; only how the
+// match(es) are *found* differs (getTypedGuessMatches, defined earlier)
+// and how strictly a wrong guess gets submitted (see the Instant Check
+// listener below).
+// matchedCounties is always an array — length 1 for the single-target
+// modes, but List can hand back several counties at once when their
+// bare names are identical (e.g. two "Kent"s in play).
 function acceptTypedMatches(matchedCounties) {
   scoreRight++;
   playSound("correct");
   const recoveredFromMistake = currentAttemptMistakes > 0;
 
   if (feedbackEl) {
-    if (selectedMode === "type-hard") {
+    if (SINGLE_TARGET_TYPE_MODES.has(selectedMode)) {
       // There's exactly one specific target here, so naming it is useful
       // confirmation.
       feedbackEl.textContent = `Correct! That's ${getDisplayName(matchedCounties[0])}.`;
     } else {
-      // Plain "Type" mode: the player typed the name themselves, so
-      // repeating it back as "Correct! That's Kent!" is redundant — just
-      // confirm the guess, and note the count if it resolved more than
-      // one county at once.
+      // List: the player typed the name themselves, so repeating it
+      // back as "Correct! That's Kent!" is redundant — just confirm the
+      // guess, and note the count if it resolved more than one county at
+      // once.
       feedbackEl.textContent = matchedCounties.length > 1
         ? `Correct! That matched ${matchedCounties.length} counties.`
         : "Correct!";
@@ -1378,7 +1439,12 @@ function acceptTypedMatches(matchedCounties) {
     if (!recoveredFromMistake) markCountyLearned(matchedCounty.id, selectedMode);
     getCountyElements(matchedCounty.id).forEach(el => {
       el.classList.remove("typing-highlight");
-      el.classList.add(recoveredFromMistake ? "correct-recovered" : "correct", "found");
+      // Typing modes never use the yellow "correct-recovered" color,
+      // unlike Pin mode: a wrong *typed* guess doesn't reliably tell you
+      // what the player meant to type, so there's nothing meaningful for
+      // the yellow to represent here — it just adds noise. Always plain
+      // green once it's right.
+      el.classList.add("correct", "found");
       el.style.pointerEvents = "none";
     });
   });
@@ -1456,12 +1522,13 @@ function submitTypedGuess() {
 
 if (typeInput) {
   typeInput.addEventListener("input", () => {
-    // "Type" (selectedMode === "type-hard") is the harder, Seterra-style
-    // mode: it always requires an explicit Enter press to submit, so a
-    // wrong guess is actually registered as wrong (see
-    // registerWrongTypedGuess) instead of just sitting there unmatched.
-    // The Instant Check setting only ever applies to List Mode.
-    if (selectedMode === "type" && gameSettings.instantTypeCheck) tryAutoMatchTypedInput();
+    // "Type (Hard)" (type-strict) always requires an explicit Enter
+    // press to submit, so a wrong guess actually registers as wrong
+    // (see registerWrongTypedGuess) instead of just sitting there
+    // unmatched. The Instant Check setting applies to List and
+    // "Type" (type-hard) — both still auto-accept a match as you type,
+    // if the setting is on.
+    if (selectedMode !== "type-strict" && gameSettings.instantTypeCheck) tryAutoMatchTypedInput();
   });
   typeInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {

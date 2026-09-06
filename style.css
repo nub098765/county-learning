@@ -582,6 +582,63 @@ body.dark-mode .badge-mistake {
 }
 
 
+/* Flex row holding the optional county-list sidebar next to the maps.
+  Wraps to stack the sidebar above the maps on narrow screens instead of
+  squeezing both side by side. */
+.game-body {
+ display: flex;
+ flex-direction: row;
+ flex-wrap: wrap;
+ justify-content: center;
+ align-items: flex-start;
+ gap: 1rem;
+ max-width: 100%;
+}
+
+
+/* Optional "Show List" sidebar for List Mode: a plain checklist of every
+  county in the current game, struck through once found, so a player can
+  see at a glance what's left without the map giving anything away. */
+.county-list-panel {
+ background: #ffffff;
+ border: 2px solid #2d5a27;
+ border-radius: 12px;
+ padding: 0.75rem 1.1rem;
+ min-width: 160px;
+ max-width: 220px;
+ max-height: 480px;
+ overflow-y: auto;
+}
+body.dark-mode .county-list-panel {
+ background-color: #1e1e1c;
+ border-color: #45a049;
+}
+.county-list-panel h3 {
+ margin: 0 0 0.5rem 0;
+ font-size: 0.75rem;
+ font-weight: 700;
+ letter-spacing: 0.05em;
+ text-transform: uppercase;
+ opacity: 0.7;
+}
+.county-list-panel ul {
+ list-style: none;
+ margin: 0;
+ padding: 0;
+ display: flex;
+ flex-direction: column;
+ gap: 0.35rem;
+}
+.county-list-panel li {
+ font-family: system-ui, -apple-system, sans-serif;
+ font-size: 0.85rem;
+}
+.county-list-panel li.found {
+ text-decoration: line-through;
+ opacity: 0.4;
+}
+
+
 .map-wrapper {
  max-width: 100%;
  margin: 0 auto;

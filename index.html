@@ -47,7 +47,7 @@
    </div>
     <div class="setting-item">
      <div class="setting-text">
-       <label for="toggle-contrast">High Contrast Colors</label>
+       <label for="toggle-contrast">High-Contrast Colors</label>
        <p class="setting-desc">Use bolder, more distinct colors for correct and incorrect counties.</p>
      </div>
      <input type="checkbox" id="toggle-contrast">
@@ -69,7 +69,7 @@
 
    <div class="setting-item">
      <div class="setting-text">
-       <label for="toggle-speedrun">Speedrun Mode</label>
+       <label for="toggle-speedrun">Speedrun Mode (Pin modes)</label>
        <p class="setting-desc">Register a guess the instant you press down on a county, instead of waiting for you to release.</p>
      </div>
      <input type="checkbox" id="toggle-speedrun">
@@ -80,8 +80,8 @@
 
    <div class="setting-item">
      <div class="setting-text">
-       <label for="toggle-instant-check">Instant Check (List Mode)</label>
-       <p class="setting-desc">Check what you've typed as you type it, instead of waiting for you to press Enter. Only applies to List Mode — Type mode always requires pressing Enter, and wrong guesses count against you.</p>
+       <label for="toggle-instant-check">Instant Check (Type modes)</label>
+       <p class="setting-desc">Check what you've typed as you type it, instead of waiting for you to press Enter. Doesn't apply to Type (Hard).</p>
      </div>
      <input type="checkbox" id="toggle-instant-check">
    </div>
@@ -103,7 +103,7 @@
        <label>Progress</label>
        <p class="setting-desc">Clear completed states, mistake history, and best-known suggestions.</p>
      </div>
-     <button id="btn-reset-progress" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Reset Saved States</button>
+     <button id="btn-reset-progress" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Reset Progress</button>
    </div>
 
 
@@ -127,12 +127,16 @@
        <span>Click the county you are given; once found, it flashes briefly.</span>
      </button>
      <button class="btn-mode" data-mode="type">
-       <strong>List Mode</strong>
-       <span>Type any county, in any order — see how many you can list.</span>
+       <strong>List</strong>
+       <span>Type any county, in any order, and see how many you can list.</span>
      </button>
      <button class="btn-mode" data-mode="type-hard">
        <strong>Type</strong>
-       <span>Type the name of a specific highlighted county. Press Enter to submit — wrong guesses count against you.</span>
+       <span>Type the name of a specific highlighted county.</span>
+     </button>
+     <button class="btn-mode" data-mode="type-strict">
+       <strong>Type (Hard)</strong>
+       <span>Type the name of a specific highlighted county. You must press Enter to submit, and wrong guesses count against you.</span>
      </button>
    </div>
    <button class="btn-back" data-target="screen-home">Back</button>
@@ -272,6 +276,7 @@
    <div class="game-header">
      <button id="btn-quit-game" class="btn-secondary">Quit</button>
      <button id="btn-give-up" class="btn-secondary">Give Up</button>
+     <button id="btn-toggle-county-list" class="btn-secondary hidden">Show List</button>
      <button id="btn-game-settings" class="btn-secondary">Settings</button>
    </div>
 
@@ -290,7 +295,12 @@
 
 
 
-   <div class="map-wrapper">
+   <div class="game-body">
+     <aside id="county-list-panel" class="county-list-panel hidden">
+       <h3>Counties</h3>
+       <ul id="county-list-items"></ul>
+     </aside>
+     <div class="map-wrapper">
      <!-- Delaware SVG Map -->
      <svg
         id="map-delaware"
@@ -404,8 +414,7 @@
 </g>
 </svg>
    </div>
-
-
+   </div>
 
 
    <!-- Persistent Bottom Bar for Admire Mode -->
