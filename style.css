@@ -987,13 +987,30 @@ body.dark-mode .state-map.map-divider-top {
   growing unevenly while Rhode Island (no ID rule of its own) got
   flattened correctly. Repeating the override with those IDs included
   gives it equal ID-specificity (1 ID + extra classes beats 1 ID alone),
-  so it actually wins now. */
+  so it actually wins now.
+  FIX 3: turning off flex-grow wasn't the whole story either. .state-map
+  also has margin: 0 auto (below), and on a flex item auto margins absorb
+  any leftover space on their OWN line independently of flex-grow — that
+  happens before justify-content ever runs. With every map on a shared
+  row carrying auto margins on both sides, leftover space was getting
+  split across *each* map's own margins rather than pooled once around
+  the whole row: that doubles the gap wherever two maps' facing auto
+  margins land next to each other (Hawaii's "disconnected" gap), and can
+  land unevenly enough elsewhere to shove a narrower map like Rhode
+  Island off from where it looks centered. Zeroing the horizontal margins
+  here removes that per-item competition, so the row packs snugly against
+  its dividers and .map-wrapper's justify-content: center is the only
+  thing left deciding how the row as a whole is centered. */
 .app-container.wide-map .state-map {
  flex-grow: 0;
+ margin-left: 0;
+ margin-right: 0;
 }
 .app-container.wide-map #svg-hawaii,
 .app-container.wide-map #svg-california {
  flex-grow: 0;
+ margin-left: 0;
+ margin-right: 0;
 }
 
 
@@ -1371,6 +1388,348 @@ body.dark-mode #target-prompt {
  margin-top: 0.5rem;
  min-height: 1.3em;
  text-align: center;
+}
+
+
+/* --- "How to Play" info modal: intro + embedded mode example --- */
+
+
+/* Wider than the default modal-content so the two example panels have
+  room to sit side by side, and left-aligned since it's now a short
+  paragraph + a two-column example rather than a single centered
+  headline/button pair. */
+.info-modal-content {
+ max-width: 460px;
+ text-align: left;
+}
+.info-modal-content h2 {
+ text-align: center;
+}
+
+
+.info-intro {
+ font-size: 0.9rem;
+ line-height: 1.45;
+ color: #333;
+ margin: 0.35rem 0 0;
+}
+body.dark-mode .info-intro {
+ color: #ddd;
+}
+
+
+/* Two side-by-side cards: "You'll see" (the prompt or the highlighted
+  county) and "You'll do" (the click or typing action), each labeled
+  with a small caption above a tiny looping demo. Stacks to one column
+  on narrow screens instead of squeezing both down unreadably. */
+.info-example {
+ display: grid;
+ grid-template-columns: 1fr 1fr;
+ gap: 0.6rem;
+ margin: 1.1rem 0 0.5rem;
+}
+@media (max-width: 420px) {
+ .info-example {
+   grid-template-columns: 1fr;
+ }
+}
+.info-example-panel {
+ background: #f8f7f1;
+ border: 1px solid rgba(0, 0, 0, 0.06);
+ border-radius: 12px;
+ padding: 0.7rem 0.5rem 0.85rem;
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ gap: 0.5rem;
+ overflow: hidden;
+}
+body.dark-mode .info-example-panel {
+ background: #1e1e1c;
+ border-color: #33332d;
+}
+.info-example-caption {
+ font-size: 0.65rem;
+ font-weight: 700;
+ text-transform: uppercase;
+ letter-spacing: 0.06em;
+ color: #888;
+}
+body.dark-mode .info-example-caption {
+ color: #999;
+}
+.info-demo-see, .info-demo-do {
+ width: 100%;
+ min-height: 60px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ overflow: hidden;
+}
+
+
+/* Only one of the two children in each demo slot is shown at once —
+  which one depends on the mode, set via data-demo on .info-example.
+  These default-hide rules are scoped under .info-example (specificity
+  0,2,0) specifically so they beat each element's own unconditional
+  base style (e.g. .mini-type-box's own display:flex, specificity
+  0,1,0) — otherwise the base style would win by source order and the
+  element would show in every mode regardless of data-demo. */
+.info-example .demo-banner,
+.info-example .demo-highlight-map,
+.info-example .demo-click-map,
+.info-example .demo-type-box {
+ display: none;
+}
+.info-example[data-demo="pin"] .demo-banner,
+.info-example[data-demo="pin-hard"] .demo-banner,
+.info-example[data-demo="list"] .demo-banner {
+ display: flex;
+}
+.info-example[data-demo="type-hard"] .demo-highlight-map,
+.info-example[data-demo="type-strict"] .demo-highlight-map {
+ display: block;
+}
+.info-example[data-demo="pin"] .demo-click-map,
+.info-example[data-demo="pin-hard"] .demo-click-map {
+ display: block;
+}
+.info-example[data-demo="type-hard"] .demo-type-box,
+.info-example[data-demo="type-strict"] .demo-type-box,
+.info-example[data-demo="list"] .demo-type-box {
+ display: flex;
+}
+
+
+/* Tiny replica of the real #target-prompt banner, used for the "You'll
+  see" side in Pin/Flash/List modes. */
+.mini-prompt-box {
+ background: #ffffff;
+ border: 2px solid #2d5a27;
+ border-radius: 12px;
+ padding: 0.5rem 0.9rem;
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ gap: 0.05rem;
+ min-width: 110px;
+}
+body.dark-mode .mini-prompt-box {
+ background-color: #1e1e1c;
+ border-color: #45a049;
+}
+.mini-find-label {
+ font-family: 'Roboto Serif', Georgia, serif;
+ font-size: 0.6rem;
+ font-weight: 700;
+ letter-spacing: 0.04em;
+ text-transform: uppercase;
+ color: #1b3818;
+ opacity: 0.75;
+}
+body.dark-mode .mini-find-label {
+ color: #fdeca6;
+}
+.mini-target-name {
+ font-family: 'Roboto Serif', Georgia, serif;
+ font-size: 1.25rem;
+ font-weight: 700;
+ color: #1b3818;
+ line-height: 1.15;
+}
+body.dark-mode .mini-target-name {
+ color: #fdeca6;
+}
+.mini-target-name.hidden {
+ display: none;
+}
+
+
+/* Tiny looping map demos, built from a single generic blob shape so
+  they read as "a county" without claiming to be any real one. */
+.mini-map-demo {
+ width: 100%;
+ max-width: 120px;
+ height: auto;
+ overflow: hidden;
+}
+.mini-cursor-shape {
+ fill: #111;
+ transform-origin: 0 0;
+ animation: miniCursorMove 2.6s ease-in-out infinite;
+}
+body.dark-mode .mini-cursor-shape {
+ fill: #fdeca6;
+}
+@keyframes miniCursorMove {
+ 0%   { transform: translate(72px, -16px) scale(1); opacity: 0; }
+ 12%  { opacity: 1; }
+ 38%  { transform: translate(40px, 30px) scale(1); }
+ 45%  { transform: translate(38px, 33px) scale(0.82); }
+ 52%  { transform: translate(40px, 30px) scale(1); }
+ 82%  { opacity: 1; transform: translate(40px, 30px) scale(1); }
+ 96%  { transform: translate(72px, -16px) scale(1); opacity: 0; }
+ 100% { transform: translate(72px, -16px) scale(1); opacity: 0; }
+}
+
+
+/* Pin mode: the shape fills in on "click" and stays filled, matching
+  .county.correct never reverting. */
+.info-example[data-demo="pin"] .click-shape {
+ fill: #e8e4d9;
+ animation: miniFillPin 2.6s ease-in-out infinite;
+}
+@keyframes miniFillPin {
+ 0%, 42%  { fill: #e8e4d9; }
+ 50%, 100% { fill: #2d5a27; }
+}
+
+
+/* Flash mode: the shape flashes on "click" then fades back to blank,
+  matching .county.flash-correct's brief, non-persistent green. */
+.info-example[data-demo="pin-hard"] .click-shape {
+ fill: #e8e4d9;
+ animation: miniFillFlash 2.6s ease-in-out infinite;
+}
+@keyframes miniFillFlash {
+ 0%, 42%  { fill: #e8e4d9; }
+ 50%, 62% { fill: #2d5a27; }
+ 74%, 100% { fill: #e8e4d9; }
+}
+
+
+body.dark-mode .info-example[data-demo="pin"] .click-shape,
+body.dark-mode .info-example[data-demo="pin-hard"] .click-shape {
+ fill: #3a3a34;
+}
+
+
+/* Type/Verbatim modes: the shape pulses blue on its own, matching
+  .county.typing-highlight — nothing to click, just something to look
+  at while you type. */
+.highlight-shape {
+ fill: #e8e4d9;
+ animation: miniPulseHighlight 1.7s ease-in-out infinite;
+}
+@keyframes miniPulseHighlight {
+ 0%, 100% { fill: #e8e4d9; }
+ 50%      { fill: #3a6ea5; }
+}
+body.dark-mode .highlight-shape {
+ fill: #3a3a34;
+}
+
+
+/* Tiny replica of #type-input, used for the "You'll do" side in every
+  typing mode, plus List mode's free-recall version. Text/caret/enter
+  cue/checkmark are all driven by script.js's typing-demo loop. */
+.mini-type-box {
+ background: #fff;
+ border: 2px solid #2d5a27;
+ border-radius: 10px;
+ padding: 0.5rem 0.8rem;
+ min-width: 110px;
+ min-height: 1.4em;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ flex-wrap: wrap;
+ gap: 0.3rem;
+ font-family: system-ui, -apple-system, sans-serif;
+ font-size: 1rem;
+ font-weight: 600;
+ color: #111;
+}
+body.dark-mode .mini-type-box {
+ background-color: #2a2a26;
+ border-color: #45a049;
+ color: #fdeca6;
+}
+.mini-type-caret {
+ display: inline-block;
+ width: 2px;
+ height: 1.05em;
+ background: currentColor;
+ animation: miniCaretBlink 0.8s steps(1) infinite;
+}
+@keyframes miniCaretBlink {
+ 0%, 49%  { opacity: 1; }
+ 50%, 100% { opacity: 0; }
+}
+.mini-type-enter, .mini-type-check {
+ font-size: 0.7rem;
+ font-weight: 700;
+ padding: 0.15rem 0.4rem;
+ border-radius: 6px;
+ opacity: 0;
+ transform: scale(0.7);
+ transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.mini-type-enter {
+ background: #eef3ec;
+ color: #2d5a27;
+}
+.mini-type-check {
+ background: transparent;
+ color: #2d5a27;
+ font-size: 1rem;
+ padding: 0;
+}
+.mini-type-enter.show, .mini-type-check.show {
+ opacity: 1;
+ transform: scale(1);
+}
+body.dark-mode .mini-type-enter {
+ background: #2c2c27;
+ color: #7bc47f;
+}
+body.dark-mode .mini-type-check {
+ color: #7bc47f;
+}
+
+
+/* Collapsed by default so the modal leads with the short, mode-specific
+  explanation instead of every general tip at once. */
+.info-tips {
+ margin-top: 0.9rem;
+}
+.info-tips summary {
+ cursor: pointer;
+ font-size: 0.8rem;
+ font-weight: 700;
+ color: #2d5a27;
+ list-style: revert;
+}
+body.dark-mode .info-tips summary {
+ color: #7bc47f;
+}
+.info-tips[open] summary {
+ margin-bottom: 0.5rem;
+}
+.info-tips .info-list {
+ font-size: 0.8rem;
+ margin-top: 0.4rem;
+}
+
+
+/* Small "made by" footer, pinned to the corner of the viewport rather
+  than the app-container card, so it never scrolls with the content or
+  gets squeezed by a tall map. Sits at a low z-index and ignores clicks
+  so it never competes with anything interactive on top of it. */
+.site-credits {
+ position: fixed;
+ bottom: 0.6rem;
+ right: 0.85rem;
+ font-family: system-ui, -apple-system, sans-serif;
+ font-size: 0.65rem;
+ line-height: 1.5;
+ color: #8a8370;
+ text-align: right;
+ z-index: 5;
+ pointer-events: none;
+}
+body.dark-mode .site-credits {
+ color: #6b6b5f;
 }
 
 

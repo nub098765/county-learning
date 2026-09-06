@@ -532,15 +532,56 @@
     the play area. Plain static help text, no script.js state to wire up
     beyond opening/closing it. -->
 <div id="modal-info" class="modal hidden">
- <div class="modal-content">
-   <h2>How to Play</h2>
-   <ul class="info-list">
-     <li>Click (or tap) the county you're asked to find.</li>
-     <li>In Type modes, type the county's name instead of clicking it.</li>
-     <li>Right-click (or long-press) any map to zoom in, which makes small counties much easier to click. Right-click again, tap outside the map, or press Escape to zoom back out.</li>
-     <li>Counties too tiny to click reliably — like San Francisco or Hawai'i's Kalawao — get a dashed "click here" circle with an arrow pointing at their real location instead.</li>
-     <li>Use Give Up if you're stuck; it reveals the answer and moves on.</li>
-   </ul>
+ <div class="modal-content info-modal-content">
+   <h2 id="info-modal-title">How to Play</h2>
+   <p id="info-modal-intro" class="info-intro">Click (or tap) the county you're asked to find.</p>
+
+
+   <!-- Mode-specific mini example: left panel shows what you'll SEE
+        (the prompt banner, or the county lit up on the map), right
+        panel shows what you'll DO (a looping click or typing demo).
+        script.js swaps the data-demo attribute + a couple of text
+        nodes to match whichever mode the player is actually in. -->
+   <div class="info-example" id="info-example" data-demo="pin">
+     <div class="info-example-panel">
+       <span class="info-example-caption">You'll see</span>
+       <div class="info-demo-see">
+         <div class="mini-prompt-box demo-banner">
+           <span id="info-demo-label" class="mini-find-label">Find:</span>
+           <span id="info-demo-target" class="mini-target-name">Sonoma</span>
+         </div>
+         <svg class="mini-map-demo demo-highlight-map" viewBox="0 0 100 70" aria-hidden="true">
+           <path class="mini-county-shape highlight-shape" d="M25,10 L70,6 L88,28 L78,56 L38,62 L10,42 Z" />
+         </svg>
+       </div>
+     </div>
+     <div class="info-example-panel">
+       <span class="info-example-caption">You'll do</span>
+       <div class="info-demo-do">
+         <svg class="mini-map-demo demo-click-map" viewBox="0 0 100 70" aria-hidden="true">
+           <path class="mini-county-shape click-shape" d="M25,10 L70,6 L88,28 L78,56 L38,62 L10,42 Z" />
+           <path class="mini-cursor-shape" d="M0,0 L0,16 4,12.4 6.6,18.6 9.4,17.4 6.8,11.3 12,11.3 Z" />
+         </svg>
+         <div class="mini-type-box demo-type-box">
+           <span id="info-demo-typed" class="mini-type-text"></span><span class="mini-type-caret"></span>
+           <span id="info-demo-enter" class="mini-type-enter">↵ Enter</span>
+           <span id="info-demo-check" class="mini-type-check">✓</span>
+         </div>
+       </div>
+     </div>
+   </div>
+
+
+   <details class="info-tips">
+     <summary>More tips</summary>
+     <ul class="info-list">
+       <li>Right-click (or long-press) any map to zoom in, which makes small counties much easier to click. Right-click again, tap outside the map, or press Escape to zoom back out.</li>
+       <li>County equivalents that are too tiny to click reliably, like San Francisco or Kalawao, have an enlarged circle you can click with an arrow pointing to their real location.</li>
+       <li>Only if you are utterly bumfuzzled should you click Give Up. It ends the game immediately and reveals what you missed.</li>
+     </ul>
+   </details>
+
+
    <div class="modal-actions">
      <button id="btn-modal-info-close" class="btn-primary">Got it</button>
    </div>
@@ -566,5 +607,15 @@
 
 
 <script src="script.js"></script>
+<!-- Small credits footer, fixed to the corner of the viewport rather than
+    living inside the app-container card — so it stays put in the corner
+    no matter which screen is showing or how tall the content above it
+    gets. -->
+<div id="site-credits" class="site-credits">
+  Made by nub098765<br>
+  Idea and playtesting by mellohihellohi
+</div>
+
+
 </body>
 </html>

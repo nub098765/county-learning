@@ -443,31 +443,156 @@ document.addEventListener("keydown", (e) => {
 
 
 // --- "How to Play" info button/modal (bottom-right of the play area) ---
+// Content is no longer one static wall of text: the title, the intro
+// paragraph, and the little "you'll see / you'll do" example all get
+// swapped in based on selectedMode right when the modal opens.
 const btnGameInfo = document.getElementById("btn-game-info");
 const modalInfo = document.getElementById("modal-info");
 const btnModalInfoClose = document.getElementById("btn-modal-info-close");
 
+const infoModalTitle = document.getElementById("info-modal-title");
+const infoModalIntro = document.getElementById("info-modal-intro");
+const infoExample = document.getElementById("info-example");
+const infoDemoLabel = document.getElementById("info-demo-label");
+const infoDemoTarget = document.getElementById("info-demo-target");
+const infoDemoTyped = document.getElementById("info-demo-typed");
+const infoDemoEnter = document.getElementById("info-demo-enter");
+const infoDemoCheck = document.getElementById("info-demo-check");
+
+const INFO_MODE_CONFIG = {
+  pin: {
+    title: "How to Play: Pin",
+    intro: "Click (or tap) the county you're asked to find. Once you find it, it stays filled in on the map, so you can watch your progress build.",
+    demo: "pin",
+    word: "Sonoma",
+  },
+  "pin-hard": {
+    title: "How to Play: Flash",
+    intro: "Click (or tap) the county you're asked to find. It flashes briefly to confirm, then goes back to blank, nothing stays filled in.",
+    demo: "pin-hard",
+    word: "Sonoma",
+  },
+  type: {
+    title: "How to Play: List",
+    intro: "Type any county's name, in any order, and see how many you can list before you run out.",
+    demo: "list",
+    word: "Sonoma",
+  },
+  "type-hard": {
+    title: "How to Play: Type",
+    intro: "A county lights up on the map. Type its name to guess it.",
+    demo: "type-hard",
+    word: "Sonoma",
+  },
+  "type-strict": {
+    title: "How to Play: Verbatim",
+    intro: "A county lights up on the map. Type its name, then press Enter to submit. Wrong guesses count against you.",
+    demo: "type-strict",
+    word: "Sonoma",
+  },
+};
+
+// Drives the looping typed-word demo used by List/Type/Verbatim. Not a
+// CSS animation like the click demo, since the word (and, for
+// Verbatim, an extra "press Enter" beat) has to be spelled out one
+// character at a time.
+let infoTypeTimer = null;
+function stopInfoTypeDemo() {
+  if (infoTypeTimer) {
+    clearTimeout(infoTypeTimer);
+    infoTypeTimer = null;
+  }
+}
+function runInfoTypeDemo(word, demo) {
+  stopInfoTypeDemo();
+  if (!infoDemoTyped) return;
+  let i = 0;
+
+  function typeNext() {
+    infoDemoTyped.textContent = word.slice(0, i);
+    if (infoDemoEnter) infoDemoEnter.classList.remove("show");
+    if (infoDemoCheck) infoDemoCheck.classList.remove("show");
+    if (i < word.length) {
+      i++;
+      infoTypeTimer = setTimeout(typeNext, 140);
+      return;
+    }
+    // Word fully typed. Verbatim needs an extra "press Enter" beat
+    // before it counts; the other typing modes check instantly.
+    if (demo === "type-strict") {
+      infoTypeTimer = setTimeout(() => {
+        if (infoDemoEnter) infoDemoEnter.classList.add("show");
+        infoTypeTimer = setTimeout(showCheckThenReset, 550);
+      }, 350);
+    } else {
+      infoTypeTimer = setTimeout(showCheckThenReset, 300);
+    }
+  }
+  function showCheckThenReset() {
+    if (infoDemoCheck) infoDemoCheck.classList.add("show");
+    infoTypeTimer = setTimeout(() => {
+      infoDemoTyped.textContent = "";
+      if (infoDemoEnter) infoDemoEnter.classList.remove("show");
+      if (infoDemoCheck) infoDemoCheck.classList.remove("show");
+      i = 0;
+      infoTypeTimer = setTimeout(typeNext, 500);
+    }, 850);
+  }
+
+  typeNext();
+}
+
+function openInfoModalForMode(mode) {
+  const cfg = INFO_MODE_CONFIG[mode] || INFO_MODE_CONFIG.pin;
+
+  if (infoModalTitle) infoModalTitle.textContent = cfg.title;
+  if (infoModalIntro) infoModalIntro.textContent = cfg.intro;
+  if (infoExample) infoExample.setAttribute("data-demo", cfg.demo);
+
+  if (infoDemoLabel) {
+    infoDemoLabel.textContent = cfg.demo === "list" ? "Type any county" : "Find";
+  }
+  if (infoDemoTarget) {
+    infoDemoTarget.textContent = cfg.word;
+    infoDemoTarget.classList.toggle("hidden", cfg.demo === "list");
+  }
+
+  // Click-based modes (Pin/Flash) animate purely via CSS on an infinite
+  // loop, restarting naturally each time the modal goes from
+  // display:none back to visible. Typing-based modes (List/Type/
+  // Verbatim) need the JS-driven loop above instead.
+  if (cfg.demo === "type-hard" || cfg.demo === "type-strict" || cfg.demo === "list") {
+    runInfoTypeDemo(cfg.word, cfg.demo);
+  } else {
+    stopInfoTypeDemo();
+  }
+}
+
+function closeInfoModal() {
+  if (modalInfo) modalInfo.classList.add("hidden");
+  stopInfoTypeDemo();
+}
+
 if (btnGameInfo && modalInfo) {
   btnGameInfo.addEventListener("click", () => {
+    openInfoModalForMode(selectedMode);
     modalInfo.classList.remove("hidden");
   });
 }
 if (btnModalInfoClose && modalInfo) {
-  btnModalInfoClose.addEventListener("click", () => {
-    modalInfo.classList.add("hidden");
-  });
+  btnModalInfoClose.addEventListener("click", closeInfoModal);
 }
 // Clicking the dimmed backdrop closes it too, same as the other modals —
 // .modal already stretches to fill the viewport, so a click anywhere
 // outside .modal-content is a click on the modal itself.
 if (modalInfo) {
   modalInfo.addEventListener("click", (e) => {
-    if (e.target === modalInfo) modalInfo.classList.add("hidden");
+    if (e.target === modalInfo) closeInfoModal();
   });
 }
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && modalInfo && !modalInfo.classList.contains("hidden")) {
-    modalInfo.classList.add("hidden");
+    closeInfoModal();
   }
 });
 
@@ -1603,7 +1728,7 @@ function pickNextTarget() {
     if (selectedMode === "type") {
       // Open-ended: any remaining county counts, so there's no single
       // name to reveal here — the prompt just explains what to do.
-      targetPrompt.innerHTML = `<span class="find-label">Type any county below</span>`;
+      targetPrompt.innerHTML = `<span class="find-label">Type any county</span>`;
     } else if (selectedMode === "type-hard") {
       targetPrompt.innerHTML = `<span class="find-label">Type the highlighted county</span>`;
     } else if (selectedMode === "type-strict") {
