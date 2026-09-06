@@ -95,6 +95,266 @@ const stateData = {
       { id: "yolo", name: "Yolo", stateKey: "california" },
       { id: "yuba", name: "Yuba", stateKey: "california" }
     ]
+  },
+  texas: {
+    name: "Texas",
+    svgId: "svg-texas",
+    counties: [
+      { id: "anderson", name: "Anderson", stateKey: "texas" },
+      { id: "andrews", name: "Andrews", stateKey: "texas" },
+      { id: "angelina", name: "Angelina", stateKey: "texas" },
+      { id: "aransas", name: "Aransas", stateKey: "texas" },
+      { id: "archer", name: "Archer", stateKey: "texas" },
+      { id: "armstrong", name: "Armstrong", stateKey: "texas" },
+      { id: "atascosa", name: "Atascosa", stateKey: "texas" },
+      { id: "austin", name: "Austin", stateKey: "texas" },
+      { id: "bailey", name: "Bailey", stateKey: "texas" },
+      { id: "bandera", name: "Bandera", stateKey: "texas" },
+      { id: "bastrop", name: "Bastrop", stateKey: "texas" },
+      { id: "baylor", name: "Baylor", stateKey: "texas" },
+      { id: "bee", name: "Bee", stateKey: "texas" },
+      { id: "bell", name: "Bell", stateKey: "texas" },
+      { id: "bexar", name: "Bexar", stateKey: "texas" },
+      { id: "blanco", name: "Blanco", stateKey: "texas" },
+      { id: "borden", name: "Borden", stateKey: "texas" },
+      { id: "bosque", name: "Bosque", stateKey: "texas" },
+      { id: "bowie", name: "Bowie", stateKey: "texas" },
+      { id: "brazoria", name: "Brazoria", stateKey: "texas" },
+      { id: "brazos", name: "Brazos", stateKey: "texas" },
+      { id: "brewster", name: "Brewster", stateKey: "texas" },
+      { id: "briscoe", name: "Briscoe", stateKey: "texas" },
+      { id: "brooks", name: "Brooks", stateKey: "texas" },
+      { id: "brown", name: "Brown", stateKey: "texas" },
+      { id: "burleson", name: "Burleson", stateKey: "texas" },
+      { id: "burnet", name: "Burnet", stateKey: "texas" },
+      { id: "caldwell", name: "Caldwell", stateKey: "texas" },
+      { id: "calhoun", name: "Calhoun", stateKey: "texas" },
+      { id: "callahan", name: "Callahan", stateKey: "texas" },
+      { id: "cameron", name: "Cameron", stateKey: "texas" },
+      { id: "camp", name: "Camp", stateKey: "texas" },
+      { id: "carson", name: "Carson", stateKey: "texas" },
+      { id: "cass", name: "Cass", stateKey: "texas" },
+      { id: "castro", name: "Castro", stateKey: "texas" },
+      { id: "chambers", name: "Chambers", stateKey: "texas" },
+      { id: "cherokee", name: "Cherokee", stateKey: "texas" },
+      { id: "childress", name: "Childress", stateKey: "texas" },
+      { id: "clay", name: "Clay", stateKey: "texas" },
+      { id: "cochran", name: "Cochran", stateKey: "texas" },
+      { id: "coke", name: "Coke", stateKey: "texas" },
+      { id: "coleman", name: "Coleman", stateKey: "texas" },
+      { id: "collin", name: "Collin", stateKey: "texas" },
+      { id: "collingsworth", name: "Collingsworth", stateKey: "texas" },
+      { id: "colorado", name: "Colorado", stateKey: "texas" },
+      { id: "comal", name: "Comal", stateKey: "texas" },
+      { id: "comanche", name: "Comanche", stateKey: "texas" },
+      { id: "concho", name: "Concho", stateKey: "texas" },
+      { id: "cooke", name: "Cooke", stateKey: "texas" },
+      { id: "coryell", name: "Coryell", stateKey: "texas" },
+      { id: "cottle", name: "Cottle", stateKey: "texas" },
+      { id: "crane", name: "Crane", stateKey: "texas" },
+      { id: "crockett", name: "Crockett", stateKey: "texas" },
+      { id: "crosby", name: "Crosby", stateKey: "texas" },
+      { id: "culberson", name: "Culberson", stateKey: "texas" },
+      { id: "dallam", name: "Dallam", stateKey: "texas" },
+      { id: "dallas", name: "Dallas", stateKey: "texas" },
+      { id: "dawson", name: "Dawson", stateKey: "texas" },
+      { id: "dewitt", name: "DeWitt", stateKey: "texas" },
+      { id: "deaf-smith", name: "Deaf Smith", stateKey: "texas" },
+      { id: "delta", name: "Delta", stateKey: "texas" },
+      { id: "denton", name: "Denton", stateKey: "texas" },
+      { id: "dickens", name: "Dickens", stateKey: "texas" },
+      { id: "dimmit", name: "Dimmit", stateKey: "texas" },
+      { id: "donley", name: "Donley", stateKey: "texas" },
+      { id: "duval", name: "Duval", stateKey: "texas" },
+      { id: "eastland", name: "Eastland", stateKey: "texas" },
+      { id: "ector", name: "Ector", stateKey: "texas" },
+      { id: "edwards", name: "Edwards", stateKey: "texas" },
+      { id: "el-paso", name: "El Paso", stateKey: "texas" },
+      { id: "ellis", name: "Ellis", stateKey: "texas" },
+      { id: "erath", name: "Erath", stateKey: "texas" },
+      { id: "falls", name: "Falls", stateKey: "texas" },
+      { id: "fannin", name: "Fannin", stateKey: "texas" },
+      { id: "fayette", name: "Fayette", stateKey: "texas" },
+      { id: "fisher", name: "Fisher", stateKey: "texas" },
+      { id: "floyd", name: "Floyd", stateKey: "texas" },
+      { id: "foard", name: "Foard", stateKey: "texas" },
+      { id: "fort-bend", name: "Fort Bend", stateKey: "texas" },
+      { id: "franklin", name: "Franklin", stateKey: "texas" },
+      { id: "freestone", name: "Freestone", stateKey: "texas" },
+      { id: "frio", name: "Frio", stateKey: "texas" },
+      { id: "gaines", name: "Gaines", stateKey: "texas" },
+      { id: "galveston", name: "Galveston", stateKey: "texas" },
+      { id: "garza", name: "Garza", stateKey: "texas" },
+      { id: "gillespie", name: "Gillespie", stateKey: "texas" },
+      { id: "glasscock", name: "Glasscock", stateKey: "texas" },
+      { id: "goliad", name: "Goliad", stateKey: "texas" },
+      { id: "gonzales", name: "Gonzales", stateKey: "texas" },
+      { id: "gray", name: "Gray", stateKey: "texas" },
+      { id: "grayson", name: "Grayson", stateKey: "texas" },
+      { id: "gregg", name: "Gregg", stateKey: "texas" },
+      { id: "grimes", name: "Grimes", stateKey: "texas" },
+      { id: "guadalupe", name: "Guadalupe", stateKey: "texas" },
+      { id: "hale", name: "Hale", stateKey: "texas" },
+      { id: "hall", name: "Hall", stateKey: "texas" },
+      { id: "hamilton", name: "Hamilton", stateKey: "texas" },
+      { id: "hansford", name: "Hansford", stateKey: "texas" },
+      { id: "hardeman", name: "Hardeman", stateKey: "texas" },
+      { id: "hardin", name: "Hardin", stateKey: "texas" },
+      { id: "harris", name: "Harris", stateKey: "texas" },
+      { id: "harrison", name: "Harrison", stateKey: "texas" },
+      { id: "hartley", name: "Hartley", stateKey: "texas" },
+      { id: "haskell", name: "Haskell", stateKey: "texas" },
+      { id: "hays", name: "Hays", stateKey: "texas" },
+      { id: "hemphill", name: "Hemphill", stateKey: "texas" },
+      { id: "henderson", name: "Henderson", stateKey: "texas" },
+      { id: "hidalgo", name: "Hidalgo", stateKey: "texas" },
+      { id: "hill", name: "Hill", stateKey: "texas" },
+      { id: "hockley", name: "Hockley", stateKey: "texas" },
+      { id: "hood", name: "Hood", stateKey: "texas" },
+      { id: "hopkins", name: "Hopkins", stateKey: "texas" },
+      { id: "houston", name: "Houston", stateKey: "texas" },
+      { id: "howard", name: "Howard", stateKey: "texas" },
+      { id: "hudspeth", name: "Hudspeth", stateKey: "texas" },
+      { id: "hunt", name: "Hunt", stateKey: "texas" },
+      { id: "hutchinson", name: "Hutchinson", stateKey: "texas" },
+      { id: "irion", name: "Irion", stateKey: "texas" },
+      { id: "jack", name: "Jack", stateKey: "texas" },
+      { id: "jackson", name: "Jackson", stateKey: "texas" },
+      { id: "jasper", name: "Jasper", stateKey: "texas" },
+      { id: "jeff-davis", name: "Jeff Davis", stateKey: "texas" },
+      { id: "jefferson", name: "Jefferson", stateKey: "texas" },
+      { id: "jim-hogg", name: "Jim Hogg", stateKey: "texas" },
+      { id: "jim-wells", name: "Jim Wells", stateKey: "texas" },
+      { id: "johnson", name: "Johnson", stateKey: "texas" },
+      { id: "jones", name: "Jones", stateKey: "texas" },
+      { id: "karnes", name: "Karnes", stateKey: "texas" },
+      { id: "kaufman", name: "Kaufman", stateKey: "texas" },
+      { id: "kendall", name: "Kendall", stateKey: "texas" },
+      { id: "kenedy", name: "Kenedy", stateKey: "texas" },
+      { id: "kent-tx", name: "Kent", stateKey: "texas" },
+      { id: "kerr", name: "Kerr", stateKey: "texas" },
+      { id: "kimble", name: "Kimble", stateKey: "texas" },
+      { id: "king", name: "King", stateKey: "texas" },
+      { id: "kinney", name: "Kinney", stateKey: "texas" },
+      { id: "kleberg", name: "Kleberg", stateKey: "texas" },
+      { id: "knox", name: "Knox", stateKey: "texas" },
+      { id: "la-salle", name: "La Salle", stateKey: "texas" },
+      { id: "lamar", name: "Lamar", stateKey: "texas" },
+      { id: "lamb", name: "Lamb", stateKey: "texas" },
+      { id: "lampasas", name: "Lampasas", stateKey: "texas" },
+      { id: "lavaca", name: "Lavaca", stateKey: "texas" },
+      { id: "lee", name: "Lee", stateKey: "texas" },
+      { id: "leon", name: "Leon", stateKey: "texas" },
+      { id: "liberty", name: "Liberty", stateKey: "texas" },
+      { id: "limestone", name: "Limestone", stateKey: "texas" },
+      { id: "lipscomb", name: "Lipscomb", stateKey: "texas" },
+      { id: "live-oak", name: "Live Oak", stateKey: "texas" },
+      { id: "llano", name: "Llano", stateKey: "texas" },
+      { id: "loving", name: "Loving", stateKey: "texas" },
+      { id: "lubbock", name: "Lubbock", stateKey: "texas" },
+      { id: "lynn", name: "Lynn", stateKey: "texas" },
+      { id: "madison", name: "Madison", stateKey: "texas" },
+      { id: "marion", name: "Marion", stateKey: "texas" },
+      { id: "martin", name: "Martin", stateKey: "texas" },
+      { id: "mason", name: "Mason", stateKey: "texas" },
+      { id: "matagorda", name: "Matagorda", stateKey: "texas" },
+      { id: "maverick", name: "Maverick", stateKey: "texas" },
+      { id: "mcculloch", name: "McCulloch", stateKey: "texas" },
+      { id: "mclennan", name: "McLennan", stateKey: "texas" },
+      { id: "mcmullen", name: "McMullen", stateKey: "texas" },
+      { id: "medina", name: "Medina", stateKey: "texas" },
+      { id: "menard", name: "Menard", stateKey: "texas" },
+      { id: "midland", name: "Midland", stateKey: "texas" },
+      { id: "milam", name: "Milam", stateKey: "texas" },
+      { id: "mills", name: "Mills", stateKey: "texas" },
+      { id: "mitchell", name: "Mitchell", stateKey: "texas" },
+      { id: "montague", name: "Montague", stateKey: "texas" },
+      { id: "montgomery", name: "Montgomery", stateKey: "texas" },
+      { id: "moore", name: "Moore", stateKey: "texas" },
+      { id: "morris", name: "Morris", stateKey: "texas" },
+      { id: "motley", name: "Motley", stateKey: "texas" },
+      { id: "nacogdoches", name: "Nacogdoches", stateKey: "texas" },
+      { id: "navarro", name: "Navarro", stateKey: "texas" },
+      { id: "newton", name: "Newton", stateKey: "texas" },
+      { id: "nolan", name: "Nolan", stateKey: "texas" },
+      { id: "nueces", name: "Nueces", stateKey: "texas" },
+      { id: "ochiltree", name: "Ochiltree", stateKey: "texas" },
+      { id: "oldham", name: "Oldham", stateKey: "texas" },
+      { id: "orange-tx", name: "Orange", stateKey: "texas" },
+      { id: "palo-pinto", name: "Palo Pinto", stateKey: "texas" },
+      { id: "panola", name: "Panola", stateKey: "texas" },
+      { id: "parker", name: "Parker", stateKey: "texas" },
+      { id: "parmer", name: "Parmer", stateKey: "texas" },
+      { id: "pecos", name: "Pecos", stateKey: "texas" },
+      { id: "polk", name: "Polk", stateKey: "texas" },
+      { id: "potter", name: "Potter", stateKey: "texas" },
+      { id: "presidio", name: "Presidio", stateKey: "texas" },
+      { id: "rains", name: "Rains", stateKey: "texas" },
+      { id: "randall", name: "Randall", stateKey: "texas" },
+      { id: "reagan", name: "Reagan", stateKey: "texas" },
+      { id: "real", name: "Real", stateKey: "texas" },
+      { id: "red-river", name: "Red River", stateKey: "texas" },
+      { id: "reeves", name: "Reeves", stateKey: "texas" },
+      { id: "refugio", name: "Refugio", stateKey: "texas" },
+      { id: "roberts", name: "Roberts", stateKey: "texas" },
+      { id: "robertson", name: "Robertson", stateKey: "texas" },
+      { id: "rockwall", name: "Rockwall", stateKey: "texas" },
+      { id: "runnels", name: "Runnels", stateKey: "texas" },
+      { id: "rusk", name: "Rusk", stateKey: "texas" },
+      { id: "sabine", name: "Sabine", stateKey: "texas" },
+      { id: "san-augustine", name: "San Augustine", stateKey: "texas" },
+      { id: "san-jacinto", name: "San Jacinto", stateKey: "texas" },
+      { id: "san-patricio", name: "San Patricio", stateKey: "texas" },
+      { id: "san-saba", name: "San Saba", stateKey: "texas" },
+      { id: "schleicher", name: "Schleicher", stateKey: "texas" },
+      { id: "scurry", name: "Scurry", stateKey: "texas" },
+      { id: "shackelford", name: "Shackelford", stateKey: "texas" },
+      { id: "shelby", name: "Shelby", stateKey: "texas" },
+      { id: "sherman", name: "Sherman", stateKey: "texas" },
+      { id: "smith", name: "Smith", stateKey: "texas" },
+      { id: "somervell", name: "Somervell", stateKey: "texas" },
+      { id: "starr", name: "Starr", stateKey: "texas" },
+      { id: "stephens", name: "Stephens", stateKey: "texas" },
+      { id: "sterling", name: "Sterling", stateKey: "texas" },
+      { id: "stonewall", name: "Stonewall", stateKey: "texas" },
+      { id: "sutton", name: "Sutton", stateKey: "texas" },
+      { id: "swisher", name: "Swisher", stateKey: "texas" },
+      { id: "tarrant", name: "Tarrant", stateKey: "texas" },
+      { id: "taylor", name: "Taylor", stateKey: "texas" },
+      { id: "terrell", name: "Terrell", stateKey: "texas" },
+      { id: "terry", name: "Terry", stateKey: "texas" },
+      { id: "throckmorton", name: "Throckmorton", stateKey: "texas" },
+      { id: "titus", name: "Titus", stateKey: "texas" },
+      { id: "tom-green", name: "Tom Green", stateKey: "texas" },
+      { id: "travis", name: "Travis", stateKey: "texas" },
+      { id: "trinity-tx", name: "Trinity", stateKey: "texas" },
+      { id: "tyler", name: "Tyler", stateKey: "texas" },
+      { id: "upshur", name: "Upshur", stateKey: "texas" },
+      { id: "upton", name: "Upton", stateKey: "texas" },
+      { id: "uvalde", name: "Uvalde", stateKey: "texas" },
+      { id: "val-verde", name: "Val Verde", stateKey: "texas" },
+      { id: "van-zandt", name: "Van Zandt", stateKey: "texas" },
+      { id: "victoria", name: "Victoria", stateKey: "texas" },
+      { id: "walker", name: "Walker", stateKey: "texas" },
+      { id: "waller", name: "Waller", stateKey: "texas" },
+      { id: "ward", name: "Ward", stateKey: "texas" },
+      { id: "washington-tx", name: "Washington", stateKey: "texas" },
+      { id: "webb", name: "Webb", stateKey: "texas" },
+      { id: "wharton", name: "Wharton", stateKey: "texas" },
+      { id: "wheeler", name: "Wheeler", stateKey: "texas" },
+      { id: "wichita", name: "Wichita", stateKey: "texas" },
+      { id: "wilbarger", name: "Wilbarger", stateKey: "texas" },
+      { id: "willacy", name: "Willacy", stateKey: "texas" },
+      { id: "williamson", name: "Williamson", stateKey: "texas" },
+      { id: "wilson", name: "Wilson", stateKey: "texas" },
+      { id: "winkler", name: "Winkler", stateKey: "texas" },
+      { id: "wise", name: "Wise", stateKey: "texas" },
+      { id: "wood", name: "Wood", stateKey: "texas" },
+      { id: "yoakum", name: "Yoakum", stateKey: "texas" },
+      { id: "young", name: "Young", stateKey: "texas" },
+      { id: "zapata", name: "Zapata", stateKey: "texas" },
+      { id: "zavala", name: "Zavala", stateKey: "texas" }
+    ]
   }
 };
 
@@ -293,20 +553,45 @@ let gameSettings = JSON.parse(localStorage.getItem("gameSettings")) || {
   soundVolume: 50,
   speedrunMode: false,
   instantTypeCheck: true,
-  hideStatsByDefault: false,
-  listByState: true
+  hideStatsByDefault: true,
+  listByState: true,
+  sortStatesAlphabetically: false,
+  scaleStatesBySize: false,
+  useDividersForFewStates: true,
+  statesPerRow: 2
 };
 // Backfills the new setting for anyone with an existing saved
 // gameSettings blob from before Type mode existed.
 if (gameSettings.instantTypeCheck === undefined) gameSettings.instantTypeCheck = true;
 // Backfills the new setting for anyone with an existing saved
 // gameSettings blob from before per-state progress tables could be
-// collapsed.
-if (gameSettings.hideStatsByDefault === undefined) gameSettings.hideStatsByDefault = false;
+// collapsed. Defaults to ON (collapsed by default).
+if (gameSettings.hideStatsByDefault === undefined) gameSettings.hideStatsByDefault = true;
 // Backfills the new setting for anyone with an existing saved
 // gameSettings blob from before the List Mode checklist could be
 // grouped by state. Defaults to ON.
 if (gameSettings.listByState === undefined) gameSettings.listByState = true;
+// Backfills the new setting for anyone with an existing saved
+// gameSettings blob from before states could be sorted alphabetically.
+// Defaults to OFF, i.e. states keep showing in the order they were
+// clicked on the setup screen, same as before this setting existed.
+if (gameSettings.sortStatesAlphabetically === undefined) gameSettings.sortStatesAlphabetically = false;
+// Backfills the new setting for anyone with an existing saved
+// gameSettings blob from before the in-game maps could switch between
+// uniform boxes and the original size-by-complexity layout. Defaults to
+// OFF, i.e. every state now shows in the same-size box by default —
+// the original variable-sized-with-dividers layout is opt-in.
+if (gameSettings.scaleStatesBySize === undefined) gameSettings.scaleStatesBySize = false;
+// Backfills the new setting for anyone with an existing saved
+// gameSettings blob from before this offshoot of Scale States by Size
+// existed. Defaults to ON — 3-or-fewer-state games automatically get the
+// divided layout even with the main setting off, since a couple of boxes
+// in a uniform grid looks sparse.
+if (gameSettings.useDividersForFewStates === undefined) gameSettings.useDividersForFewStates = true;
+// Backfills the new setting for anyone with an existing saved
+// gameSettings blob from before the uniform grid's column count was
+// configurable. Defaults to 2, matching the bigger default boxes.
+if (gameSettings.statesPerRow === undefined) gameSettings.statesPerRow = 2;
 
 
 // Per-state "collapsed" choice for the setup screen's progress tables.
@@ -322,6 +607,24 @@ function isStatsHidden(stateKey) {
   return Object.prototype.hasOwnProperty.call(statsHiddenOverride, stateKey)
     ? statsHiddenOverride[stateKey]
     : gameSettings.hideStatsByDefault;
+}
+
+
+// Returns the state keys that should currently be selected, in the order
+// they should be displayed/grouped by (county checkboxes, progress
+// tables, etc). By default this is just activeStateKeys as-is — i.e. the
+// order the player clicked the states in on the setup screen. When
+// gameSettings.sortStatesAlphabetically is on, a sorted copy is returned
+// instead, so every grouped-by-state list on the setup screen shows
+// states A-Z regardless of click order. Always returns a new array —
+// callers are free to sort/mutate it without touching activeStateKeys.
+function getOrderedStateKeys() {
+  if (!gameSettings.sortStatesAlphabetically) return [...activeStateKeys];
+  return [...activeStateKeys].sort((a, b) => {
+    const nameA = stateData[a]?.name || a;
+    const nameB = stateData[b]?.name || b;
+    return nameA.localeCompare(nameB);
+  });
 }
 
 
@@ -358,6 +661,10 @@ const toggleSpeedrun = document.getElementById("toggle-speedrun");
 const toggleInstantCheck = document.getElementById("toggle-instant-check");
 const toggleHideStatsDefault = document.getElementById("toggle-hide-stats-default");
 const toggleListByState = document.getElementById("toggle-list-by-state");
+const toggleSortStatesAlpha = document.getElementById("toggle-sort-states-alpha");
+const toggleScaleStatesBySize = document.getElementById("toggle-scale-states-by-size");
+const toggleDividersForFewStates = document.getElementById("toggle-dividers-for-few-states");
+const selectStatesPerRow = document.getElementById("select-states-per-row");
 const btnResetProgress = document.getElementById("btn-reset-progress");
 
 
@@ -697,10 +1004,16 @@ function applySettings() {
   if (toggleInstantCheck) toggleInstantCheck.checked = gameSettings.instantTypeCheck;
   if (toggleHideStatsDefault) toggleHideStatsDefault.checked = gameSettings.hideStatsByDefault;
   if (toggleListByState) toggleListByState.checked = gameSettings.listByState;
+  if (toggleSortStatesAlpha) toggleSortStatesAlpha.checked = gameSettings.sortStatesAlphabetically;
+  if (toggleScaleStatesBySize) toggleScaleStatesBySize.checked = gameSettings.scaleStatesBySize;
+  if (toggleDividersForFewStates) toggleDividersForFewStates.checked = gameSettings.useDividersForFewStates;
+  if (selectStatesPerRow) selectStatesPerRow.value = String(gameSettings.statesPerRow);
 
 
   document.body.classList.toggle("dark-mode", gameSettings.darkMode);
   document.body.classList.toggle("high-contrast", gameSettings.highContrast);
+  updateMapLayoutMode();
+  updateMapGridColumns();
 }
 
 
@@ -762,7 +1075,9 @@ function showScreen(screenId) {
     appContainer.classList.toggle(
       "wide-map",
       screenId === "screen-game" &&
-        (activeStateKeys.length > 1 || activeStateKeys.includes("california"))
+        (activeStateKeys.length > 1 ||
+          activeStateKeys.includes("california") ||
+          activeStateKeys.includes("texas"))
     );
     // A separate, narrower flag from "wide-map" above: California's extra-
     // large sizing (see #svg-california in style.css) is only meant for
@@ -775,6 +1090,19 @@ function showScreen(screenId) {
         activeStateKeys.length === 1 &&
         activeStateKeys[0] === "california"
     );
+    // Same idea for Texas — 254 counties packed in tight, so it needs at
+    // least as much solo room as California, if not more.
+    appContainer.classList.toggle(
+      "solo-texas",
+      screenId === "screen-game" &&
+        activeStateKeys.length === 1 &&
+        activeStateKeys[0] === "texas"
+    );
+    // Same pattern as the three toggles above, but for the settings
+    // screen's own two-column layout (see .settings-layout in style.css) —
+    // it needs more horizontal room than the normal narrow card to fit
+    // the table-of-contents sidebar beside the settings list.
+    appContainer.classList.toggle("wide-settings", screenId === "screen-settings");
   }
 }
 
@@ -891,6 +1219,60 @@ if (toggleListByState) {
 }
 
 
+if (toggleSortStatesAlpha) {
+  toggleSortStatesAlpha.addEventListener("change", (e) => {
+    gameSettings.sortStatesAlphabetically = e.target.checked;
+    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+    // Re-render both setup-screen lists immediately so the new order
+    // shows up right away instead of waiting for the next state click.
+    renderCountyCheckboxes();
+    renderStatsPanel();
+    // Also reorder the in-game maps right away — in case this was
+    // toggled from the game screen's own Settings button mid-game.
+    applyMapDomOrder();
+  });
+}
+
+
+if (toggleScaleStatesBySize) {
+  toggleScaleStatesBySize.addEventListener("change", (e) => {
+    gameSettings.scaleStatesBySize = e.target.checked;
+    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+    // Flip the body class immediately so the switch between uniform
+    // boxes and the original size-by-complexity layout shows up right
+    // away, even if this was toggled mid-game from the in-game Settings
+    // button rather than before a game starts. Routed through
+    // updateMapLayoutMode() rather than toggling the class directly here,
+    // since "Use Dividers for Few States" can also demand the divided
+    // layout even while this setting is off.
+    updateMapLayoutMode();
+  });
+}
+
+
+if (toggleDividersForFewStates) {
+  toggleDividersForFewStates.addEventListener("change", (e) => {
+    gameSettings.useDividersForFewStates = e.target.checked;
+    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+    // Same live-update reasoning as the "Scale States by Size" listener
+    // above — this setting can flip the divided-vs-uniform layout on its
+    // own, independent of that one.
+    updateMapLayoutMode();
+  });
+}
+
+
+if (selectStatesPerRow) {
+  selectStatesPerRow.addEventListener("change", (e) => {
+    gameSettings.statesPerRow = parseInt(e.target.value, 10) || 2;
+    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+    // Re-apply immediately so the grid re-flows right away if this was
+    // changed mid-game from the in-game Settings button.
+    updateMapGridColumns();
+  });
+}
+
+
 if (btnResetProgress) {
 btnResetProgress.addEventListener("click", () => {
   if (confirm("Are you sure you want to reset all saved progress and mistakes?")) {
@@ -907,6 +1289,51 @@ btnResetProgress.addEventListener("click", () => {
   }
 });
 }
+
+
+// --- Settings Table of Contents ---
+// Each caret button only expands/collapses its section's sub-list (see
+// .toc-items in style.css) — it's a separate element from the section
+// name link right beside it specifically so a click on one never also
+// triggers the other; a link nested inside a native <summary>-style
+// disclosure widget would make "navigate" and "expand" the same click,
+// which isn't what's wanted here.
+document.querySelectorAll(".toc-caret").forEach(caret => {
+  caret.addEventListener("click", () => {
+    const list = document.getElementById(caret.getAttribute("aria-controls"));
+    if (!list) return;
+    const nowExpanded = caret.getAttribute("aria-expanded") !== "true";
+    caret.setAttribute("aria-expanded", String(nowExpanded));
+    list.classList.toggle("collapsed", !nowExpanded);
+  });
+});
+
+
+// Section names and individual setting names both just scroll the target
+// into view — smoothly, and clear of the sticky top edge — rather than
+// jumping straight there the way a plain #anchor link would. preventDefault()
+// here also stops a section-name click from being misread as a click on its
+// enclosing .toc-section-row that should toggle the caret; the two are
+// wired independently (see above), so this only ever does the scroll.
+document.querySelectorAll(".toc-section-link, .toc-item-link").forEach(link => {
+  link.addEventListener("click", (e) => {
+    e.preventDefault();
+    const targetId = link.getAttribute("href").slice(1);
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Only individual settings (not whole sections) get the brief
+    // highlight flash — a whole section landing at the top of the
+    // viewport is already obvious without one.
+    if (target.classList.contains("setting-item")) {
+      target.classList.remove("toc-highlight");
+      // Force a reflow so re-adding the class restarts the animation even
+      // if the same setting was just clicked again a moment ago.
+      void target.offsetWidth;
+      target.classList.add("toc-highlight");
+    }
+  });
+});
 
 
 // --- Dynamic State Selector UI ---
@@ -996,10 +1423,12 @@ function markCountyLearned(countyId, mode) {
 
 // Renders one stats section (state name header + per-mode/per-county
 // table) for every currently-selected state, back to back — the same
-// "grouped by state, in selection order" layout renderCountyCheckboxes()
-// uses. Hidden entirely when nothing is selected. Each state's table can
-// be individually collapsed via its Hide/Show button (or all at once via
-// Hide All) — see isStatsHidden()/statsHiddenOverride above.
+// grouping order renderCountyCheckboxes() uses (click order, or
+// alphabetical if gameSettings.sortStatesAlphabetically is on — see
+// getOrderedStateKeys()). Hidden entirely when nothing is selected. Each
+// state's table can be individually collapsed via its Hide/Show button
+// (or all at once via Hide All) — see isStatsHidden()/statsHiddenOverride
+// above.
 function renderStatsPanel() {
   if (!statsPanel || !statsSections) return;
 
@@ -1012,7 +1441,7 @@ function renderStatsPanel() {
 
   const headerCells = MODE_LIST.map(mode => `<th>${MODE_LABELS[mode]}</th>`).join("");
 
-  const stateSections = activeStateKeys.map(stateKey => {
+  const stateSections = getOrderedStateKeys().map(stateKey => {
     const state = stateData[stateKey];
     if (!state) return "";
 
@@ -1202,11 +1631,114 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
 }
 
 
+// Physically reorders the .map-box elements (each one wrapping a single
+// state's <svg class="state-map">) inside .map-wrapper so the maps
+// you're actually playing with line up the same way the rest of the app
+// orders states: click order (the order you selected states in on the
+// setup screen — activeStateKeys, as-is) by default, or alphabetically
+// if gameSettings.sortStatesAlphabetically is on. States that aren't
+// currently selected are appended after, in no particular order —
+// they're hidden, so their relative order doesn't affect anything on
+// screen.
+//
+// This is a real DOM reorder (via appendChild, which moves rather than
+// clones a node) rather than a CSS "order" trick, because
+// switchVisibleSvgMap()'s divider logic below reads actual DOM order to
+// figure out which maps sit side by side (relevant when the "Scale
+// States by Size" setting is on) — a CSS-only reorder would desync the
+// two and put dividers in the wrong place. Moving the .map-box (rather
+// than the <svg> directly) keeps each map inside its own box wrapper
+// intact — moving the svg alone would rip it out of its box.
+function applyMapDomOrder() {
+  const wrapper = document.querySelector(".map-wrapper");
+  if (!wrapper) return;
+  const activeOrdered = gameSettings.sortStatesAlphabetically
+    ? [...activeStateKeys].sort((a, b) =>
+        (stateData[a]?.name || a).localeCompare(stateData[b]?.name || b)
+      )
+    : [...activeStateKeys];
+  const inactive = Object.keys(stateData).filter(key => !activeStateKeys.includes(key));
+  [...activeOrdered, ...inactive].forEach(key => {
+    const svg = document.getElementById(stateData[key]?.svgId);
+    const box = svg?.closest(".map-box") || svg;
+    if (box) wrapper.appendChild(box);
+  });
+}
+
+
+// True if the in-game maps should use the original variable-sized,
+// divided layout (body.scale-states-by-size) instead of the default
+// uniform-box grid. This is the case either because "Scale States by
+// Size" itself is on, or — when that's off — because "Use Dividers for
+// Few States" is on (its default) and there are 3 or fewer active
+// states, where a barely-populated uniform grid tends to look sparser
+// than the divided layout. Zero active states (nothing selected yet)
+// doesn't count as "few states" here, since there's nothing to lay out
+// either way.
+function shouldUseDividerLayout() {
+  if (gameSettings.scaleStatesBySize) return true;
+  return (
+    gameSettings.useDividersForFewStates &&
+    activeStateKeys.length > 0 &&
+    activeStateKeys.length <= 3
+  );
+}
+
+
+// Keeps body.scale-states-by-size in sync with shouldUseDividerLayout().
+// Called any time either of the two settings it depends on changes, or
+// the active state selection changes (see switchVisibleSvgMap()), so
+// e.g. selecting a 4th state while "Use Dividers for Few States" is on
+// switches the game screen from the divided layout to the uniform grid
+// live, without needing a page reload.
+function updateMapLayoutMode() {
+  document.body.classList.toggle("scale-states-by-size", shouldUseDividerLayout());
+}
+
+
+// Keeps .map-wrapper's --states-per-row custom property (see .map-wrapper
+// in style.css) in sync with the "States Per Row" setting, capped at the
+// number of states actually active — e.g. a "2 per row" setting with only
+// 1 state selected collapses to a single column so that one box grows to
+// fill the row, instead of sitting at half width beside an empty track.
+// Only meaningful for the uniform grid layout; harmless to keep updated
+// even while the divided layout (see updateMapLayoutMode()) is showing,
+// since that layout doesn't use CSS grid at all.
+function updateMapGridColumns() {
+  const wrapper = document.querySelector(".map-wrapper");
+  if (!wrapper) return;
+  const cappedByActiveCount = activeStateKeys.length > 0
+    ? Math.min(gameSettings.statesPerRow, activeStateKeys.length)
+    : gameSettings.statesPerRow;
+  wrapper.style.setProperty("--states-per-row", Math.max(1, cappedByActiveCount));
+}
+
+
 function switchVisibleSvgMap() {
-  svgMaps.forEach(map => {
+  // The active state selection is what both of these depend on, and this
+  // is the one function guaranteed to run any time that selection changes
+  // (a state gets toggled on the setup screen, or a game is started) —
+  // see its call sites.
+  updateMapLayoutMode();
+  updateMapGridColumns();
+  applyMapDomOrder();
+
+  // Re-query rather than reuse the module-level svgMaps NodeList: that
+  // NodeList is a snapshot taken once at load, so its internal order
+  // wouldn't reflect any reordering applyMapDomOrder() just did.
+  const currentSvgMaps = document.querySelectorAll(".state-map");
+
+  currentSvgMaps.forEach(map => {
     map.style.display = "none";
     map.classList.add("hidden");
     map.classList.remove("map-divider", "map-divider-top");
+    // The .map-box wrapper (see index.html) needs to be hidden along
+    // with its svg — otherwise an inactive state would still render as
+    // an empty box/tile in the uniform grid layout, since the box's own
+    // border/shadow/aspect-ratio don't depend on whether its child svg
+    // is visible.
+    const box = map.closest(".map-box");
+    if (box) box.classList.add("hidden");
   });
 
 
@@ -1216,6 +1748,8 @@ function switchVisibleSvgMap() {
     if (targetSvg) {
       targetSvg.style.display = "block";
       targetSvg.classList.remove("hidden");
+      const box = targetSvg.closest(".map-box");
+      if (box) box.classList.remove("hidden");
       visibleMaps.push(targetSvg);
 
 
@@ -1256,7 +1790,7 @@ function switchVisibleSvgMap() {
   // divider could land on the wrong map whenever the user picked the
   // states in a different order than they appear in the markup, making
   // it show up outside the pair instead of between them.
-  const domOrderedVisibleMaps = Array.from(svgMaps).filter(map => visibleMaps.includes(map));
+  const domOrderedVisibleMaps = Array.from(currentSvgMaps).filter(map => visibleMaps.includes(map));
 
 
   // Group the visible maps into their actual visual rows by checking
@@ -1326,13 +1860,14 @@ function switchVisibleSvgMap() {
   existingChildren.forEach(el => el.remove());
 
 
-  // Grouped by state (in the order the states were selected), with
-  // each state's own counties sorted alphabetically underneath its
+  // Grouped by state — in click order by default, or alphabetically if
+  // gameSettings.sortStatesAlphabetically is on (see getOrderedStateKeys())
+  // — with each state's own counties sorted alphabetically underneath its
   // header. The header itself is what disambiguates two counties that
   // share a name (e.g. "Kent" in Delaware vs Rhode Island), so the
   // label text no longer needs a ", State" suffix the way the flat
   // combined list did.
-  activeStateKeys.forEach(stateKey => {
+  getOrderedStateKeys().forEach(stateKey => {
     const state = stateData[stateKey];
     if (!state) return;
 
