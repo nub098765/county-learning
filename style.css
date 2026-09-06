@@ -630,6 +630,7 @@ body.dark-mode .county-list-panel {
  letter-spacing: 0.05em;
  text-transform: uppercase;
  opacity: 0.7;
+ text-align: center;
 }
 .county-list-panel table {
  border-collapse: separate;
@@ -1117,13 +1118,14 @@ body.dark-mode .modal-card {
 body.dark-mode .summary-missed-section {
  background: rgba(255, 255, 255, 0.06);
 }
-.summary-missed-section h3 {
+#summary-missed-section h3 {
  margin: 0 0 0.35rem 0;
  font-size: 0.75rem;
  font-weight: 700;
  letter-spacing: 0.05em;
  text-transform: uppercase;
  opacity: 0.7;
+ text-align: center !important;
 }
 .summary-missed-state + .summary-missed-state {
  margin-top: 0.6rem;
