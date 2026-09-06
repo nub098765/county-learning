@@ -825,19 +825,19 @@ const infoDemoCheck = document.getElementById("info-demo-check");
 const INFO_MODE_CONFIG = {
   pin: {
     title: "How to Play: Pin",
-    intro: "Click (or tap) the county you're asked to find. Once you find it, it stays filled in on the map, so you can watch your progress build.",
+    intro: "Click (or tap) the county you're asked to find. Once you find it, it stays filled in on the map.",
     demo: "pin",
     word: "Sonoma",
   },
   "pin-hard": {
     title: "How to Play: Flash",
-    intro: "Click (or tap) the county you're asked to find. It flashes briefly to confirm, then goes back to blank, nothing stays filled in.",
+    intro: "Click (or tap) the county you're asked to find. It flashes briefly, then goes back to blank.",
     demo: "pin-hard",
     word: "Sonoma",
   },
   type: {
     title: "How to Play: List",
-    intro: "Type any county's name, in any order, and see how many you can list before you run out.",
+    intro: "Type any county's name, in any order, and see how many you can list.",
     demo: "list",
     word: "Sonoma",
   },
