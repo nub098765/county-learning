@@ -708,7 +708,7 @@ body.dark-mode .county-list-panel td.found {
  flex-direction: row;
  flex-wrap: wrap;
  justify-content: center;
- align-items: flex-start;
+ align-items: center;
 }
 
 
