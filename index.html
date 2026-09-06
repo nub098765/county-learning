@@ -38,7 +38,10 @@
 
  <section id="screen-settings" class="screen">
    <h2>Settings</h2>
-    <div class="setting-item">
+
+   <h3 class="settings-group-title">General</h3>
+
+   <div class="setting-item">
      <div class="setting-text">
        <label for="toggle-dark">Dark Mode</label>
        <p class="setting-desc">Switch the whole app to a darker color scheme.</p>
@@ -54,36 +57,12 @@
    </div>
 
 
-
-
    <div class="setting-item">
      <div class="setting-text">
        <label for="slider-sound">Sound Volume</label>
        <p class="setting-desc">How loud the correct/incorrect sound effects play.</p>
      </div>
      <input type="range" id="slider-sound" min="0" max="100" value="50" step="1">
-   </div>
-
-
-
-
-   <div class="setting-item">
-     <div class="setting-text">
-       <label for="toggle-speedrun">Speedrun Mode (Pin modes)</label>
-       <p class="setting-desc">Register a guess the instant you press down on a county, instead of waiting for you to release.</p>
-     </div>
-     <input type="checkbox" id="toggle-speedrun">
-   </div>
-
-
-
-
-   <div class="setting-item">
-     <div class="setting-text">
-       <label for="toggle-instant-check">Instant Check (Type modes)</label>
-       <p class="setting-desc">Check what you've typed as you type it, instead of waiting for you to press Enter. Doesn't apply to Type (Hard).</p>
-     </div>
-     <input type="checkbox" id="toggle-instant-check">
    </div>
 
 
@@ -98,21 +77,39 @@
 
    <div class="setting-item">
      <div class="setting-text">
-       <label for="toggle-list-by-state">Separate List Mode Checklist by State</label>
-       <p class="setting-desc">Group the county checklist in List Mode into a section per state, instead of one mixed alphabetical list.</p>
-     </div>
-     <input type="checkbox" id="toggle-list-by-state">
-   </div>
-
-
-
-
-   <div class="setting-item">
-     <div class="setting-text">
        <label>Progress</label>
        <p class="setting-desc">Clear completed states, mistake history, and best-known suggestions.</p>
      </div>
      <button id="btn-reset-progress" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Reset Progress</button>
+   </div>
+
+
+   <h3 class="settings-group-title">Specific Modes</h3>
+
+   <div class="setting-item">
+     <div class="setting-text">
+       <label for="toggle-speedrun">Speedrun Mode (Pin modes)</label>
+       <p class="setting-desc">Register a guess the instant you press down on a county, instead of waiting for you to release.</p>
+     </div>
+     <input type="checkbox" id="toggle-speedrun">
+   </div>
+
+
+   <div class="setting-item">
+     <div class="setting-text">
+       <label for="toggle-instant-check">Instant Check (Type modes)</label>
+       <p class="setting-desc">Check what you've typed as you type it, instead of waiting for you to press Enter. Doesn't apply to Type (Hard).</p>
+     </div>
+     <input type="checkbox" id="toggle-instant-check">
+   </div>
+
+
+   <div class="setting-item">
+     <div class="setting-text">
+       <label for="toggle-list-by-state">Group Checklist by State</label>
+       <p class="setting-desc">Group the county checklist in List Mode into a section per state, instead of one mixed alphabetical list.</p>
+     </div>
+     <input type="checkbox" id="toggle-list-by-state">
    </div>
 
 

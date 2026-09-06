@@ -164,6 +164,23 @@ body.dark-mode .btn-mode span {
 
 
 /* Settings Screen */
+.settings-group-title {
+ text-align: left;
+ font-size: 0.75rem;
+ font-weight: 700;
+ text-transform: uppercase;
+ letter-spacing: 0.04em;
+ color: #888;
+ margin: 1.5rem 0 0.25rem;
+}
+.settings-group-title:first-of-type {
+ margin-top: 0.5rem;
+}
+body.dark-mode .settings-group-title {
+ color: #999;
+}
+
+
 .setting-item {
  display: flex;
  justify-content: space-between;
