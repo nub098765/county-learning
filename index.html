@@ -98,7 +98,7 @@
    <div class="setting-item">
      <div class="setting-text">
        <label for="toggle-instant-check">Instant Check (Type modes)</label>
-       <p class="setting-desc">Check what you've typed as you type it, instead of waiting for you to press Enter. Doesn't apply to Type (Hard).</p>
+       <p class="setting-desc">Check what you've typed as you type it, instead of waiting for you to press Enter. Doesn't apply to Verbatim.</p>
      </div>
      <input type="checkbox" id="toggle-instant-check">
    </div>
@@ -124,24 +124,24 @@
  <section id="screen-modes" class="screen">
    <h2>Select Mode</h2>
    <div class="mode-options">
-     <button class="btn-mode" data-mode="pin">
+     <button class="btn-mode mode-pin" data-mode="pin">
        <strong>Pin</strong>
        <span>Click the county you are given; once found, it stays filled.</span>
      </button>
-     <button class="btn-mode" data-mode="pin-hard">
-       <strong>Pin (Hard)</strong>
+     <button class="btn-mode mode-pin" data-mode="pin-hard">
+       <strong>Flash</strong>
        <span>Click the county you are given; once found, it flashes briefly.</span>
      </button>
-     <button class="btn-mode" data-mode="type">
+     <button class="btn-mode mode-list" data-mode="type">
        <strong>List</strong>
        <span>Type any county, in any order, and see how many you can list.</span>
      </button>
-     <button class="btn-mode" data-mode="type-hard">
+     <button class="btn-mode mode-type" data-mode="type-hard">
        <strong>Type</strong>
        <span>Type the name of a specific highlighted county.</span>
      </button>
-     <button class="btn-mode" data-mode="type-strict">
-       <strong>Type (Hard)</strong>
+     <button class="btn-mode mode-type" data-mode="type-strict">
+       <strong>Verbatim</strong>
        <span>Type the name of a specific highlighted county. You must press Enter to submit, and wrong guesses count against you.</span>
      </button>
    </div>

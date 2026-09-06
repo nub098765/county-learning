@@ -45,7 +45,7 @@ const TYPE_MODES = new Set(["type", "type-hard", "type-strict"]);
 // Typing modes where only the single highlighted county counts as a
 // match — as opposed to "type" (List), where typing any remaining
 // county's name resolves it. Both "type-hard" (Type) and "type-strict"
-// (Type (Hard)) work this way; they differ in submission behavior (see
+// (Verbatim) work this way; they differ in submission behavior (see
 // the Instant Check listener) and in how unforgivingly they treat a
 // wrong guess.
 const SINGLE_TARGET_TYPE_MODES = new Set(["type-hard", "type-strict"]);
@@ -58,12 +58,17 @@ const MODE_LIST = ["pin", "pin-hard", "type", "type-hard", "type-strict"];
 // "type-strict" is a brand-new mode, separate from "type-hard": same
 // single-target typing, but it always requires pressing Enter (no
 // Instant Check) and treats a wrong guess as a real miss.
+// Later renamed for clarity: "pin-hard" displays as "Flash" (it already
+// flashes the found county instead of filling it in), and "type-strict"
+// displays as "Verbatim" (it demands an exact, deliberate Enter-submitted
+// guess). The underlying ids ("pin-hard", "type-strict") are untouched —
+// same reason as above, so saved progress keeps working.
 const MODE_LABELS = {
   pin: "Pin",
-  "pin-hard": "Pin (Hard)",
+  "pin-hard": "Flash",
   type: "List",
   "type-hard": "Type",
-  "type-strict": "Type (Hard)"
+  "type-strict": "Verbatim"
 };
 let activeStateKeys = [];
 let selectedCounties = [];
@@ -164,7 +169,7 @@ function findAllPoolMatchesByName(normalized) {
 
 // Returns every county the current typed guess should resolve, as an
 // array (empty if it doesn't match anything). Single-target modes
-// ("Type" / type-hard and "Type (Hard)" / type-strict) can only ever
+// ("Type" / type-hard and "Verbatim" / type-strict) can only ever
 // resolve the one highlighted county; "List" can resolve several
 // counties at once if their bare names are identical.
 function getTypedGuessMatches(normalized) {
@@ -1475,7 +1480,7 @@ function handleCountyClick(pathEl) {
 }
 
 
-// --- Typing Modes ("List" / type, "Type" / type-hard, "Type (Hard)" / type-strict) ---
+// --- Typing Modes ("List" / type, "Type" / type-hard, "Verbatim" / type-strict) ---
 // A correct guess is shared logic across all three modes; only how the
 // match(es) are *found* differs (getTypedGuessMatches, defined earlier)
 // and how strictly a wrong guess gets submitted (see the Instant Check
@@ -1510,7 +1515,7 @@ function acceptTypedMatches(matchedCounties) {
     if (!recoveredFromMistake) markCountyLearned(matchedCounty.id, selectedMode);
     getCountyElements(matchedCounty.id).forEach(el => {
       el.classList.remove("typing-highlight");
-      // Only "Type (Hard)" (type-strict) gets the yellow "recovered"
+      // Only "Verbatim" (type-strict) gets the yellow "recovered"
       // treatment: it's the one mode where a wrong guess actually
       // penalizes you (counts against you), so the color means
       // something there. "Type" (type-hard) doesn't punish a wrong
@@ -1528,7 +1533,7 @@ function acceptTypedMatches(matchedCounties) {
 }
 
 function registerWrongTypedGuess() {
-  // Only "Type (Hard)" (type-strict) actually penalizes your percentage
+  // Only "Verbatim" (type-strict) actually penalizes your percentage
   // for a wrong guess — that's the one mode explicitly billed as "wrong
   // guesses count against you". List ("type") and "Type" (type-hard)
   // still track the mistake below (for the shake/sound, the "recovered"
@@ -1548,7 +1553,7 @@ function registerWrongTypedGuess() {
   // in Type) so the persistent countyMistakes counter still feeds the
   // "5 best-known" suggestions, same as click-based modes. missedCounties
   // (the set that drives the end-of-game "You missed X" summary) only
-  // gets a wrong guess added in "Type (Hard)" (type-strict) — that's the
+  // gets a wrong guess added in "Verbatim" (type-strict) — that's the
   // one mode where a wrong guess is a real, permanent miss. In List and
   // "Type", a wrong guess is just a retry: if you land on the right
   // answer afterward, nothing should count against you, so we leave
@@ -1608,7 +1613,7 @@ function submitTypedGuess() {
 
 if (typeInput) {
   typeInput.addEventListener("input", () => {
-    // "Type (Hard)" (type-strict) always requires an explicit Enter
+    // "Verbatim" (type-strict) always requires an explicit Enter
     // press to submit, so a wrong guess actually registers as wrong
     // (see registerWrongTypedGuess) instead of just sitting there
     // unmatched. The Instant Check setting applies to List and
