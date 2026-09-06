@@ -550,7 +550,7 @@ function openInfoModalForMode(mode) {
   if (infoExample) infoExample.setAttribute("data-demo", cfg.demo);
 
   if (infoDemoLabel) {
-    infoDemoLabel.textContent = cfg.demo === "list" ? "Type any county" : "Find";
+    infoDemoLabel.textContent = cfg.demo === "list" ? "Find any county" : "Find:";
   }
   if (infoDemoTarget) {
     infoDemoTarget.textContent = cfg.word;
@@ -1728,7 +1728,7 @@ function pickNextTarget() {
     if (selectedMode === "type") {
       // Open-ended: any remaining county counts, so there's no single
       // name to reveal here — the prompt just explains what to do.
-      targetPrompt.innerHTML = `<span class="find-label">Type any county</span>`;
+      targetPrompt.innerHTML = `<span class="find-label">Find any county</span>`;
     } else if (selectedMode === "type-hard") {
       targetPrompt.innerHTML = `<span class="find-label">Type the highlighted county</span>`;
     } else if (selectedMode === "type-strict") {
