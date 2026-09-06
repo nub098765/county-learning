@@ -690,15 +690,15 @@ let countyPaths = document.querySelectorAll(".county");
 const svgMaps = document.querySelectorAll(".state-map");
 
 
-// --- Right-click-to-zoom on state maps ---
+// --- Right-click / long-press-to-zoom on state maps ---
 // Small counties (Kalawao, San Francisco, etc.) are hard to click
-// precisely at the map's normal on-screen size, so right-clicking any
-// state map blows it up to a large, centered overlay — like a lightbox
-// — so individual counties are easier to see and click. Right-clicking
-// it again, clicking the dimmed backdrop, or pressing Escape restores
-// the normal layout. The backdrop element is created once here (rather
-// than living in index.html) since it's purely a JS-driven UI, not
-// meaningful markup.
+// precisely at the map's normal on-screen size, so right-clicking (or, on
+// touch devices, long-pressing) any state map blows it up to a large,
+// centered overlay — like a lightbox — so individual counties are easier
+// to see and click. Doing the same gesture again, clicking the dimmed
+// backdrop, or pressing Escape restores the normal layout. The backdrop
+// element is created once here (rather than living in index.html) since
+// it's purely a JS-driven UI, not meaningful markup.
 const zoomBackdrop = document.createElement("div");
 zoomBackdrop.className = "zoom-backdrop";
 document.body.appendChild(zoomBackdrop);
@@ -731,14 +731,70 @@ function enterMapZoom(svg) {
   document.body.classList.add("map-zoomed");
 }
 
+function toggleMapZoom(svg) {
+  if (svg.classList.contains("zoomed")) {
+    exitMapZoom();
+  } else {
+    enterMapZoom(svg);
+  }
+}
+
+// How long a touch has to be held before it counts as a long press,
+// matching roughly what iOS/Android treat as a "long" press themselves.
+const LONG_PRESS_MS = 500;
+// After our own touchstart timer above has already toggled the zoom for a
+// touch, Android still goes on to fire its own native "contextmenu" event
+// for that same long press a moment later. Without this guard, the
+// contextmenu listener below would see that event and toggle the zoom
+// straight back off again — so any contextmenu arriving shortly after our
+// timer already fired for the same gesture is ignored.
+const LONG_PRESS_GUARD_MS = 800;
+let touchLongPressFiredAt = 0;
+
 svgMaps.forEach(svg => {
+  // --- Touch: manual long-press detection ---
+  // iOS Safari has no native long-press event for a plain, non-link,
+  // non-image element like this SVG — left alone, a long press on it
+  // does nothing of ours at all, and the touch just falls through to the
+  // browser's own default long-press handling (text selection / the
+  // "callout" menu), which is what was landing on whatever nearby text
+  // happened to be selectable (e.g. the "i" info button) instead of
+  // zooming the map. Timing the press ourselves and calling
+  // preventDefault() on the triggering touchstart (see below) sidesteps
+  // both problems: it works the same on iOS and Android, and it stops
+  // the browser's own long-press gesture from ever getting a chance to
+  // start.
+  let pressTimer = null;
+  let moved = false;
+
+  svg.addEventListener("touchstart", (e) => {
+    moved = false;
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => {
+      if (moved) return;
+      touchLongPressFiredAt = Date.now();
+      toggleMapZoom(svg);
+    }, LONG_PRESS_MS);
+  }, { passive: true });
+
+  const cancelPressTimer = () => clearTimeout(pressTimer);
+  // A finger sliding around (panning, or just an imprecise tap) shouldn't
+  // count as holding still for a long press.
+  svg.addEventListener("touchmove", () => {
+    moved = true;
+    cancelPressTimer();
+  }, { passive: true });
+  svg.addEventListener("touchend", cancelPressTimer);
+  svg.addEventListener("touchcancel", cancelPressTimer);
+
+  // --- Mouse: right-click (desktop), or Android's native long-press ---
+  // Android automatically fires a synthetic "contextmenu" event on
+  // long-press for most elements, which is what already made this work
+  // there even before the manual touch handling above existed.
   svg.addEventListener("contextmenu", (e) => {
     e.preventDefault();
-    if (svg.classList.contains("zoomed")) {
-      exitMapZoom();
-    } else {
-      enterMapZoom(svg);
-    }
+    if (Date.now() - touchLongPressFiredAt < LONG_PRESS_GUARD_MS) return;
+    toggleMapZoom(svg);
   });
 });
 

@@ -1156,6 +1156,21 @@ body.high-contrast .county.correct-recovered {
 }
 
 
+/* Stops iOS/Android's default long-press gesture (text selection, or the
+   "callout" menu offering to copy/share) from ever getting a chance to
+   start on the maps or the floating info button that sits over them.
+   Without this, a long press meant for the manual zoom handling in
+   script.js could instead be swallowed by the browser's own selection
+   gesture — landing on whatever nearby text happened to be selectable
+   (typically the info button's lone "i") rather than doing anything on
+   the map itself. */
+.map-wrapper, .map-wrapper *, .info-button {
+ -webkit-touch-callout: none;
+ -webkit-user-select: none;
+ user-select: none;
+}
+
+
 /* Ensure SVG scales inside its .map-box, filling it edge to edge (minus
    the box's own padding). This is the default, uniform-box sizing; the
    original per-state variable sizing lives under the
