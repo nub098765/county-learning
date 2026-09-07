@@ -116,6 +116,23 @@ body.dark-mode .subtitle {
 }
 
 
+/* Small "Mode: X" label shown above the "Select State(s)" heading, set
+   in script.js's modeButtons click handler — a reminder of which mode
+   you picked on the previous screen, since it's otherwise easy to
+   forget once you're a few states deep into the setup screen. */
+.setup-mode-indicator {
+ color: #8a4b00;
+ font-size: 0.8rem;
+ font-weight: 700;
+ letter-spacing: 0.03em;
+ text-transform: uppercase;
+ margin: 0 0 0.35rem;
+}
+body.dark-mode .setup-mode-indicator {
+ color: #ffd699;
+}
+
+
 /* Buttons & Inputs */
 button {
  font-family: 'Roboto Serif', Georgia, serif;
@@ -729,6 +746,19 @@ body.dark-mode .stats-summary-cell.stats-complete {
 }
 
 
+/* Every county in this state/mode is learned, but at least one only via
+   a Retry Missed round (see .stats-check-cell.stats-retry below) rather
+   than a clean first pass. Uses the same orange as that dash so it's
+   visually tied to it, rather than reading as a plain, fully-earned
+   "Completed" — see renderStatsPanel() in script.js. */
+.stats-summary-cell.stats-complete-retry {
+ color: #c98a1a;
+}
+body.dark-mode .stats-summary-cell.stats-complete-retry {
+ color: #e0b030;
+}
+
+
 .stats-check-cell.stats-yes {
  color: #2d5a27;
  font-weight: 700;
@@ -744,6 +774,21 @@ body.dark-mode .stats-check-cell.stats-yes {
 }
 body.dark-mode .stats-check-cell.stats-no {
  color: #e0857a;
+}
+
+
+/* A county learned only during a "Retry Missed" round — i.e. it was
+   missed on the original pass and only gotten right afterward, rather
+   than in one clean sweep. Shown as a distinct orange dash rather than
+   the plain green checkmark, so the progress table doesn't quietly
+   count a Retry Missed save the same as a true first-try/clean run. See
+   markCountyLearned() in script.js. */
+.stats-check-cell.stats-retry {
+ color: #c98a1a;
+ font-weight: 700;
+}
+body.dark-mode .stats-check-cell.stats-retry {
+ color: #e0b030;
 }
 
 
@@ -1058,6 +1103,7 @@ body.scale-states-by-size .map-wrapper {
    and sits like a button, but isn't one — the actual clicking/tapping
    still happens on the county shapes inside it, exactly as before. */
 .map-box {
+ position: relative;
  aspect-ratio: 1 / 1;
  display: flex;
  align-items: center;
@@ -1068,6 +1114,55 @@ body.scale-states-by-size .map-wrapper {
  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
  padding: 0.75rem;
  overflow: hidden;
+}
+
+
+/* Magnifying-glass button, added by JS (see the svgMaps.forEach loop
+   right after zoomBackdrop is set up in script.js) as a more discoverable
+   alternative to right-click/long-press for the same zoom — that gesture
+   isn't obvious it's available at all. Sits in the corner of each map's
+   own box and calls the same toggleMapZoom() the gesture does.
+   display: contents in "Scale States by Size" mode (see .map-box above)
+   removes .map-box from the render tree entirely, which breaks this
+   button's absolute positioning against it — rather than sort out a new
+   anchor for that layout, it's simplest to just not show the button
+   there, same as this feature's original ask. */
+.map-magnify-btn {
+ position: absolute;
+ bottom: 0.5rem;
+ right: 0.5rem;
+ width: 1.9rem;
+ height: 1.9rem;
+ border-radius: 50%;
+ border: 1px solid rgba(0, 0, 0, 0.15);
+ background: rgba(255, 255, 255, 0.88);
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ font-size: 1rem;
+ line-height: 1;
+ padding: 0;
+ cursor: zoom-in;
+ box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+ transition: background 0.15s ease, transform 0.15s ease;
+ z-index: 2;
+}
+.map-magnify-btn:hover,
+.map-magnify-btn:focus-visible {
+ background: #ffffff;
+ transform: scale(1.08);
+}
+body.dark-mode .map-magnify-btn {
+ background: rgba(36, 36, 32, 0.88);
+ border-color: rgba(255, 255, 255, 0.18);
+ color: #fdeca6;
+}
+body.dark-mode .map-magnify-btn:hover,
+body.dark-mode .map-magnify-btn:focus-visible {
+ background: #242420;
+}
+body.scale-states-by-size .map-magnify-btn {
+ display: none;
 }
 body.dark-mode .map-box {
  background: #242420;
@@ -1185,14 +1280,23 @@ body.high-contrast .county.correct-recovered {
  flex: none;
  padding: 0;
 }
+/* FIX: this used to be max-width: 180px / flex: 1 1 140px for every state
+   without its own #svg-* override below (Hawaii/California/Texas). With
+   a couple of those bigger states sharing a row, that small a flex-basis
+   let the smaller states (New Hampshire, Rhode Island, Delaware...) get
+   squeezed down toward their basis, or below it, way more than their
+   actual complexity warranted — reading as "eensy weensy" next to their
+   neighbors. Bumping the default cap and basis up gives every ordinary
+   state noticeably more room to stay legible before Hawaii/California/
+   Texas's own larger overrides below even come into play. */
 body.scale-states-by-size .state-map {
  width: 100%;
  height: auto;
- max-width: 180px;
- max-height: 500px;
+ max-width: 230px;
+ max-height: 520px;
  display: block;
  margin: 0 auto;
- flex: 1 1 140px;
+ flex: 1 1 190px;
  padding: 0 0.85rem;
 }
 
@@ -1209,11 +1313,11 @@ body.scale-states-by-size #svg-hawaii {
 
 
 /* California has 58 densely-packed counties, so it needs considerably
-  more on-screen room than the smaller states to stay legible/clickable.
-  This base size is what's used whenever California shares the screen
-  with other states — the bigger, solo-only size lives in the
-  .solo-california rule right below. Only relevant to the original
-  variable-sized layout — see "Scale States by Size". */
+  more on-screen room than the smaller states to stay legible/clickable
+  when it's sharing the screen with others. Only relevant to the original
+  variable-sized layout — see "Scale States by Size". Its solo-play size
+  now comes from the generic .app-container.solo-map rule below instead
+  of a California-specific one. */
 body.scale-states-by-size #svg-california {
  max-width: 520px;
  max-height: 720px;
@@ -1221,31 +1325,76 @@ body.scale-states-by-size #svg-california {
 }
 
 
-/* California gets extra room on top of the base size above when it's
-  the ONLY map in play (see showScreen()'s "solo-california" toggle in
-  script.js) — otherwise it stays cramped even with the wide card, since
-  its own max-width was still the limiting factor. Kept separate from the
-  base rule so adding other states back in shrinks it back down instead
-  of leaving it oversized next to them. */
-body.scale-states-by-size .app-container.solo-california #svg-california {
- max-width: 640px;
- max-height: 840px;
- flex-basis: 600px;
-}
-
-
 /* Texas has 254 counties — more than 4x California's — packed into a
   similarly dense grid, so it gets at least as much room as California
-  both when sharing the screen and (even more so) solo. */
+  when sharing the screen with other states. Only relevant to the
+  original variable-sized layout — see "Scale States by Size". */
 body.scale-states-by-size #svg-texas {
  max-width: 560px;
  max-height: 760px;
  flex: 1 1 480px;
 }
-body.scale-states-by-size .app-container.solo-texas #svg-texas {
- max-width: 680px;
- max-height: 880px;
- flex-basis: 640px;
+
+
+/* Wisconsin has 72 counties in a compact area — noticeably denser than
+  the small states, though not as sprawling as Texas or California — so
+  it lands between them for on-screen room. Only relevant to the
+  original variable-sized layout — see "Scale States by Size". */
+body.scale-states-by-size #svg-wisconsin {
+ max-width: 480px;
+ max-height: 680px;
+ flex: 1 1 420px;
+}
+
+
+/* Solo play: exactly one state selected, so there's no row of other maps
+  it needs to stay visually even with. That state's map gets a modest
+  boost over its normal shared-row size — and this applies equally to
+  every state, not just the dense ones above, so a lone Delaware gets
+  exactly as big a boost as a lone Texas. Works in both layout modes:
+  bumping .map-wrapper's max-width grows the single box in the default
+  uniform grid (see updateMapGridColumns() collapsing it to one column),
+  while the .state-map/#svg-* overrides take over in the divided
+  "Scale States by Size" layout, where .map-box is display: contents and
+  sizing comes from the map itself. The !importants are needed to beat
+  the base Hawaii/California/Texas rules above, which would otherwise
+  still win on specificity. Toggled via .app-container.solo-map in
+  script.js's showScreen().
+  FIX: this used to size the map at up to min(94vw, 1100px)/85vh — nearly
+  the full viewport — which meant .app-container (width: fit-content via
+  .wide-map) had to balloon out to match it, i.e. the *body* was
+  stretching to accommodate however big the map decided to be. Capping
+  the map at a much smaller, fixed-feeling size instead means the
+  container only ever grows as much as this modest size actually needs —
+  the map stays a reasonable, predictable size and the body just
+  compensates around it, not the other way around. */
+.app-container.solo-map .map-wrapper {
+ /* FIX: this used to be max-width only, with no definite width. Paired
+    with .app-container.wide-map's own "width: fit-content" and the map
+    SVG's "width: 100%" below, that left the actual width to fall out of
+    a circular fit-content resolution instead of ever reaching this cap —
+    in practice every solo map topped out around ~300px wide regardless
+    of the 560px/60vw ceiling. Because states differ in their viewBox's
+    aspect ratio, that bug hit some states far harder than others: a
+    tall/narrow state like Rhode Island still ended up with a reasonably
+    big map (height follows from width via aspect ratio), while a
+    square-ish or wide state — California, Texas, Hawaii, New Hampshire —
+    ended up with a noticeably shorter, smaller-looking map, even though
+    every state is meant to get the same generous solo-play box. Setting
+    a definite "width" (not just "max-width") here breaks that circular
+    dependency so the cap actually takes effect for every state. */
+ width: min(60vw, 560px) !important;
+ max-width: min(60vw, 560px) !important;
+}
+.app-container.solo-map .state-map,
+.app-container.solo-map #svg-hawaii,
+.app-container.solo-map #svg-california,
+.app-container.solo-map #svg-texas,
+.app-container.solo-map #svg-wisconsin {
+ max-width: min(60vw, 560px) !important;
+ max-height: 60vh !important;
+ width: 100% !important;
+ flex: none !important;
 }
 
 
@@ -1317,7 +1466,8 @@ body.scale-states-by-size .app-container.wide-map .state-map {
 }
 body.scale-states-by-size .app-container.wide-map #svg-hawaii,
 body.scale-states-by-size .app-container.wide-map #svg-california,
-body.scale-states-by-size .app-container.wide-map #svg-texas {
+body.scale-states-by-size .app-container.wide-map #svg-texas,
+body.scale-states-by-size .app-container.wide-map #svg-wisconsin {
  flex-grow: 0;
  margin-left: 0;
  margin-right: 0;

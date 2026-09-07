@@ -371,6 +371,84 @@ const stateData = {
       { id: "zapata", name: "Zapata", stateKey: "texas" },
       { id: "zavala", name: "Zavala", stateKey: "texas" }
     ]
+  },
+  wisconsin: {
+    name: "Wisconsin",
+    svgId: "svg-wisconsin",
+    counties: [
+      { id: "adams", name: "Adams", stateKey: "wisconsin" },
+      { id: "ashland", name: "Ashland", stateKey: "wisconsin" },
+      { id: "barron", name: "Barron", stateKey: "wisconsin" },
+      { id: "bayfield", name: "Bayfield", stateKey: "wisconsin" },
+      { id: "brown-wi", name: "Brown", stateKey: "wisconsin" },
+      { id: "buffalo", name: "Buffalo", stateKey: "wisconsin" },
+      { id: "burnett", name: "Burnett", stateKey: "wisconsin" },
+      { id: "calumet", name: "Calumet", stateKey: "wisconsin" },
+      { id: "chippewa", name: "Chippewa", stateKey: "wisconsin" },
+      { id: "clark", name: "Clark", stateKey: "wisconsin" },
+      { id: "columbia", name: "Columbia", stateKey: "wisconsin" },
+      { id: "crawford", name: "Crawford", stateKey: "wisconsin" },
+      { id: "dane", name: "Dane", stateKey: "wisconsin" },
+      { id: "dodge", name: "Dodge", stateKey: "wisconsin" },
+      { id: "door", name: "Door", stateKey: "wisconsin" },
+      { id: "douglas", name: "Douglas", stateKey: "wisconsin" },
+      { id: "dunn", name: "Dunn", stateKey: "wisconsin" },
+      { id: "eau-claire", name: "Eau Claire", stateKey: "wisconsin" },
+      { id: "florence", name: "Florence", stateKey: "wisconsin" },
+      { id: "fond-du-lac", name: "Fond du Lac", stateKey: "wisconsin" },
+      { id: "forest", name: "Forest", stateKey: "wisconsin" },
+      { id: "grant", name: "Grant", stateKey: "wisconsin" },
+      { id: "green", name: "Green", stateKey: "wisconsin" },
+      { id: "green-lake", name: "Green Lake", stateKey: "wisconsin" },
+      { id: "iowa", name: "Iowa", stateKey: "wisconsin" },
+      { id: "iron", name: "Iron", stateKey: "wisconsin" },
+      { id: "jackson-wi", name: "Jackson", stateKey: "wisconsin" },
+      { id: "jefferson-wi", name: "Jefferson", stateKey: "wisconsin" },
+      { id: "juneau", name: "Juneau", stateKey: "wisconsin" },
+      { id: "kenosha", name: "Kenosha", stateKey: "wisconsin" },
+      { id: "kewaunee", name: "Kewaunee", stateKey: "wisconsin" },
+      { id: "la-crosse", name: "La Crosse", stateKey: "wisconsin" },
+      { id: "lafayette", name: "Lafayette", stateKey: "wisconsin" },
+      { id: "langlade", name: "Langlade", stateKey: "wisconsin" },
+      { id: "lincoln", name: "Lincoln", stateKey: "wisconsin" },
+      { id: "manitowoc", name: "Manitowoc", stateKey: "wisconsin" },
+      { id: "marathon", name: "Marathon", stateKey: "wisconsin" },
+      { id: "marinette", name: "Marinette", stateKey: "wisconsin" },
+      { id: "marquette", name: "Marquette", stateKey: "wisconsin" },
+      { id: "menominee", name: "Menominee", stateKey: "wisconsin" },
+      { id: "milwaukee", name: "Milwaukee", stateKey: "wisconsin" },
+      { id: "monroe", name: "Monroe", stateKey: "wisconsin" },
+      { id: "oconto", name: "Oconto", stateKey: "wisconsin" },
+      { id: "oneida", name: "Oneida", stateKey: "wisconsin" },
+      { id: "outagamie", name: "Outagamie", stateKey: "wisconsin" },
+      { id: "ozaukee", name: "Ozaukee", stateKey: "wisconsin" },
+      { id: "pepin", name: "Pepin", stateKey: "wisconsin" },
+      { id: "pierce", name: "Pierce", stateKey: "wisconsin" },
+      { id: "polk-wi", name: "Polk", stateKey: "wisconsin" },
+      { id: "portage", name: "Portage", stateKey: "wisconsin" },
+      { id: "price", name: "Price", stateKey: "wisconsin" },
+      { id: "racine", name: "Racine", stateKey: "wisconsin" },
+      { id: "richland", name: "Richland", stateKey: "wisconsin" },
+      { id: "rock", name: "Rock", stateKey: "wisconsin" },
+      { id: "rusk-wi", name: "Rusk", stateKey: "wisconsin" },
+      { id: "sauk", name: "Sauk", stateKey: "wisconsin" },
+      { id: "sawyer", name: "Sawyer", stateKey: "wisconsin" },
+      { id: "shawano", name: "Shawano", stateKey: "wisconsin" },
+      { id: "sheboygan", name: "Sheboygan", stateKey: "wisconsin" },
+      { id: "st-croix", name: "St. Croix", stateKey: "wisconsin" },
+      { id: "taylor-wi", name: "Taylor", stateKey: "wisconsin" },
+      { id: "trempealeau", name: "Trempealeau", stateKey: "wisconsin" },
+      { id: "vernon", name: "Vernon", stateKey: "wisconsin" },
+      { id: "vilas", name: "Vilas", stateKey: "wisconsin" },
+      { id: "walworth", name: "Walworth", stateKey: "wisconsin" },
+      { id: "washburn", name: "Washburn", stateKey: "wisconsin" },
+      { id: "washington-wi", name: "Washington", stateKey: "wisconsin" },
+      { id: "waukesha", name: "Waukesha", stateKey: "wisconsin" },
+      { id: "waupaca", name: "Waupaca", stateKey: "wisconsin" },
+      { id: "waushara", name: "Waushara", stateKey: "wisconsin" },
+      { id: "winnebago", name: "Winnebago", stateKey: "wisconsin" },
+      { id: "wood-wi", name: "Wood", stateKey: "wisconsin" }
+    ]
   }
 };
 
@@ -389,6 +467,12 @@ const TYPE_MODES = new Set(["type", "type-hard", "type-strict"]);
 // the Instant Check listener) and in how unforgivingly they treat a
 // wrong guess.
 const SINGLE_TARGET_TYPE_MODES = new Set(["type-hard", "type-strict"]);
+// How many wrong guesses on the same target it takes before the
+// "Reveal Answer After Mistakes" setting kicks in — naming it outright
+// in Type/Verbatim (see registerWrongTypedGuess() and
+// refreshTargetPrompt()), or pulsing it blue on the map in Pin/Flash
+// (see handleCountyClick()).
+const REVEAL_ANSWER_AFTER_MISTAKES = 3;
 // All five modes, in the order they should appear as stats-panel columns.
 const MODE_LIST = ["pin", "pin-hard", "type", "type-hard", "type-strict"];
 // NOTE: the "type" / "type-hard" mode ids are unchanged from before so
@@ -418,6 +502,9 @@ let scoreRight = 0;
 let scoreWrong = 0;
 let isGameActive = false;
 let missedCounties = new Set();
+// True for the duration of a game round started via "Retry Missed" — see
+// initGame()'s isRetryMissedRun param and markCountyLearned() below.
+let currentRunIsRetryMissed = false;
 let currentAttemptMistakes = 0;
 // Total counties in play for the current game, fixed at initGame() time,
 // so the "found/total" progress counter has a stable denominator even as
@@ -484,6 +571,29 @@ function getDisplayParts(county) {
   return { name: county.name, state: null };
 }
 
+// Unlike getDisplayParts()'s "state", which only surfaces a state name
+// when it's needed to disambiguate two identically-named counties, this
+// always returns the county's actual state name. Used by the "Show
+// State in Prompt" setting and the mistake-reveal hint below — both are
+// about helping the player locate a flashing highlight on a big
+// multi-state map, not about telling two "Bristol"s apart, so they need
+// the state every time, not just on a name clash.
+function getStateNameForCounty(county) {
+  if (!county) return "";
+  return stateData[county.stateKey]?.name || county.stateKey || "";
+}
+
+
+// Strips diacritic marks (e.g. ö → o) from a string for comparison
+// purposes — used by normalizeTypedName() below whenever the "Require
+// Diacritic Marks" setting is off. Unicode NFD decomposition splits an
+// accented letter into its plain base letter plus a separate combining
+// mark (U+0300–U+036F), so dropping that range folds the accent away
+// without needing to hardcode every possible accented letter.
+function foldDiacriticsForComparison(str) {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 
 // Normalizes a typed guess for comparison: lowercase, trims, collapses
 // repeated whitespace, and folds apostrophe-*like* characters (okina,
@@ -492,12 +602,38 @@ function getDisplayParts(county) {
 // the mark itself is still required. Kaua'i's official name (per the
 // Census) uses a plain apostrophe, not an okina, but typing "kauai"
 // with nothing there is still wrong.
+//
+// Diacritic marks (the diaeresis in New Hampshire's Coös County, for
+// instance) are handled separately from apostrophes, via the "Require
+// Diacritic Marks" setting: with it off (the default), this also strips
+// those marks so "Coos" is accepted; with it on, they're left alone and
+// have to be typed exactly. Both the typed guess and each county's
+// stored name go through this same function before being compared (see
+// findAllPoolMatchesByName/getTypedGuessMatches below), so the setting
+// applies evenly to both sides no matter which way it's set.
+//
+// NOTE for whoever adds Oregon's own (non-diaeresis) Coos County later:
+// this doesn't need special-casing for that. With the setting off, a
+// typed "coos" already resolves every matching county in the active
+// pool regardless of state (see findAllPoolMatchesByName's comment) —
+// the same mechanism that already lets two same-named "Kent" counties
+// both resolve from one guess. With the setting on, "Coos" and "Coös"
+// stay distinct and each only matches its own county. The one gap: 
+// computeAmbiguousNames() (for the "Kent, Rhode Island" state-qualifier
+// display) compares raw county.name strings, not normalized ones, so it
+// won't treat "Coös" and "Coos" as the same name for disambiguation
+// display purposes even with the setting off — worth revisiting once
+// Oregon's Coos actually exists in stateData.
 function normalizeTypedName(str) {
-  return str
+  let result = str
     .toLowerCase()
     .replace(/[\u02BB\u2018\u2019'`´]/g, "'")
     .trim()
     .replace(/\s+/g, " ");
+  if (!gameSettings.requireDiacritics) {
+    result = foldDiacriticsForComparison(result);
+  }
+  return result;
 }
 
 
@@ -571,10 +707,13 @@ let gameSettings = JSON.parse(localStorage.getItem("gameSettings")) || {
   instantTypeCheck: true,
   hideStatsByDefault: true,
   listByState: true,
-  sortStatesAlphabetically: false,
+  sortStatesAlphabetically: true,
   scaleStatesBySize: false,
   useDividersForFewStates: true,
-  statesPerRow: 2
+  statesPerRow: 2,
+  requireDiacritics: false,
+  showStateInPrompt: true,
+  revealAnswerAfterMistakes: true
 };
 // Backfills the new setting for anyone with an existing saved
 // gameSettings blob from before Type mode existed.
@@ -589,9 +728,27 @@ if (gameSettings.hideStatsByDefault === undefined) gameSettings.hideStatsByDefau
 if (gameSettings.listByState === undefined) gameSettings.listByState = true;
 // Backfills the new setting for anyone with an existing saved
 // gameSettings blob from before states could be sorted alphabetically.
-// Defaults to OFF, i.e. states keep showing in the order they were
-// clicked on the setup screen, same as before this setting existed.
-if (gameSettings.sortStatesAlphabetically === undefined) gameSettings.sortStatesAlphabetically = false;
+// Defaults to ON — alphabetical reads as the more natural/expected
+// default order; anyone who wants click order back can turn this off.
+if (gameSettings.sortStatesAlphabetically === undefined) gameSettings.sortStatesAlphabetically = true;
+// Backfills the new setting for anyone with an existing saved
+// gameSettings blob from before prompts could show the target's
+// state. Defaults to ON (auto-turned-on, per request) — with several
+// states in play at once, even a named target (Pin/Flash) or a
+// flashing highlight (Type/Verbatim) can be genuinely hard to place
+// (e.g. a small county like Rockwall, TX or Bristol, RI), so naming
+// the state up front is the safer default across all four modes.
+if (gameSettings.showStateInPrompt === undefined) gameSettings.showStateInPrompt = true;
+// Backfills the new setting for anyone with an existing saved
+// gameSettings blob from before enough wrong guesses on the same
+// county could earn a hint. Defaults to ON — this only kicks in after
+// several wrong guesses, so it's a safety net rather than a shortcut.
+// Pin/Flash already name the target up front, so their "reveal" is
+// pulsing the real county blue on the map instead (see
+// handleCountyClick); Type/Verbatim reveal by naming it in the prompt
+// (see refreshTargetPrompt). Doesn't apply to List ("type"), which is
+// free-recall with no single right answer to reveal.
+if (gameSettings.revealAnswerAfterMistakes === undefined) gameSettings.revealAnswerAfterMistakes = true;
 // Backfills the new setting for anyone with an existing saved
 // gameSettings blob from before the in-game maps could switch between
 // uniform boxes and the original size-by-complexity layout. Defaults to
@@ -608,6 +765,11 @@ if (gameSettings.useDividersForFewStates === undefined) gameSettings.useDividers
 // gameSettings blob from before the uniform grid's column count was
 // configurable. Defaults to 2, matching the bigger default boxes.
 if (gameSettings.statesPerRow === undefined) gameSettings.statesPerRow = 2;
+// Backfills the new setting for anyone with an existing saved
+// gameSettings blob from before typed answers could require diacritic
+// marks. Defaults to OFF — e.g. typing "Coos" for New Hampshire's Coös
+// County is accepted without the diaeresis unless this is turned on.
+if (gameSettings.requireDiacritics === undefined) gameSettings.requireDiacritics = false;
 
 
 // Per-state "collapsed" choice for the setup screen's progress tables.
@@ -659,6 +821,7 @@ const statsSections = document.getElementById("state-stats-sections");
 const statsDivider = document.querySelector("#screen-setup .soft-divider");
 const radioSpecific = document.querySelectorAll('input[name="specific-counties"]');
 const checkboxContainer = document.getElementById("checkbox-container");
+const setupModeIndicator = document.getElementById("setup-mode-indicator");
 const btnStartGame = document.getElementById("btn-start-game");
 const suggestionBox = document.getElementById("suggestion-box");
 const btnSelectSuggested = document.getElementById("btn-select-suggested");
@@ -683,6 +846,9 @@ const toggleSortStatesAlpha = document.getElementById("toggle-sort-states-alpha"
 const toggleScaleStatesBySize = document.getElementById("toggle-scale-states-by-size");
 const toggleDividersForFewStates = document.getElementById("toggle-dividers-for-few-states");
 const selectStatesPerRow = document.getElementById("select-states-per-row");
+const toggleRequireDiacritics = document.getElementById("toggle-require-diacritics");
+const toggleShowStateInPrompt = document.getElementById("toggle-show-state-in-prompt");
+const toggleRevealAnswerAfterMistakes = document.getElementById("toggle-reveal-answer");
 const btnResetProgress = document.getElementById("btn-reset-progress");
 
 
@@ -770,6 +936,24 @@ const LONG_PRESS_GUARD_MS = 800;
 let touchLongPressFiredAt = 0;
 
 svgMaps.forEach(svg => {
+  // Small, discoverable alternative to the right-click/long-press zoom
+  // gesture below — it's not obvious that gesture even exists. Sits in
+  // the corner of the map's own box (see .map-magnify-btn in style.css,
+  // which also hides it automatically in "Scale States by Size" mode).
+  const magnifyBox = svg.closest(".map-box");
+  if (magnifyBox) {
+    const magnifyBtn = document.createElement("button");
+    magnifyBtn.type = "button";
+    magnifyBtn.className = "map-magnify-btn";
+    magnifyBtn.setAttribute("aria-label", "Zoom in on this map");
+    magnifyBtn.textContent = "🔍";
+    magnifyBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleMapZoom(svg);
+    });
+    magnifyBox.appendChild(magnifyBtn);
+  }
+
   // --- Touch: manual long-press detection ---
   // iOS Safari has no native long-press event for a plain, non-link,
   // non-image element like this SVG — left alone, a long press on it
@@ -1082,6 +1266,9 @@ function applySettings() {
   if (toggleScaleStatesBySize) toggleScaleStatesBySize.checked = gameSettings.scaleStatesBySize;
   if (toggleDividersForFewStates) toggleDividersForFewStates.checked = gameSettings.useDividersForFewStates;
   if (selectStatesPerRow) selectStatesPerRow.value = String(gameSettings.statesPerRow);
+  if (toggleRequireDiacritics) toggleRequireDiacritics.checked = gameSettings.requireDiacritics;
+  if (toggleShowStateInPrompt) toggleShowStateInPrompt.checked = gameSettings.showStateInPrompt;
+  if (toggleRevealAnswerAfterMistakes) toggleRevealAnswerAfterMistakes.checked = gameSettings.revealAnswerAfterMistakes;
 
 
   document.body.classList.toggle("dark-mode", gameSettings.darkMode);
@@ -1135,44 +1322,25 @@ function showScreen(screenId) {
   if (countyListPanel && screenId !== "screen-game") {
     countyListPanel.classList.add("hidden");
   }
-  // Give the app-container extra horizontal room on the game screen when
-  // more than one state's map is in play, so the maps spread out sideways
-  // before wrapping to a new row instead of always stacking straight down.
-  // Only applies on screen-game itself — every other screen (setup,
-  // settings, etc.) keeps the normal narrow card width.
-  // FIX: California alone was staying in the default narrow card (no
-  // "> 1" states selected), which caps out well under #svg-california's
-  // own max-width — so it rendered smaller than intended instead of
-  // bigger. California needs the wide card even solo, since it's sized
-  // for far more room than the other three states.
+  // Give the app-container extra horizontal room on the game screen
+  // whenever a map is showing, so it can grow to fit however much room
+  // the map(s) actually need instead of staying capped at the normal
+  // narrow card width. Only applies on screen-game itself — every other
+  // screen (setup, settings, etc.) keeps the normal narrow card width.
   if (appContainer) {
     appContainer.classList.toggle(
       "wide-map",
-      screenId === "screen-game" &&
-        (activeStateKeys.length > 1 ||
-          activeStateKeys.includes("california") ||
-          activeStateKeys.includes("texas"))
+      screenId === "screen-game" && activeStateKeys.length >= 1
     );
-    // A separate, narrower flag from "wide-map" above: California's extra-
-    // large sizing (see #svg-california in style.css) is only meant for
-    // when it's the ONLY map on screen. With other states also in play it
-    // was ballooning past the room the other maps need, so that bigger
-    // sizing now only applies under this class.
+    // Solo play — exactly one state selected, so nothing else it needs to
+    // stay visually even with. Drives the big generic size bump in
+    // style.css (see .app-container.solo-map), which applies the same way
+    // no matter which single state is in play.
     appContainer.classList.toggle(
-      "solo-california",
-      screenId === "screen-game" &&
-        activeStateKeys.length === 1 &&
-        activeStateKeys[0] === "california"
+      "solo-map",
+      screenId === "screen-game" && activeStateKeys.length === 1
     );
-    // Same idea for Texas — 254 counties packed in tight, so it needs at
-    // least as much solo room as California, if not more.
-    appContainer.classList.toggle(
-      "solo-texas",
-      screenId === "screen-game" &&
-        activeStateKeys.length === 1 &&
-        activeStateKeys[0] === "texas"
-    );
-    // Same pattern as the three toggles above, but for the settings
+    // Same pattern as the two toggles above, but for the settings
     // screen's own two-column layout (see .settings-layout in style.css) —
     // it needs more horizontal room than the normal narrow card to fit
     // the table-of-contents sidebar beside the settings list.
@@ -1225,6 +1393,10 @@ backButtons.forEach(btn => {
 modeButtons.forEach(btn => {
   btn.addEventListener("click", () => {
     selectedMode = btn.dataset.mode || "pin";
+    // Shown just above "Select State(s)" so it's clear which mode you're
+    // about to set states up for, without having to remember which
+    // button you clicked on the previous screen.
+    if (setupModeIndicator) setupModeIndicator.textContent = `Mode: ${MODE_LABELS[selectedMode] || selectedMode}`;
     showScreen("screen-setup");
   });
 });
@@ -1343,6 +1515,34 @@ if (selectStatesPerRow) {
     // Re-apply immediately so the grid re-flows right away if this was
     // changed mid-game from the in-game Settings button.
     updateMapGridColumns();
+  });
+}
+
+
+if (toggleRequireDiacritics) {
+  toggleRequireDiacritics.addEventListener("change", (e) => {
+    gameSettings.requireDiacritics = e.target.checked;
+    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+  });
+}
+
+
+if (toggleShowStateInPrompt) {
+  toggleShowStateInPrompt.addEventListener("change", (e) => {
+    gameSettings.showStateInPrompt = e.target.checked;
+    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+    // Re-render the current prompt right away if a target is already
+    // up, instead of waiting for the next county. Applies to all four
+    // modes now, not just Type/Verbatim.
+    if (isGameActive) refreshTargetPrompt(false);
+  });
+}
+
+
+if (toggleRevealAnswerAfterMistakes) {
+  toggleRevealAnswerAfterMistakes.addEventListener("change", (e) => {
+    gameSettings.revealAnswerAfterMistakes = e.target.checked;
+    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
   });
 }
 
@@ -1477,19 +1677,36 @@ function renderStateListUI() {
 
 
 // --- Per-County, Per-Mode Learning Stats ---
+// Returns the learned status for a county/mode pair: "clean" (learned in
+// one unbroken pass — no mistakes, and not a Retry Missed round), "retry"
+// (only ever gotten right during a Retry Missed round), or null (not
+// learned at all). `true` is also accepted as a legacy value, from
+// before this distinction existed — treated the same as "clean".
+function getCountyLearnedStatus(countyId, mode) {
+  const status = countyProgress[countyId] && countyProgress[countyId][mode];
+  if (status === true) return "clean";
+  return status || null;
+}
+
+
 function isCountyLearned(countyId, mode) {
-  return !!(countyProgress[countyId] && countyProgress[countyId][mode]);
+  return !!getCountyLearnedStatus(countyId, mode);
 }
 
 
 // Marks a county learned for whichever mode it was just correctly
-// guessed in. Idempotent (re-marking an already-learned county/mode
-// pair is a no-op) so it's safe to call on every correct guess without
-// spamming localStorage writes.
-function markCountyLearned(countyId, mode) {
-  if (isCountyLearned(countyId, mode)) return;
+// guessed in — "clean" for a normal first-try-correct guess, or "retry"
+// if this round was started via "Retry Missed" (see
+// currentRunIsRetryMissed/initGame()). A county already marked "clean"
+// never gets downgraded back to "retry"; otherwise this is idempotent
+// (re-marking the same status is a no-op) so it's safe to call on every
+// correct guess without spamming localStorage writes.
+function markCountyLearned(countyId, mode, viaRetryMissed) {
+  const newStatus = viaRetryMissed ? "retry" : "clean";
+  const current = getCountyLearnedStatus(countyId, mode);
+  if (current === "clean" || current === newStatus) return;
   if (!countyProgress[countyId]) countyProgress[countyId] = {};
-  countyProgress[countyId][mode] = true;
+  countyProgress[countyId][mode] = newStatus;
   localStorage.setItem("countyProgress", JSON.stringify(countyProgress));
   renderStatsPanel();
 }
@@ -1525,15 +1742,41 @@ function renderStatsPanel() {
 
     const summaryCells = MODE_LIST.map(mode => {
       const learnedCount = sortedCounties.filter(c => isCountyLearned(c.id, mode)).length;
-      const complete = learnedCount === total;
-      const label = complete ? "Completed" : `${learnedCount}/${total} learned`;
-      return `<td class="stats-summary-cell${complete ? " stats-complete" : ""}">${label}</td>`;
+      // FIX: "Completed" used to fire whenever every county was *learned*
+      // (learnedCount === total), which counts "retry" (–) counties the
+      // same as "clean" (✓) ones — see isCountyLearned(). That meant a
+      // state showing a dash for some counties could still say flat-out
+      // "Completed", which reads as "you have this fully mastered" when
+      // you don't. Now "Completed" only fires when every county is
+      // "clean"; a state that's fully learned but leaning on some retries
+      // gets its own distinct label/style instead of either extreme.
+      const cleanCount = sortedCounties.filter(c => getCountyLearnedStatus(c.id, mode) === "clean").length;
+      const allClean = cleanCount === total;
+      const allLearned = learnedCount === total;
+      let label, cellClass;
+      if (allClean) {
+        label = "Completed";
+        cellClass = " stats-complete";
+      } else if (allLearned) {
+        label = "Completed (Retry Missed)";
+        cellClass = " stats-complete-retry";
+      } else {
+        label = `${learnedCount}/${total} learned`;
+        cellClass = "";
+      }
+      return `<td class="stats-summary-cell${cellClass}">${label}</td>`;
     }).join("");
 
     const countyRows = sortedCounties.map(c => {
       const cells = MODE_LIST.map(mode => {
-        const learned = isCountyLearned(c.id, mode);
-        return `<td class="stats-check-cell ${learned ? "stats-yes" : "stats-no"}" aria-label="${learned ? "Learned" : "Not learned"}">${learned ? "✓" : "✗"}</td>`;
+        const status = getCountyLearnedStatus(c.id, mode);
+        // "retry" = learned only during a Retry Missed round, shown as a
+        // distinct orange dash rather than the plain green checkmark —
+        // see markCountyLearned().
+        const symbol = status === "clean" ? "✓" : status === "retry" ? "–" : "✗";
+        const statusClass = status === "clean" ? "stats-yes" : status === "retry" ? "stats-retry" : "stats-no";
+        const label = status === "clean" ? "Learned" : status === "retry" ? "Learned (Retry Missed)" : "Not learned";
+        return `<td class="stats-check-cell ${statusClass}" aria-label="${label}">${symbol}</td>`;
       }).join("");
       return `<tr><td class="stats-county-name">${c.name}</td>${cells}</tr>`;
     }).join("");
@@ -2251,7 +2494,13 @@ if (btnGiveUp) {
 
 
 // --- Game Loop Functions ---
-function initGame(countiesToPlay) {
+// isRetryMissedRun: true only when this round was started via "Retry
+// Missed" (either the modal button or the Admire bar's retry button) —
+// i.e. it's re-covering ground the player already missed once, not a
+// fresh/full attempt. Threaded through to markCountyLearned() below so
+// a county gotten right only during such a round is tracked separately
+// from one gotten right clean the first time (see currentRunIsRetryMissed).
+function initGame(countiesToPlay, isRetryMissedRun = false) {
   targetPool = [...countiesToPlay];
   totalTargetsCount = targetPool.length;
   originalTargetList = [...targetPool];
@@ -2260,6 +2509,7 @@ function initGame(countiesToPlay) {
   isGameActive = true;
   missedCounties.clear();
   currentAttemptMistakes = 0;
+  currentRunIsRetryMissed = isRetryMissedRun;
   // Recompute per-game: e.g. retrying only Delaware's missed counties
   // means "Kent" is no longer ambiguous even if it was during the full
   // multi-state round.
@@ -2363,6 +2613,64 @@ function renderCountyListPanel() {
   }
 }
 
+// Renders (or re-renders) the #target-prompt text for whatever
+// currentTarget/selectedMode currently are.
+//
+// forceReveal only matters for "Type" (type-hard) and "Verbatim"
+// (type-strict) — the two modes that normally just say "Type the
+// highlighted county" without naming it. Once the "Reveal Answer After
+// Mistakes" setting has decided the player's stuck (see
+// registerWrongTypedGuess), this switches that prompt over to naming
+// the county outright, the same way Pin's prompt always does. List
+// ("type") is free-recall with no single right answer, so it ignores
+// forceReveal entirely — there's nothing specific to reveal.
+function refreshTargetPrompt(forceReveal) {
+  if (!targetPrompt || !currentTarget) return;
+
+  if (selectedMode === "type") {
+    // Open-ended: any remaining county counts, so there's no single
+    // name to reveal here — the prompt just explains what to do.
+    targetPrompt.innerHTML = `<span class="find-label">Find any county</span>`;
+    return;
+  }
+
+  if (selectedMode === "type-hard" || selectedMode === "type-strict") {
+    if (forceReveal) {
+      const { name, state } = getDisplayParts(currentTarget);
+      const stateName = state || getStateNameForCounty(currentTarget);
+      targetPrompt.innerHTML = `
+        <span class="find-label">It's:</span>
+        <span class="target-name">${name}</span>
+        ${stateName ? `<span class="target-state">(${stateName})</span>` : ""}
+      `;
+    } else {
+      // "Show State in Prompt" — auto-on. With several states in play
+      // at once, a lone flashing highlight can be genuinely hard to
+      // spot (e.g. a small county like Rockwall, TX or Bristol, RI), so
+      // naming the state up front narrows the search.
+      const stateName = gameSettings.showStateInPrompt ? getStateNameForCounty(currentTarget) : "";
+      targetPrompt.innerHTML = `
+        <span class="find-label">Type the highlighted county</span>
+        ${stateName ? `<span class="target-state">(${stateName})</span>` : ""}
+      `;
+    }
+    return;
+  }
+
+  // Pin / Flash: always names the target up front. The state is shown
+  // either because it's needed to tell two same-named counties apart
+  // (e.g. two "Kent"s in play — that one's non-negotiable, so it's
+  // shown regardless of the setting), or because "Show State in
+  // Prompt" is on, same as Type/Verbatim above.
+  const { name, state: ambiguousState } = getDisplayParts(currentTarget);
+  const stateName = ambiguousState || (gameSettings.showStateInPrompt ? getStateNameForCounty(currentTarget) : "");
+  targetPrompt.innerHTML = `
+    <span class="find-label">Find:</span>
+    <span class="target-name">${name}</span>
+    ${stateName ? `<span class="target-state">(${stateName})</span>` : ""}
+  `;
+}
+
 function pickNextTarget() {
   currentAttemptMistakes = 0;
   updateProgressCounter();
@@ -2385,24 +2693,7 @@ function pickNextTarget() {
   currentTarget = targetPool[randomIndex];
 
 
-  if (targetPrompt) {
-    if (selectedMode === "type") {
-      // Open-ended: any remaining county counts, so there's no single
-      // name to reveal here — the prompt just explains what to do.
-      targetPrompt.innerHTML = `<span class="find-label">Find any county</span>`;
-    } else if (selectedMode === "type-hard") {
-      targetPrompt.innerHTML = `<span class="find-label">Type the highlighted county</span>`;
-    } else if (selectedMode === "type-strict") {
-      targetPrompt.innerHTML = `<span class="find-label">Type the highlighted county</span>`;
-    } else {
-      const { name, state } = getDisplayParts(currentTarget);
-      targetPrompt.innerHTML = `
-        <span class="find-label">Find:</span>
-        <span class="target-name">${name}</span>
-        ${state ? `<span class="target-state">(${state})</span>` : ""}
-      `;
-    }
-  }
+  refreshTargetPrompt(false);
 
   if (SINGLE_TARGET_TYPE_MODES.has(selectedMode)) {
     getCountyElements(currentTarget.id).forEach(el => el.classList.add("typing-highlight"));
@@ -2444,7 +2735,7 @@ function handleCountyClick(pathEl) {
     // this attempt — i.e. first try (or, during Retry Missed, first
     // try within that retry). Getting it right only after guessing
     // wrong first doesn't earn the checkmark.
-    if (!recoveredFromMistake) markCountyLearned(currentTarget.id, selectedMode);
+    if (!recoveredFromMistake) markCountyLearned(currentTarget.id, selectedMode, currentRunIsRetryMissed);
 
 
     if (feedbackEl) {
@@ -2489,6 +2780,20 @@ function handleCountyClick(pathEl) {
     countyMistakes[currentTarget.id] = (countyMistakes[currentTarget.id] || 0) + 1;
     localStorage.setItem("countyMistakes", JSON.stringify(countyMistakes));
 
+    // Reveal Answer After Mistakes: Pin/Flash already name the target
+    // in the prompt from the start, so there's nothing textual left to
+    // reveal — but the actual challenge in these modes is *finding* it
+    // on the map, so after enough wrong clicks this pulses the real
+    // county blue (the same highlight Type/Verbatim use) without
+    // clicking it for the player.
+    if (
+      gameSettings.revealAnswerAfterMistakes &&
+      (selectedMode === "pin" || selectedMode === "pin-hard") &&
+      currentAttemptMistakes >= REVEAL_ANSWER_AFTER_MISTAKES
+    ) {
+      getCountyElements(currentTarget.id).forEach(el => el.classList.add("typing-highlight"));
+    }
+
 
     pathEl.classList.add("wrong");
     setTimeout(() => pathEl.classList.remove("wrong"), 600);
@@ -2528,7 +2833,7 @@ function acceptTypedMatches(matchedCounties) {
 
   matchedCounties.forEach(matchedCounty => {
     // Same "first try only" rule as click mode — see handleCountyClick.
-    if (!recoveredFromMistake) markCountyLearned(matchedCounty.id, selectedMode);
+    if (!recoveredFromMistake) markCountyLearned(matchedCounty.id, selectedMode, currentRunIsRetryMissed);
     getCountyElements(matchedCounty.id).forEach(el => {
       el.classList.remove("typing-highlight");
       // Only "Verbatim" (type-strict) gets the yellow "recovered"
@@ -2579,6 +2884,20 @@ function registerWrongTypedGuess() {
     if (selectedMode === "type-strict") missedCounties.add(currentTarget);
     countyMistakes[currentTarget.id] = (countyMistakes[currentTarget.id] || 0) + 1;
     localStorage.setItem("countyMistakes", JSON.stringify(countyMistakes));
+  }
+
+  // Reveal Answer After Mistakes: after enough wrong guesses on the
+  // same "Type"/"Verbatim" target, stop making the player guess blind
+  // and just name the county in the prompt (same info Pin's prompt
+  // shows from the start). Doesn't apply to List ("type") — with no
+  // single right answer there, refreshTargetPrompt() ignores the
+  // reveal flag for that mode anyway.
+  if (
+    gameSettings.revealAnswerAfterMistakes &&
+    SINGLE_TARGET_TYPE_MODES.has(selectedMode) &&
+    currentAttemptMistakes >= REVEAL_ANSWER_AFTER_MISTAKES
+  ) {
+    refreshTargetPrompt(true);
   }
 
   if (typeInputBox) {
@@ -2833,7 +3152,7 @@ function showSummaryModal() {
     appendModalButton("Admire Map", "btn-secondary", enableAdmireBar);
     appendModalButton("Retry Missed", "btn-primary", () => {
       modalSummary.classList.add("hidden");
-      initGame(missedArray);
+      initGame(missedArray, true);
     });
     appendModalButton("Play Again", "btn-secondary", () => {
       modalSummary.classList.add("hidden");
@@ -2888,7 +3207,7 @@ function enableAdmireBar() {
 if (btnAdmireRetry) {
   btnAdmireRetry.addEventListener("click", () => {
     admireBar.classList.add("hidden");
-    initGame(Array.from(missedCounties));
+    initGame(Array.from(missedCounties), true);
   });
 }
 
