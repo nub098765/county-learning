@@ -10,6 +10,22 @@ const stateData = {
       { id: "sussex", name: "Sussex", stateKey: "delaware" }
     ]
   },
+  new_hampshire: {
+    name: "New Hampshire",
+    svgId: "svg-new-hampshire",
+    counties: [
+      { id: "belknap", name: "Belknap", stateKey: "new_hampshire" },
+      { id: "carroll", name: "Carroll", stateKey: "new_hampshire" },
+      { id: "cheshire", name: "Cheshire", stateKey: "new_hampshire" },
+      { id: "coos", name: "Coös", stateKey: "new_hampshire" },
+      { id: "grafton", name: "Grafton", stateKey: "new_hampshire" },
+      { id: "hillsborough", name: "Hillsborough", stateKey: "new_hampshire" },
+      { id: "merrimack", name: "Merrimack", stateKey: "new_hampshire" },
+      { id: "rockingham", name: "Rockingham", stateKey: "new_hampshire" },
+      { id: "strafford", name: "Strafford", stateKey: "new_hampshire" },
+      { id: "sullivan", name: "Sullivan", stateKey: "new_hampshire" }
+    ]
+  },
   rhode_island: {
     name: "Rhode Island",
     svgId: "svg-rhode-island",
@@ -647,6 +663,8 @@ const btnStartGame = document.getElementById("btn-start-game");
 const suggestionBox = document.getElementById("suggestion-box");
 const btnSelectSuggested = document.getElementById("btn-select-suggested");
 const btnDeselectAll = document.getElementById("btn-deselect-all");
+const btnSelectAllStates = document.getElementById("btn-select-all-states");
+const btnDeselectAllStates = document.getElementById("btn-deselect-all-states");
 // FIX #1: there is no #state-list container in index.html — the state rows
 // (#state-delaware, #state-rhode_island, ...) are already
 // hardcoded in the markup. renderStateListUI() now wires up the existing rows
@@ -2016,6 +2034,58 @@ radioSpecific.forEach(radio => {
     updateSetupPlayButton();
   });
 });
+
+
+if (btnSelectAllStates) {
+  btnSelectAllStates.addEventListener("click", () => {
+    // Add every enabled state to the active set (stateData only ever
+    // contains states that are actually playable — the disabled
+    // "WORK IN PROGRESS" rows aren't real entries), then mirror the same
+    // row updates and side effects that a single toggleState() click does.
+    Object.keys(stateData).forEach(stateKey => {
+      if (!activeStateKeys.includes(stateKey)) {
+        activeStateKeys.push(stateKey);
+      }
+      const stateRow = document.getElementById(`state-${stateKey}`);
+      if (stateRow) {
+        stateRow.classList.add("selected");
+        stateRow.setAttribute("aria-pressed", "true");
+      }
+    });
+
+    renderCountyCheckboxes();
+    if (countyPanel) {
+      countyPanel.classList.toggle("hidden", activeStateKeys.length === 0);
+    }
+    updateSetupPlayButton();
+    switchVisibleSvgMap();
+    renderStatsPanel();
+  });
+}
+
+
+if (btnDeselectAllStates) {
+  btnDeselectAllStates.addEventListener("click", () => {
+    // Clear the active set and un-highlight every currently-rendered row,
+    // mirroring the same side effects a single toggleState() click does.
+    activeStateKeys.length = 0;
+    Object.keys(stateData).forEach(stateKey => {
+      const stateRow = document.getElementById(`state-${stateKey}`);
+      if (stateRow) {
+        stateRow.classList.remove("selected");
+        stateRow.setAttribute("aria-pressed", "false");
+      }
+    });
+
+    renderCountyCheckboxes();
+    if (countyPanel) {
+      countyPanel.classList.toggle("hidden", activeStateKeys.length === 0);
+    }
+    updateSetupPlayButton();
+    switchVisibleSvgMap();
+    renderStatsPanel();
+  });
+}
 
 
 if (btnSelectSuggested) {
