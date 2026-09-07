@@ -2084,7 +2084,7 @@ function switchVisibleSvgMap() {
         // the leader line actually reads as a line pointing to a
         // distant marker, rather than a circle sitting right on top of
         // the coastline with the arrowhead barely poking out.
-        kalawaoCalloutCreated = setupCountyCallout(targetSvg, "kalawao", "kalawao", -3000, -6800, 350, 150);
+        kalawaoCalloutCreated = setupCountyCallout(targetSvg, "kalawao", "kalawao", -4200, -7800, 350, 150);
       }
       if (key === "california" && !sfCalloutCreated) {
         // Open Pacific water just west of the city, clear of Marin
@@ -2142,7 +2142,20 @@ function switchVisibleSvgMap() {
     if (lastRow) {
       const overlap = Math.min(lastRow.bottom, rect.bottom) - Math.max(lastRow.top, rect.top);
       const smallerHeight = Math.min(lastRow.bottom - lastRow.top, rect.height);
-      if (overlap > smallerHeight * 0.5) {
+      // FIX: was a 0.5 (50%) threshold. Once New Hampshire and Hawaii
+      // got their own bigger, custom flex-basis/max-width (see
+      // #svg-new-hampshire / #svg-hawaii in style.css), the height gap
+      // between the shortest map sharing a row (Hawaii, ~208px) and the
+      // tallest (Delaware, ~466px) got wide enough that ordinary
+      // sub-row jitter — different maps hitting their own max-width cap
+      // at slightly different points as flex-grow distributes leftover
+      // space — could push a short map's overlap with its row just
+      // under 50%, misclassifying it as starting a new row and giving
+      // it a stray map-divider-top even though it's still visually on
+      // the same line. 0.35 keeps genuinely separate rows (which have
+      // ~0% overlap) from ever being merged, while giving same-row maps
+      // enough slack to survive that jitter.
+      if (overlap > smallerHeight * 0.35) {
         lastRow.maps.push(map);
         lastRow.top = Math.min(lastRow.top, rect.top);
         lastRow.bottom = Math.max(lastRow.bottom, rect.bottom);

@@ -1495,20 +1495,26 @@ body.scale-states-by-size .app-container.wide-map #svg-wisconsin {
 /* FIX: was centered on the full viewport (top: 50%), which put its top
   edge above the fixed target banner (body.map-zoomed .prompt-box below)
   and let the banner cover the state's northern counties. Anchoring to a
-  fixed top offset instead keeps the whole map below the banner. 12rem
+  fixed top offset instead keeps the whole map below the banner. 13.5rem
   clears the banner's tallest state (label + 3.2rem target name + state
   line + feedback line + Type mode's input box + padding/border) with
   room to spare. The vh-bound dimension is shrunk by that same offset so
-  the map is only a touch smaller, not cramped. */
+  the map is only a touch smaller, not cramped.
+  FIX 2: 12rem turned out not to be enough room to spare after all —
+  every state was clipping slightly, not just the ones (New Hampshire's
+  real shape, Hawaii's Kalawao callout circle) that happened to sit
+  closest to the top of their own viewBox with the least margin to
+  lose. Bumped to 13.5rem across the board instead of chasing it with
+  more and more per-state overrides. */
 .state-map.zoomed {
  position: fixed !important;
- top: 12rem;
+ top: 13.5rem;
  left: 50%;
  transform: translateX(-50%);
  z-index: 1000;
- width: min(88vw, calc(90vh - 12rem)) !important;
- max-width: min(88vw, calc(90vh - 12rem)) !important;
- max-height: calc(90vh - 12rem) !important;
+ width: min(88vw, calc(90vh - 13.5rem)) !important;
+ max-width: min(88vw, calc(90vh - 13.5rem)) !important;
+ max-height: calc(90vh - 13.5rem) !important;
  flex: none !important;
  background: #ffffff;
  border-radius: 16px;
@@ -1627,7 +1633,7 @@ body.high-contrast .county.typing-highlight {
   sidesteps that scale-dependence entirely. */
 .kalawao-callout-line {
  stroke: #b5651d;
- stroke-width: 3px;
+ stroke-width: 1.5px;
  fill: none;
  vector-effect: non-scaling-stroke;
 }
@@ -1671,7 +1677,7 @@ body.high-contrast .kalawao-callout {
   arrowhead many times larger than San Francisco's own real shape. */
 .sf-callout-line {
  stroke: #b5651d;
- stroke-width: 0.6px;
+ stroke-width: 1.5px;
  fill: none;
  vector-effect: non-scaling-stroke;
 }
@@ -2456,4 +2462,9 @@ body.dark-mode .county-group-header {
 body.dark-mode .county-hover-tooltip {
  background: #fdeca6;
  color: #111;
+}
+
+body.scale-states-by-size #svg-new-hampshire {
+  max-width: 280px;
+  flex: 1 1 240px;
 }
