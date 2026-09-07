@@ -138,7 +138,22 @@
          <input type="checkbox" id="toggle-sort-states-alpha">
        </div>
 
+       <div class="setting-item" id="setting-show-state-in-prompt">
+         <div class="setting-text">
+           <label for="toggle-show-state-in-prompt">Show State in Prompt</label>
+           <p class="setting-desc">Name the target county's state in the prompt, in every mode. Makes it easier to locate when several states are in play at once.</p>
+         </div>
+         <input type="checkbox" id="toggle-show-state-in-prompt">
+       </div>
 
+       <div class="setting-item" id="setting-reveal-answer">
+         <div class="setting-text">
+           <label for="toggle-reveal-answer">Reveal Answer After Mistakes</label>
+           <p class="setting-desc">After a few wrong guesses on the same county, give you a hand: Pin/Flash pulse the real county blue on the map, and Type/Verbatim name it in the prompt banner. Doesn't apply to List, which has no single right answer.</p>
+         </div>
+         <input type="checkbox" id="toggle-reveal-answer">
+       </div>
+       
        <div class="setting-item" id="setting-scale-states-by-size">
          <div class="setting-text">
            <label for="toggle-scale-states-by-size">Scale States by Size</label>
@@ -151,7 +166,7 @@
        <div class="setting-item" id="setting-dividers-for-few-states">
          <div class="setting-text">
            <label for="toggle-dividers-for-few-states">Use Dividers for Few States</label>
-           <p class="setting-desc">Automatically use dividers if you are playing with 3 or fewer states, despite the status of Scale States by Size. Skipped if any of those states is large/dense (like Texas or Wisconsin) — those get equal-sized boxes instead of sharing a cramped row.</p>
+           <p class="setting-desc">Automatically use dividers if you are playing with 3 or fewer states, despite the status of Scale States by Size.</p>
          </div>
          <input type="checkbox" id="toggle-dividers-for-few-states">
        </div>
@@ -206,27 +221,7 @@
            <p class="setting-desc">Require marks like diaereses to be typed exactly.</p>
          </div>
          <input type="checkbox" id="toggle-require-diacritics">
-       </div>
-
-
-       <div class="setting-item" id="setting-show-state-in-prompt">
-         <div class="setting-text">
-           <label for="toggle-show-state-in-prompt">Show State in Prompt</label>
-           <p class="setting-desc">Name the target county's state in the prompt, in every mode. Makes it easier to locate — or spot a flashing highlight — when several states are in play at once.</p>
-         </div>
-         <input type="checkbox" id="toggle-show-state-in-prompt">
-       </div>
-
-
-       <div class="setting-item" id="setting-reveal-answer">
-         <div class="setting-text">
-           <label for="toggle-reveal-answer">Reveal Answer After Mistakes (Pin/Flash/Type/Verbatim)</label>
-           <p class="setting-desc">After a few wrong guesses on the same county, give you a hand: Pin/Flash pulse the real county blue on the map, and Type/Verbatim name it in the prompt. Doesn't apply to List, which has no single right answer.</p>
-         </div>
-         <input type="checkbox" id="toggle-reveal-answer">
-       </div>
-
-
+        </div>
 
 
        <button class="btn-back" data-target="screen-home">Back to Home</button>
