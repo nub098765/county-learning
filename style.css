@@ -1347,6 +1347,19 @@ body.scale-states-by-size #svg-wisconsin {
 }
 
 
+/* Alaska's 30 boroughs/census areas are spread across a wide, thin,
+  irregular shape (the Southeast panhandle especially is a dense chain
+  of slivers and islands), so — like Hawaii — it needs more on-screen
+  room than a compact state would to keep those shapes legible and
+  clickable. Only relevant to the original variable-sized layout — see
+  "Scale States by Size". */
+body.scale-states-by-size #svg-alaska {
+ max-width: 480px;
+ max-height: 640px;
+ flex: 1 1 420px;
+}
+
+
 /* Solo play: exactly one state selected, so there's no row of other maps
   it needs to stay visually even with. That state's map gets a modest
   boost over its normal shared-row size — and this applies equally to
@@ -1390,7 +1403,8 @@ body.scale-states-by-size #svg-wisconsin {
 .app-container.solo-map #svg-hawaii,
 .app-container.solo-map #svg-california,
 .app-container.solo-map #svg-texas,
-.app-container.solo-map #svg-wisconsin {
+.app-container.solo-map #svg-wisconsin,
+.app-container.solo-map #svg-alaska {
  max-width: min(60vw, 560px) !important;
  max-height: 60vh !important;
  width: 100% !important;
@@ -1467,7 +1481,8 @@ body.scale-states-by-size .app-container.wide-map .state-map {
 body.scale-states-by-size .app-container.wide-map #svg-hawaii,
 body.scale-states-by-size .app-container.wide-map #svg-california,
 body.scale-states-by-size .app-container.wide-map #svg-texas,
-body.scale-states-by-size .app-container.wide-map #svg-wisconsin {
+body.scale-states-by-size .app-container.wide-map #svg-wisconsin,
+body.scale-states-by-size .app-container.wide-map #svg-alaska {
  flex-grow: 0;
  margin-left: 0;
  margin-right: 0;
@@ -1524,6 +1539,21 @@ body.scale-states-by-size .app-container.wide-map #svg-wisconsin {
 }
 body.dark-mode .state-map.zoomed {
  background: #242420;
+}
+
+/* Alaska's own viewBox crops right at the top edge of the North Slope
+  (y≈1 out of 488 — essentially no built-in margin above its northern
+  coastline), unlike other states whose shapes sit with more breathing
+  room inside their viewBox. That leaves it with less real clearance
+  under the fixed target banner than the shared 13.5rem above accounts
+  for, so it still ends up overlapping the banner at some viewport
+  sizes. Push Alaska down a bit further than the rest, adjusting its
+  width/height ceiling to match so it still fits within the viewport. */
+#svg-alaska.zoomed {
+ top: 16rem;
+ width: min(88vw, calc(90vh - 16rem)) !important;
+ max-width: min(88vw, calc(90vh - 16rem)) !important;
+ max-height: calc(90vh - 16rem) !important;
 }
 
 
@@ -1705,6 +1735,113 @@ body.dark-mode .sf-callout {
  stroke: #e0954a;
 }
 body.high-contrast .sf-callout {
+ stroke: #ff8800;
+}
+
+
+/* Skagway, Bristol Bay, and Haines get the same treatment on the Alaska
+  map — all three are real boroughs whose actual shapes are about as
+  tiny, relative to their map, as Kalawao's and San Francisco's are on
+  theirs. Same colors as both of those so all five callouts read as
+  the same kind of UI element. */
+.skagway-callout-line {
+ stroke: #b5651d;
+ stroke-width: 1.5px;
+ fill: none;
+ vector-effect: non-scaling-stroke;
+}
+body.dark-mode .skagway-callout-line {
+ stroke: #e0954a;
+}
+body.high-contrast .skagway-callout-line {
+ stroke: #ff8800;
+}
+
+.skagway-arrowhead-fill {
+ fill: #b5651d;
+}
+body.dark-mode .skagway-arrowhead-fill {
+ fill: #e0954a;
+}
+body.high-contrast .skagway-arrowhead-fill {
+ fill: #ff8800;
+}
+
+.skagway-callout {
+ stroke: #b5651d;
+}
+body.dark-mode .skagway-callout {
+ stroke: #e0954a;
+}
+body.high-contrast .skagway-callout {
+ stroke: #ff8800;
+}
+
+
+.bristol-bay-callout-line {
+ stroke: #b5651d;
+ stroke-width: 1.5px;
+ fill: none;
+ vector-effect: non-scaling-stroke;
+}
+body.dark-mode .bristol-bay-callout-line {
+ stroke: #e0954a;
+}
+body.high-contrast .bristol-bay-callout-line {
+ stroke: #ff8800;
+}
+
+.bristol-bay-arrowhead-fill {
+ fill: #b5651d;
+}
+body.dark-mode .bristol-bay-arrowhead-fill {
+ fill: #e0954a;
+}
+body.high-contrast .bristol-bay-arrowhead-fill {
+ fill: #ff8800;
+}
+
+.bristol-bay-callout {
+ stroke: #b5651d;
+}
+body.dark-mode .bristol-bay-callout {
+ stroke: #e0954a;
+}
+body.high-contrast .bristol-bay-callout {
+ stroke: #ff8800;
+}
+
+
+.haines-callout-line {
+ stroke: #b5651d;
+ stroke-width: 1.5px;
+ fill: none;
+ vector-effect: non-scaling-stroke;
+}
+body.dark-mode .haines-callout-line {
+ stroke: #e0954a;
+}
+body.high-contrast .haines-callout-line {
+ stroke: #ff8800;
+}
+
+.haines-arrowhead-fill {
+ fill: #b5651d;
+}
+body.dark-mode .haines-arrowhead-fill {
+ fill: #e0954a;
+}
+body.high-contrast .haines-arrowhead-fill {
+ fill: #ff8800;
+}
+
+.haines-callout {
+ stroke: #b5651d;
+}
+body.dark-mode .haines-callout {
+ stroke: #e0954a;
+}
+body.high-contrast .haines-callout {
  stroke: #ff8800;
 }
 

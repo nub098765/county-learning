@@ -1,6 +1,42 @@
 document.addEventListener('DOMContentLoaded', () => {
 // --- Data Registry for States and Counties ---
 const stateData = {
+  alaska: {
+    name: "Alaska",
+    svgId: "svg-alaska",
+    counties: [
+      { id: "aleutians-east", name: "Aleutians East", stateKey: "alaska" },
+      { id: "aleutians-west", name: "Aleutians West", stateKey: "alaska" },
+      { id: "anchorage", name: "Anchorage", stateKey: "alaska" },
+      { id: "bethel", name: "Bethel", stateKey: "alaska" },
+      { id: "bristol-bay", name: "Bristol Bay", stateKey: "alaska" },
+      { id: "chugach", name: "Chugach", stateKey: "alaska" },
+      { id: "copper-river", name: "Copper River", stateKey: "alaska" },
+      { id: "denali", name: "Denali", stateKey: "alaska" },
+      { id: "dillingham", name: "Dillingham", stateKey: "alaska" },
+      { id: "fairbanks-north-star", name: "Fairbanks North Star", stateKey: "alaska" },
+      { id: "haines", name: "Haines", stateKey: "alaska" },
+      { id: "hoonah-angoon", name: "Hoonah-Angoon", stateKey: "alaska" },
+      { id: "juneau", name: "Juneau", stateKey: "alaska" },
+      { id: "kenai-peninsula", name: "Kenai Peninsula", stateKey: "alaska" },
+      { id: "ketchikan-gateway", name: "Ketchikan Gateway", stateKey: "alaska" },
+      { id: "kodiak-island", name: "Kodiak Island", stateKey: "alaska" },
+      { id: "kusilvak", name: "Kusilvak", stateKey: "alaska" },
+      { id: "lake-and-peninsula", name: "Lake and Peninsula", stateKey: "alaska" },
+      { id: "matanuska-susitna", name: "Matanuska-Susitna", stateKey: "alaska" },
+      { id: "nome", name: "Nome", stateKey: "alaska" },
+      { id: "north-slope", name: "North Slope", stateKey: "alaska" },
+      { id: "northwest-arctic", name: "Northwest Arctic", stateKey: "alaska" },
+      { id: "petersburg", name: "Petersburg", stateKey: "alaska" },
+      { id: "prince-of-wales-hyder", name: "Prince of Wales-Hyder", stateKey: "alaska" },
+      { id: "sitka", name: "Sitka", stateKey: "alaska" },
+      { id: "skagway", name: "Skagway", stateKey: "alaska" },
+      { id: "southeast-fairbanks", name: "Southeast Fairbanks", stateKey: "alaska" },
+      { id: "wrangell", name: "Wrangell", stateKey: "alaska" },
+      { id: "yakutat", name: "Yakutat", stateKey: "alaska" },
+      { id: "yukon-koyukuk", name: "Yukon-Koyukuk", stateKey: "alaska" }
+    ]
+  },
   delaware: {
     name: "Delaware",
     svgId: "map-delaware", // FIX #2: was "svg-delaware", didn't match the <svg id="map-delaware"> in index.html
@@ -431,11 +467,11 @@ const stateData = {
       { id: "richland", name: "Richland", stateKey: "wisconsin" },
       { id: "rock", name: "Rock", stateKey: "wisconsin" },
       { id: "rusk-wi", name: "Rusk", stateKey: "wisconsin" },
+      { id: "st-croix", name: "Saint Croix", stateKey: "wisconsin" },
       { id: "sauk", name: "Sauk", stateKey: "wisconsin" },
       { id: "sawyer", name: "Sawyer", stateKey: "wisconsin" },
       { id: "shawano", name: "Shawano", stateKey: "wisconsin" },
       { id: "sheboygan", name: "Sheboygan", stateKey: "wisconsin" },
-      { id: "st-croix", name: "St. Croix", stateKey: "wisconsin" },
       { id: "taylor-wi", name: "Taylor", stateKey: "wisconsin" },
       { id: "trempealeau", name: "Trempealeau", stateKey: "wisconsin" },
       { id: "vernon", name: "Vernon", stateKey: "wisconsin" },
@@ -528,6 +564,14 @@ let kalawaoCalloutCreated = false;
 // tiny (and boxed in by Marin, San Mateo, and Alameda) so it's just as
 // hard to click at normal zoom as Kalawao is.
 let sfCalloutCreated = false;
+
+// Same idea again, but for Alaska — Skagway and Bristol Bay are both
+// real boroughs whose shapes are about as tiny as Kalawao's/San
+// Francisco's relative to their map, so they get the same "click here"
+// circle-and-line treatment.
+let skagwayCalloutCreated = false;
+let bristolBayCalloutCreated = false;
+let hainesCalloutCreated = false;
 
 
 // Names that are ambiguous *within the counties currently being played*
@@ -1848,8 +1892,13 @@ if (statsPanel) {
 // `radiusPadding` is added on top of the real shape's own size to get
 // the callout circle's radius; how much "extra" room it needs depends
 // on that map's own coordinate scale, so it's passed in per-county
-// rather than derived from the offset.
-function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPadding, stopShort) {
+// rather than derived from the offset. Optional `radiusOverride` skips
+// that size-derived formula entirely and uses a fixed radius instead —
+// needed for counties (like Haines) whose real shape isn't actually
+// tiny the way Kalawao/SF/Skagway/Bristol Bay's are, so deriving the
+// circle's size from its own bounding box would make the "click here"
+// circle enormous instead of a small stand-in.
+function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPadding, stopShort, radiusOverride) {
   const countyPath = document.getElementById(countyId);
   if (!countyPath || !targetSvg) return false;
 
@@ -1866,7 +1915,9 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
 
   const calloutX = cx + offsetX;
   const calloutY = cy + offsetY;
-  const calloutRadius = Math.max(bbox.width, bbox.height) * 1.6 + radiusPadding;
+  const calloutRadius = radiusOverride !== undefined
+    ? radiusOverride
+    : Math.max(bbox.width, bbox.height) * 1.6 + radiusPadding;
 
   // Stop the shaft just shy of the real county's actual center — close
   // enough that the arrowhead reads as touching the shape, not just
@@ -2092,6 +2143,35 @@ function switchVisibleSvgMap() {
         // counties boxing San Francisco in and making its real shape
         // easy to miss at normal zoom.
         sfCalloutCreated = setupCountyCallout(targetSvg, "san-francisco", "sf", -90, -10, 6, 9);
+      }
+      if (key === "alaska" && !skagwayCalloutCreated) {
+        // Blank space north of the panhandle (Canadian territory isn't
+        // drawn on this map, so it reads the same as open water) —
+        // clear of Haines to the west and Juneau/Hoonah-Angoon below.
+        skagwayCalloutCreated = setupCountyCallout(targetSvg, "skagway", "skagway", 0, -95, 4, 9);
+      }
+      if (key === "alaska" && !bristolBayCalloutCreated) {
+        // Open water in Bristol Bay itself, just west of the borough —
+        // pulled toward Dillingham's side rather than east, where it
+        // would otherwise overlap Kodiak Island or the Alaska Peninsula
+        // coastline. Pulled further down and left than a first pass,
+        // since it was overlapping a neighboring county's callout.
+        bristolBayCalloutCreated = setupCountyCallout(targetSvg, "bristol-bay", "bristol-bay", -105, 35, 4, 8);
+      }
+      if (key === "alaska" && !hainesCalloutCreated) {
+        // Unlike Kalawao/SF/Skagway/Bristol Bay, Haines's real shape
+        // isn't tiny — it's a few times bigger than Skagway's, so it
+        // gets a fixed radiusOverride instead of the usual size-derived
+        // radius (which would make the circle enormous here). 24 was
+        // picked to visually match Skagway's (~23.8) and Bristol Bay's
+        // (~26.1) own size-derived radii, rather than the much smaller
+        // value used originally. Placed in the open space east of
+        // Hoonah-Angoon and north-east of Haines itself, with a longer
+        // stopShort than usual so the leader line's angle (coming down
+        // from the north-east rather than dead-on from the east) lands
+        // the arrowhead further up and to the right, on Haines's actual
+        // landmass rather than past its edge.
+        hainesCalloutCreated = setupCountyCallout(targetSvg, "haines", "haines", 80, -40, 4, 18, 24);
       }
     }
   });
