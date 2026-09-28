@@ -296,6 +296,19 @@ body.dark-mode .setting-desc {
 }
 
 
+/* Red warning line shown under a setting's description. */
+.setting-warning {
+ font-size: 0.75rem;
+ font-weight: 700;
+ color: #d32f2f;
+ margin: 0;
+ line-height: 1.3;
+}
+body.dark-mode .setting-warning {
+ color: #ff6b6b;
+}
+
+
 /* Sound volume slider */
 .setting-item input[type="range"] {
  width: 140px;
@@ -1898,7 +1911,8 @@ body.map-zoomed .prompt-box {
  margin-top: 0.75rem;
  width: 100%;
  display: flex;
- justify-content: center;
+ flex-direction: column; /* text box, then the special-character bar under it */
+ align-items: center;
 }
 
 
@@ -1926,7 +1940,7 @@ body.dark-mode #type-input {
 }
 
 
-#type-input-box.shake {
+#type-input-box.shake #type-input {
  animation: shakeInput 0.4s ease-in-out;
 }
 @keyframes shakeInput {
@@ -2604,4 +2618,204 @@ body.dark-mode .county-hover-tooltip {
 body.scale-states-by-size #svg-new-hampshire {
   max-width: 280px;
   flex: 1 1 240px;
+}
+
+
+/* --- Special-character buttons (Type modes, "Require Diacritic Marks") ---
+   Sits under #type-input inside #type-input-box. Buttons are deliberately
+   big (>= 44px) so they're easy to tap on a phone. */
+.special-chars {
+ margin-top: 0.6rem;
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ gap: 0.3rem;
+}
+.special-chars-label {
+ font-size: 0.75rem;
+ letter-spacing: 0.02em;
+ color: #5a5a52;
+}
+body.dark-mode .special-chars-label {
+ color: #c9c3a0;
+}
+.special-chars-buttons {
+ display: flex;
+ flex-wrap: wrap;
+ justify-content: center;
+ gap: 0.4rem;
+}
+.special-char-btn {
+ min-width: 44px;
+ min-height: 44px;
+ padding: 0.2rem 0.7rem;
+ font-family: system-ui, -apple-system, sans-serif;
+ font-size: 1.35rem;
+ line-height: 1;
+ background: #fff;
+ color: #111;
+ border: 2px solid #2d5a27;
+ border-radius: 10px;
+ cursor: pointer;
+ touch-action: manipulation; /* no double-tap-zoom delay on rapid taps */
+}
+.special-char-btn:hover {
+ background: #f3f1ea;
+}
+.special-char-btn:active {
+ background: #e4efe0;
+}
+.special-char-btn:focus-visible {
+ outline: none;
+ box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.45);
+}
+body.dark-mode .special-char-btn {
+ background-color: #2a2a26;
+ border-color: #45a049;
+ color: #fdeca6;
+}
+body.dark-mode .special-char-btn:hover {
+ background-color: #35352f;
+}
+body.dark-mode .special-char-btn:active {
+ background-color: #3f4a3a;
+}
+
+/* --- Bug report (report.js) --- */
+
+/* Small text-style trigger on the home screen. Deliberately NOT built on
+   .btn-back: script.js attaches a "go to screen" click handler to every
+   .btn-back, which would misfire on a button with no data-target. */
+.report-link {
+  display: block;
+  margin: 1.25rem auto 0;
+  padding: 0.4rem 0.6rem;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #666;
+  font-size: 0.8rem;
+  font-weight: 400;
+  text-decoration: underline;
+}
+.report-link:hover {
+  background: transparent;
+  color: #111;
+}
+body.dark-mode .report-link {
+  color: #aaa;
+}
+body.dark-mode .report-link:hover {
+  background: transparent;
+  color: #fdeca6;
+}
+
+/* The popup. Same look as the "How to Play" popup, left-aligned so the
+   form reads naturally, and scrollable so it still fits on short screens
+   (or with the phone keyboard open). */
+.report-modal-content {
+  max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
+  text-align: left;
+}
+.report-modal-content h2 {
+  margin-top: 0;
+  text-align: center;
+}
+.report-intro {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #333;
+  margin: 0.35rem 0 0;
+}
+body.dark-mode .report-intro {
+  color: #ddd;
+}
+
+.report-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 1rem 0 0.35rem;
+}
+.report-optional {
+  font-weight: 400;
+  color: #666;
+}
+body.dark-mode .report-optional {
+  color: #aaa;
+}
+
+#report-form textarea,
+#report-form input[type="email"] {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 0.9rem;
+  color: inherit;
+  background: #fbfaf6;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+}
+#report-form textarea {
+  min-height: 6.5rem;
+  resize: vertical;
+}
+#report-form textarea:focus,
+#report-form input[type="email"]:focus {
+  outline: 2px solid #111;
+  outline-offset: 1px;
+}
+body.dark-mode #report-form textarea,
+body.dark-mode #report-form input[type="email"] {
+  background: #1b1b18;
+  border-color: #3f3f38;
+  color: #eee;
+}
+body.dark-mode #report-form textarea:focus,
+body.dark-mode #report-form input[type="email"]:focus {
+  outline-color: #fdeca6;
+}
+
+.report-privacy {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #666;
+  margin: 1rem 0 0;
+}
+body.dark-mode .report-privacy {
+  color: #aaa;
+}
+
+/* Reserve a line for the status text so the buttons don't jump when a
+   message appears. report.js toggles .is-error / .is-success on it. */
+.report-status {
+  min-height: 1.4em;
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.report-status.is-error {
+  color: #b3261e;
+}
+.report-status.is-success {
+  color: #2e7d32;
+}
+body.dark-mode .report-status.is-error {
+  color: #ff8a80;
+}
+body.dark-mode .report-status.is-success {
+  color: #81c784;
+}
+
+/* Spam-bot trap: pushed off-screen rather than display:none, since some
+   bots skip fields that are display:none. */
+.report-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }

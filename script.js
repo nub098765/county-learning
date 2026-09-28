@@ -180,10 +180,10 @@ const stateData = {
     name: "Hawaii",
     svgId: "svg-hawaii",
     counties: [
-      { id: "hawaii-county", name: "Hawai'i", stateKey: "hawaii" },
+      { id: "hawaii-county", name: "Hawaiʻi", stateKey: "hawaii" },
       { id: "honolulu", name: "Honolulu", stateKey: "hawaii" },
       { id: "kalawao", name: "Kalawao", stateKey: "hawaii" },
-      { id: "kauai", name: "Kaua'i", stateKey: "hawaii" },
+      { id: "kauai", name: "Kauaʻi", stateKey: "hawaii" },
       { id: "maui-county", name: "Maui", stateKey: "hawaii" }
     ]
   },
@@ -746,9 +746,12 @@ function foldDiacriticsForComparison(str) {
 // repeated whitespace, and folds apostrophe-*like* characters (okina,
 // curly quotes, backtick, acute accent) down to a single plain
 // apostrophe — so it doesn't matter which mark you actually type, but
-// the mark itself is still required. Kaua'i's official name (per the
-// Census) uses a plain apostrophe, not an okina, but typing "kauai"
-// with nothing there is still wrong.
+// the mark itself is still required. Hawaiʻi and Kauaʻi are stored with
+// a real ʻokina (U+02BB) so they display correctly, but because every
+// apostrophe-like character folds to the same plain one here (on both
+// the typed guess and the stored name), a plain ' still works for
+// anyone who can't type an ʻokina. Typing "kauai" with nothing there
+// is still wrong.
 //
 // Diacritic marks (the diaeresis in New Hampshire's Coös County, for
 // instance) are handled separately from apostrophes, via the "Require
@@ -773,6 +776,7 @@ function foldDiacriticsForComparison(str) {
 // Oregon's Coos actually exists in stateData.
 function normalizeTypedName(str) {
   let result = str
+    .normalize("NFC")
     .toLowerCase()
     .replace(/[\u02BB\u2018\u2019'`´]/g, "'")
     .trim()
@@ -1670,6 +1674,7 @@ if (toggleRequireDiacritics) {
   toggleRequireDiacritics.addEventListener("change", (e) => {
     gameSettings.requireDiacritics = e.target.checked;
     localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+    refreshSpecialCharsBar();
   });
 }
 
@@ -2898,6 +2903,7 @@ function pickNextTarget() {
   if (typeInputBox) {
     typeInputBox.classList.toggle("hidden", !TYPE_MODES.has(selectedMode));
   }
+  refreshSpecialCharsBar();
   if (TYPE_MODES.has(selectedMode) && typeInput) {
     typeInput.value = "";
     typeInput.focus();
@@ -3157,6 +3163,146 @@ if (typeInput) {
       e.preventDefault();
       submitTypedGuess();
     }
+  });
+}
+
+
+// --- Special-Character Buttons (Type modes) ---
+// Lots of players can't easily type marks like ö or the Hawaiian ʻokina
+// on their keyboard, which makes "Require Diacritic Marks" unfair (and
+// inaccessible) for them. So while that setting is on, a row of buttons
+// under the text box inserts each special character for them.
+//
+// The buttons aren't a hardcoded list: they're derived from the county
+// names in the current round (originalTargetList), so they always match
+// exactly what the player might need to type — Coös today, and things
+// like Doña Ana or Puerto Rico's names automatically once those exist.
+// Plain apostrophes, letters, digits, spaces, etc. are on every
+// keyboard and never get a button.
+//
+// Typed guesses are lowercased before comparison (see normalizeTypedName),
+// so only lowercase versions are offered.
+const specialCharsBar = document.getElementById("special-chars");
+const specialCharsButtons = document.getElementById("special-chars-buttons");
+const OKINA = "\u02BB";
+
+const COMBINING_MARK_NAMES = {
+  "\u0300": "grave accent",
+  "\u0301": "acute accent",
+  "\u0302": "circumflex",
+  "\u0303": "tilde",
+  "\u0304": "macron",
+  "\u0308": "diaeresis",
+  "\u030A": "ring",
+  "\u030C": "caron",
+  "\u0327": "cedilla",
+  "\u0328": "ogonek"
+};
+
+// Spoken/tooltip name for a special character: "o with diaeresis", etc.
+// Falls back to the character itself if it doesn't decompose (ß, ø, æ…).
+function describeSpecialChar(ch) {
+  if (ch === OKINA) return "ʻokina (Hawaiian glottal stop)";
+  const [base, mark] = Array.from(ch.normalize("NFD"));
+  const markName = COMBINING_MARK_NAMES[mark];
+  return markName ? `${base} with ${markName}` : ch;
+}
+
+// Every non-ASCII character used by the current round's county names,
+// okina first, then alphabetical.
+function getNeededSpecialChars() {
+  const found = new Set();
+  (originalTargetList || []).forEach(county => {
+    for (const ch of county.name.normalize("NFC").toLowerCase()) {
+      if (/[^\x00-\x7F]/.test(ch)) found.add(ch);
+    }
+  });
+  return [...found].sort((a, b) =>
+    (b === OKINA) - (a === OKINA) || a.localeCompare(b)
+  );
+}
+
+// Shows/hides the bar and (re)builds its buttons if the set changed.
+// Safe to call any time; it's a no-op outside typing modes.
+function refreshSpecialCharsBar() {
+  if (!specialCharsBar || !specialCharsButtons) return;
+
+  const chars = (TYPE_MODES.has(selectedMode) && gameSettings.requireDiacritics)
+    ? getNeededSpecialChars()
+    : [];
+  specialCharsBar.classList.toggle("hidden", chars.length === 0);
+
+  const signature = chars.join("");
+  if (specialCharsButtons.dataset.chars === signature) return;
+  specialCharsButtons.dataset.chars = signature;
+
+  specialCharsButtons.replaceChildren(...chars.map((ch, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "special-char-btn";
+    btn.textContent = ch;
+    btn.dataset.char = ch;
+    btn.title = describeSpecialChar(ch);
+    btn.setAttribute("aria-label", `Insert ${describeSpecialChar(ch)}`);
+    // Roving tabindex: the whole bar is a single Tab stop, and arrow
+    // keys move between buttons (see the keydown handler below).
+    btn.tabIndex = i === 0 ? 0 : -1;
+    return btn;
+  }));
+}
+
+// Inserts a character at the caret (replacing any selection), keeps focus
+// in the text box, and fires a normal "input" event so Instant Check /
+// List mode react exactly as if the character had been typed.
+function insertSpecialChar(ch) {
+  if (!typeInput || !isGameActive) return;
+  const start = typeInput.selectionStart ?? typeInput.value.length;
+  const end = typeInput.selectionEnd ?? start;
+  typeInput.setRangeText(ch, start, end, "end");
+  typeInput.focus();
+  typeInput.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+if (specialCharsButtons) {
+  // Pressing a button would normally pull focus (and, on phones, the
+  // on-screen keyboard) away from the text box. Cancel that so typing
+  // can carry straight on.
+  ["mousedown", "pointerdown"].forEach(type => {
+    specialCharsButtons.addEventListener(type, (e) => {
+      if (e.target.closest(".special-char-btn")) e.preventDefault();
+    });
+  });
+
+  specialCharsButtons.addEventListener("click", (e) => {
+    const btn = e.target.closest(".special-char-btn");
+    if (btn) insertSpecialChar(btn.dataset.char);
+  });
+}
+
+// Keyboard support: Left/Right/Home/End move between buttons, Escape
+// hops back to the text box. Enter/Space activate the focused button
+// (native <button> behavior → the click handler above).
+if (specialCharsBar) {
+  specialCharsBar.addEventListener("keydown", (e) => {
+    const buttons = Array.from(specialCharsButtons.querySelectorAll(".special-char-btn"));
+    const current = buttons.indexOf(document.activeElement);
+    if (current === -1) return;
+
+    let next = null;
+    if (e.key === "ArrowRight") next = (current + 1) % buttons.length;
+    else if (e.key === "ArrowLeft") next = (current - 1 + buttons.length) % buttons.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = buttons.length - 1;
+    else if (e.key === "Escape") {
+      e.preventDefault();
+      if (typeInput) typeInput.focus();
+      return;
+    }
+    if (next === null) return;
+
+    e.preventDefault();
+    buttons.forEach((b, i) => { b.tabIndex = i === next ? 0 : -1; });
+    buttons[next].focus();
   });
 }
 
