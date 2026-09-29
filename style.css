@@ -1353,6 +1353,7 @@ body.scale-states-by-size #svg-texas {
   the small states, though not as sprawling as Texas or California — so
   it lands between them for on-screen room. Only relevant to the
   original variable-sized layout — see "Scale States by Size". */
+body.scale-states-by-size #svg-ohio,
 body.scale-states-by-size #svg-wisconsin {
  max-width: 480px;
  max-height: 680px;
@@ -1416,6 +1417,7 @@ body.scale-states-by-size #svg-alaska {
 .app-container.solo-map #svg-hawaii,
 .app-container.solo-map #svg-california,
 .app-container.solo-map #svg-texas,
+.app-container.solo-map #svg-ohio,
 .app-container.solo-map #svg-wisconsin,
 .app-container.solo-map #svg-alaska {
  max-width: min(60vw, 560px) !important;
@@ -1494,6 +1496,7 @@ body.scale-states-by-size .app-container.wide-map .state-map {
 body.scale-states-by-size .app-container.wide-map #svg-hawaii,
 body.scale-states-by-size .app-container.wide-map #svg-california,
 body.scale-states-by-size .app-container.wide-map #svg-texas,
+body.scale-states-by-size .app-container.wide-map #svg-ohio,
 body.scale-states-by-size .app-container.wide-map #svg-wisconsin,
 body.scale-states-by-size .app-container.wide-map #svg-alaska {
  flex-grow: 0;
@@ -2818,4 +2821,131 @@ body.dark-mode .report-status.is-success {
   width: 1px;
   height: 1px;
   overflow: hidden;
+}
+
+/* --- Search boxes (state list + county exclusion list) --- */
+.list-search {
+ width: 100%;
+ box-sizing: border-box;
+ font-family: system-ui, -apple-system, sans-serif;
+ font-size: 0.95rem;
+ padding: 0.5rem 0.8rem;
+ margin-bottom: 0.6rem;
+ border: 2px solid #2d5a27;
+ border-radius: 10px;
+ background: #fff;
+ color: #111;
+}
+.list-search:focus {
+ outline: none;
+ box-shadow: 0 0 0 3px rgba(45, 90, 39, 0.25);
+}
+body.dark-mode .list-search {
+ background: #2b2b26;
+ color: #fff;
+ border-color: #4a7c59;
+}
+.checkbox-container .list-search {
+ position: sticky;
+ top: 0;
+ z-index: 1;
+ flex-shrink: 0;
+ margin-bottom: 0.25rem;
+}
+.list-search-empty {
+ font-size: 0.85rem;
+ opacity: 0.7;
+ margin: 0.25rem 0 0.75rem;
+ text-align: left;
+}
+.list-search-empty.hidden { display: none; }
+.county-group-header.search-hidden,
+.checkbox-label.search-hidden,
+.state-row.search-hidden { display: none !important; }
+
+/* --- "Which one's that?" button next to each county --- */
+.county-locate-btn {
+ flex-shrink: 0;
+ width: 1.5rem;
+ height: 1.5rem;
+ padding: 0;
+ border-radius: 50%;
+ border: 1.5px solid #2d5a27;
+ background: transparent;
+ color: #2d5a27;
+ font-size: 0.8rem;
+ font-weight: 700;
+ line-height: 1;
+ cursor: pointer;
+}
+.county-locate-btn:hover,
+.county-locate-btn:focus-visible {
+ background: #2d5a27;
+ color: #fff;
+ outline: none;
+}
+body.dark-mode .county-locate-btn {
+ border-color: #7fb98c;
+ color: #7fb98c;
+}
+body.dark-mode .county-locate-btn:hover,
+body.dark-mode .county-locate-btn:focus-visible {
+ background: #7fb98c;
+ color: #111;
+}
+
+/* --- Locator popup --- */
+.locator-modal-content {
+ max-width: 560px;
+ padding: 1.5rem 1.25rem;
+}
+.locator-modal-content h2 { margin-top: 0; margin-bottom: 0.25rem; }
+.locator-subtitle {
+ margin: 0 0 0.75rem;
+ font-weight: 600;
+}
+.locator-map-holder {
+ margin-bottom: 1rem;
+}
+.locator-map {
+ display: block;
+ width: 100%;
+ height: auto;
+ max-height: 58vh;
+}
+.locator-map .county {
+ pointer-events: none;
+ cursor: default;
+ transition: none;
+}
+.locator-map .county.locator-target,
+.locator-map .county.locator-target path {
+ fill: #e07b1a !important;
+ stroke: #7a3d00 !important;
+}
+.locator-map .locator-ring {
+ fill: none;
+ stroke: #e07b1a;
+ stroke-width: 3px;
+ vector-effect: non-scaling-stroke;
+ pointer-events: none;
+}
+
+
+/* Best-Known Counties to Select number box */
+.setting-item input[type="number"] {
+ font: inherit;
+ font-size: 0.85rem;
+ width: 4.5rem;
+ text-align: center;
+ color: inherit;
+ background: #fbfaf6;
+ border: 1px solid #ccc;
+ border-radius: 8px;
+ padding: 0.35rem 0.5rem;
+}
+body.dark-mode .setting-item input[type="number"] {
+ background: #242420;
+ border-color: #3f3f38;
+ color: #eee;
 }

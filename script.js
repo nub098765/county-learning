@@ -511,6 +511,100 @@ const stateData = {
       { id: "zavala", name: "Zavala", stateKey: "texas" }
     ]
   },
+  ohio: {
+    name: "Ohio",
+    svgId: "svg-ohio",
+    counties: [
+      { id: "adams-oh", name: "Adams", stateKey: "ohio" },
+      { id: "allen", name: "Allen", stateKey: "ohio" },
+      { id: "ashland-oh", name: "Ashland", stateKey: "ohio" },
+      { id: "ashtabula", name: "Ashtabula", stateKey: "ohio" },
+      { id: "athens", name: "Athens", stateKey: "ohio" },
+      { id: "auglaize", name: "Auglaize", stateKey: "ohio" },
+      { id: "belmont", name: "Belmont", stateKey: "ohio" },
+      { id: "brown-oh", name: "Brown", stateKey: "ohio" },
+      { id: "butler-oh", name: "Butler", stateKey: "ohio" },
+      { id: "carroll-oh", name: "Carroll", stateKey: "ohio" },
+      { id: "champaign", name: "Champaign", stateKey: "ohio" },
+      { id: "clark-oh", name: "Clark", stateKey: "ohio" },
+      { id: "clermont", name: "Clermont", stateKey: "ohio" },
+      { id: "clinton", name: "Clinton", stateKey: "ohio" },
+      { id: "columbiana", name: "Columbiana", stateKey: "ohio" },
+      { id: "coshocton", name: "Coshocton", stateKey: "ohio" },
+      { id: "crawford-oh", name: "Crawford", stateKey: "ohio" },
+      { id: "cuyahoga", name: "Cuyahoga", stateKey: "ohio" },
+      { id: "darke", name: "Darke", stateKey: "ohio" },
+      { id: "defiance", name: "Defiance", stateKey: "ohio" },
+      { id: "delaware", name: "Delaware", stateKey: "ohio" },
+      { id: "erie", name: "Erie", stateKey: "ohio" },
+      { id: "fairfield", name: "Fairfield", stateKey: "ohio" },
+      { id: "fayette-oh", name: "Fayette", stateKey: "ohio" },
+      { id: "franklin-oh", name: "Franklin", stateKey: "ohio" },
+      { id: "fulton", name: "Fulton", stateKey: "ohio" },
+      { id: "gallia", name: "Gallia", stateKey: "ohio" },
+      { id: "geauga", name: "Geauga", stateKey: "ohio" },
+      { id: "greene-oh", name: "Greene", stateKey: "ohio" },
+      { id: "guernsey", name: "Guernsey", stateKey: "ohio" },
+      { id: "hamilton-oh", name: "Hamilton", stateKey: "ohio" },
+      { id: "hancock", name: "Hancock", stateKey: "ohio" },
+      { id: "hardin-oh", name: "Hardin", stateKey: "ohio" },
+      { id: "harrison-oh", name: "Harrison", stateKey: "ohio" },
+      { id: "henry-oh", name: "Henry", stateKey: "ohio" },
+      { id: "highland", name: "Highland", stateKey: "ohio" },
+      { id: "hocking", name: "Hocking", stateKey: "ohio" },
+      { id: "holmes", name: "Holmes", stateKey: "ohio" },
+      { id: "huron", name: "Huron", stateKey: "ohio" },
+      { id: "jackson-oh", name: "Jackson", stateKey: "ohio" },
+      { id: "jefferson-oh", name: "Jefferson", stateKey: "ohio" },
+      { id: "knox-oh", name: "Knox", stateKey: "ohio" },
+      { id: "lake-oh", name: "Lake", stateKey: "ohio" },
+      { id: "lawrence-oh", name: "Lawrence", stateKey: "ohio" },
+      { id: "licking", name: "Licking", stateKey: "ohio" },
+      { id: "logan", name: "Logan", stateKey: "ohio" },
+      { id: "lorain", name: "Lorain", stateKey: "ohio" },
+      { id: "lucas", name: "Lucas", stateKey: "ohio" },
+      { id: "madison-oh", name: "Madison", stateKey: "ohio" },
+      { id: "mahoning", name: "Mahoning", stateKey: "ohio" },
+      { id: "marion-oh", name: "Marion", stateKey: "ohio" },
+      { id: "medina-oh", name: "Medina", stateKey: "ohio" },
+      { id: "meigs", name: "Meigs", stateKey: "ohio" },
+      { id: "mercer", name: "Mercer", stateKey: "ohio" },
+      { id: "miami", name: "Miami", stateKey: "ohio" },
+      { id: "monroe-oh", name: "Monroe", stateKey: "ohio" },
+      { id: "montgomery-oh", name: "Montgomery", stateKey: "ohio" },
+      { id: "morgan-oh", name: "Morgan", stateKey: "ohio" },
+      { id: "morrow", name: "Morrow", stateKey: "ohio" },
+      { id: "muskingum", name: "Muskingum", stateKey: "ohio" },
+      { id: "noble", name: "Noble", stateKey: "ohio" },
+      { id: "ottawa", name: "Ottawa", stateKey: "ohio" },
+      { id: "paulding", name: "Paulding", stateKey: "ohio" },
+      { id: "perry-oh", name: "Perry", stateKey: "ohio" },
+      { id: "pickaway", name: "Pickaway", stateKey: "ohio" },
+      { id: "pike-oh", name: "Pike", stateKey: "ohio" },
+      { id: "portage-oh", name: "Portage", stateKey: "ohio" },
+      { id: "preble", name: "Preble", stateKey: "ohio" },
+      { id: "putnam", name: "Putnam", stateKey: "ohio" },
+      { id: "richland-oh", name: "Richland", stateKey: "ohio" },
+      { id: "ross", name: "Ross", stateKey: "ohio" },
+      { id: "sandusky", name: "Sandusky", stateKey: "ohio" },
+      { id: "scioto", name: "Scioto", stateKey: "ohio" },
+      { id: "seneca", name: "Seneca", stateKey: "ohio" },
+      { id: "shelby-oh", name: "Shelby", stateKey: "ohio" },
+      { id: "stark", name: "Stark", stateKey: "ohio" },
+      { id: "summit", name: "Summit", stateKey: "ohio" },
+      { id: "trumbull", name: "Trumbull", stateKey: "ohio" },
+      { id: "tuscarawas", name: "Tuscarawas", stateKey: "ohio" },
+      { id: "union", name: "Union", stateKey: "ohio" },
+      { id: "van-wert", name: "Van Wert", stateKey: "ohio" },
+      { id: "vinton", name: "Vinton", stateKey: "ohio" },
+      { id: "warren", name: "Warren", stateKey: "ohio" },
+      { id: "washington-oh", name: "Washington", stateKey: "ohio" },
+      { id: "wayne", name: "Wayne", stateKey: "ohio" },
+      { id: "williams", name: "Williams", stateKey: "ohio" },
+      { id: "wood-oh", name: "Wood", stateKey: "ohio" },
+      { id: "wyandot", name: "Wyandot", stateKey: "ohio" }
+    ]
+  },
   wisconsin: {
     name: "Wisconsin",
     svgId: "svg-wisconsin",
@@ -864,7 +958,8 @@ let gameSettings = JSON.parse(localStorage.getItem("gameSettings")) || {
   statesPerRow: 2,
   requireDiacritics: false,
   showStateInPrompt: true,
-  revealAnswerAfterMistakes: true
+  revealAnswerAfterMistakes: true,
+  bestKnownCount: 5
 };
 // Backfills the new setting for anyone with an existing saved
 // gameSettings blob from before Type mode existed.
@@ -921,6 +1016,10 @@ if (gameSettings.statesPerRow === undefined) gameSettings.statesPerRow = 2;
 // marks. Defaults to OFF — e.g. typing "Coos" for New Hampshire's Coös
 // County is accepted without the diaeresis unless this is turned on.
 if (gameSettings.requireDiacritics === undefined) gameSettings.requireDiacritics = false;
+// Backfills the new setting for anyone with an existing saved
+// gameSettings blob from before the "Select your best-known" button's
+// count was configurable. Defaults to 5, the old hardcoded value.
+if (!Number.isInteger(gameSettings.bestKnownCount) || gameSettings.bestKnownCount < 1) gameSettings.bestKnownCount = 5;
 
 
 // Per-state "collapsed" choice for the setup screen's progress tables.
@@ -1001,6 +1100,7 @@ const toggleRequireDiacritics = document.getElementById("toggle-require-diacriti
 const toggleShowStateInPrompt = document.getElementById("toggle-show-state-in-prompt");
 const toggleRevealAnswerAfterMistakes = document.getElementById("toggle-reveal-answer");
 const btnResetProgress = document.getElementById("btn-reset-progress");
+const inputBestKnownCount = document.getElementById("input-best-known-count");
 
 
 // --- Game Screen DOM Elements ---
@@ -1420,6 +1520,8 @@ function applySettings() {
   if (toggleRequireDiacritics) toggleRequireDiacritics.checked = gameSettings.requireDiacritics;
   if (toggleShowStateInPrompt) toggleShowStateInPrompt.checked = gameSettings.showStateInPrompt;
   if (toggleRevealAnswerAfterMistakes) toggleRevealAnswerAfterMistakes.checked = gameSettings.revealAnswerAfterMistakes;
+  if (inputBestKnownCount) inputBestKnownCount.value = String(gameSettings.bestKnownCount);
+  updateBestKnownButtonLabel();
 
 
   document.body.classList.toggle("dark-mode", gameSettings.darkMode);
@@ -1667,6 +1769,31 @@ if (selectStatesPerRow) {
     // changed mid-game from the in-game Settings button.
     updateMapGridColumns();
   });
+}
+
+
+// Best-Known Counties to Select: any whole number >= 1. Saves as you
+// type (when the value is valid) and tidies up invalid/blank input once
+// the box loses focus.
+function updateBestKnownButtonLabel() {
+  if (btnSelectSuggested) btnSelectSuggested.textContent = `Select your ${gameSettings.bestKnownCount} best-known`;
+}
+
+if (inputBestKnownCount) {
+  const commitBestKnownCount = (final) => {
+    const n = parseInt(inputBestKnownCount.value, 10);
+    if (Number.isInteger(n) && n >= 1) {
+      gameSettings.bestKnownCount = n;
+      localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+      updateBestKnownButtonLabel();
+      if (final) inputBestKnownCount.value = String(n);
+    } else if (final) {
+      inputBestKnownCount.value = String(gameSettings.bestKnownCount);
+    }
+  };
+  inputBestKnownCount.addEventListener("input", () => commitBestKnownCount(false));
+  inputBestKnownCount.addEventListener("change", () => commitBestKnownCount(true));
+  inputBestKnownCount.addEventListener("blur", () => commitBestKnownCount(true));
 }
 
 
@@ -2411,7 +2538,9 @@ function switchVisibleSvgMap() {
         <span class="checkbox-custom"></span>
         <span class="county-label-text">${c.name}</span>
         ${mistakeBadge}
+        <button type="button" class="county-locate-btn" data-county-id="${c.id}" aria-label="Which one's that? Show ${c.name} on the map" title="Show on map">?</button>
       `;
+      label.dataset.searchName = c.name;
       checkboxContainer.appendChild(label);
     });
   });
@@ -2420,7 +2549,189 @@ function switchVisibleSvgMap() {
   document.querySelectorAll(".county-checkbox").forEach(cb => {
     cb.addEventListener("change", updateSetupPlayButton);
   });
+
+  applyCountySearchFilter();
 }
+
+
+// --- Setup-screen search boxes ---
+// Both boxes ignore case and diacritics (so "hawaii" finds Hawaiʻi and
+// "coos" finds Coös) and only match names that CONTAIN the typed text.
+function normalizeForSearch(str) {
+  return foldDiacriticsForComparison(String(str))
+    .toLowerCase()
+    .replace(/[\u02bb\u2018\u2019`']/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function applyStateSearchFilter() {
+  const input = document.getElementById("state-search");
+  const empty = document.getElementById("state-search-empty");
+  const q = input ? normalizeForSearch(input.value) : "";
+  let shown = 0;
+  document.querySelectorAll("#screen-setup .states-list .state-row").forEach(row => {
+    const nameEl = row.querySelector(".state-name");
+    const match = !q || (nameEl && normalizeForSearch(nameEl.textContent).includes(q));
+    row.classList.toggle("search-hidden", !match);
+    if (match) shown++;
+  });
+  if (empty) empty.classList.toggle("hidden", shown > 0);
+}
+
+// Hides county rows that don't match, and any state header whose counties
+// are all hidden. Checked/unchecked state lives on the checkboxes
+// themselves, so hiding a row never changes what's excluded.
+function applyCountySearchFilter() {
+  const input = document.getElementById("county-search");
+  const empty = document.getElementById("county-search-empty");
+  if (!checkboxContainer) return;
+  const q = input ? normalizeForSearch(input.value) : "";
+  let anyShown = false;
+  let currentHeader = null;
+  let headerHasMatch = false;
+
+  const finishGroup = () => {
+    if (currentHeader) currentHeader.classList.toggle("search-hidden", !!q && !headerHasMatch);
+  };
+
+  Array.from(checkboxContainer.children).forEach(el => {
+    if (el.classList.contains("county-group-header")) {
+      finishGroup();
+      currentHeader = el;
+      headerHasMatch = false;
+    } else if (el.classList.contains("checkbox-label")) {
+      const match = !q || normalizeForSearch(el.dataset.searchName || el.textContent).includes(q);
+      el.classList.toggle("search-hidden", !match);
+      if (match) { headerHasMatch = true; anyShown = true; }
+    }
+  });
+  finishGroup();
+
+  if (empty) empty.classList.toggle("hidden", !q || anyShown);
+}
+
+const stateSearchInput = document.getElementById("state-search");
+if (stateSearchInput) {
+  stateSearchInput.addEventListener("input", applyStateSearchFilter);
+  stateSearchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { stateSearchInput.value = ""; applyStateSearchFilter(); }
+  });
+}
+const countySearchInput = document.getElementById("county-search");
+if (countySearchInput) {
+  countySearchInput.addEventListener("input", applyCountySearchFilter);
+  countySearchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { countySearchInput.value = ""; applyCountySearchFilter(); }
+    // Enter shouldn't do anything surprising (like submitting a form).
+    if (e.key === "Enter") e.preventDefault();
+  });
+}
+
+// --- "Which one's that?" locator popup ---
+// Clones the real state map (already in the DOM inside #screen-game),
+// strips everything that could clash with the live game (ids, game-state
+// classes, listeners aren't cloned anyway), and highlights one county.
+const locatorModal = document.getElementById("modal-locator");
+const locatorHolder = document.getElementById("locator-map-holder");
+const locatorSubtitle = document.getElementById("locator-subtitle");
+const btnLocatorClose = document.getElementById("btn-locator-close");
+
+function closeLocator() {
+  if (locatorModal) locatorModal.classList.add("hidden");
+  if (locatorHolder) locatorHolder.innerHTML = "";
+}
+
+function openLocator(countyId) {
+  if (!locatorModal || !locatorHolder) return;
+  const county = findCountyById(countyId);
+  if (!county) return;
+  const sourceSvg = document.getElementById(stateData[county.stateKey]?.svgId);
+  if (!sourceSvg) return;
+
+  const stateName = stateData[county.stateKey]?.name || county.stateKey;
+  if (locatorSubtitle) locatorSubtitle.textContent = `${getDisplayName(county)} — ${stateName}`;
+
+  const svg = sourceSvg.cloneNode(true);
+
+  // Find the target(s) while the ids still exist, and tag them.
+  const targets = [];
+  svg.querySelectorAll("[id]").forEach(el => {
+    if (el.id === countyId) targets.push(el);
+  });
+  svg.querySelectorAll(`[data-county-id="${countyId}"]`).forEach(el => {
+    if (!targets.includes(el)) targets.push(el);
+  });
+
+  // Reset every county to its plain look, then strip ids so nothing here
+  // can ever be picked up by document.getElementById() in the game code.
+  svg.querySelectorAll(".county").forEach(el => {
+    el.setAttribute("class", "county");
+    el.style.removeProperty("fill");
+    el.style.removeProperty("stroke");
+  });
+  targets.forEach(el => el.classList.add("locator-target"));
+  svg.removeAttribute("id");
+  svg.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
+  svg.querySelectorAll("[tabindex]").forEach(el => el.removeAttribute("tabindex"));
+  svg.querySelectorAll("[role]").forEach(el => el.removeAttribute("role"));
+  svg.setAttribute("class", "locator-map");
+  svg.removeAttribute("width");
+  svg.removeAttribute("height");
+  svg.removeAttribute("style");
+  svg.setAttribute("aria-label", `Map of ${stateName} with ${county.name} highlighted`);
+
+  locatorHolder.innerHTML = "";
+  locatorHolder.appendChild(svg);
+  locatorModal.classList.remove("hidden");
+
+  // Tiny counties (Kalawao, Bristol, ...) are easy to miss even when
+  // coloured, so circle them. Needs the modal visible to measure.
+  requestAnimationFrame(() => {
+    try {
+      const target = targets.find(t => t.classList.contains("locator-target") && t.getBoundingClientRect().width > 0)
+        || targets[0];
+      if (!target) return;
+      const r = target.getBoundingClientRect();
+      const svgRect = svg.getBoundingClientRect();
+      if (!svgRect.width || Math.max(r.width, r.height) > svgRect.width * 0.08) return;
+      const inv = svg.getScreenCTM().inverse();
+      const pt = svg.createSVGPoint();
+      pt.x = r.left; pt.y = r.top;
+      const a = pt.matrixTransform(inv);
+      pt.x = r.right; pt.y = r.bottom;
+      const b = pt.matrixTransform(inv);
+      const vbWidth = svg.viewBox.baseVal && svg.viewBox.baseVal.width ? svg.viewBox.baseVal.width : 800;
+      const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      ring.setAttribute("class", "locator-ring");
+      ring.setAttribute("cx", (a.x + b.x) / 2);
+      ring.setAttribute("cy", (a.y + b.y) / 2);
+      ring.setAttribute("r", Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y)) / 2 + vbWidth * 0.02);
+      svg.appendChild(ring);
+    } catch (err) { /* ring is a nicety; the highlight alone is fine */ }
+  });
+
+  if (btnLocatorClose) btnLocatorClose.focus();
+}
+
+// One delegated listener covers every "?" button, including ones
+// re-created whenever the checkbox list re-renders.
+if (checkboxContainer) {
+  checkboxContainer.addEventListener("click", (e) => {
+    const btn = e.target.closest(".county-locate-btn");
+    if (!btn) return;
+    e.preventDefault();   // don't let the surrounding <label> toggle the checkbox
+    e.stopPropagation();
+    openLocator(btn.dataset.countyId);
+  });
+}
+if (btnLocatorClose) btnLocatorClose.addEventListener("click", closeLocator);
+if (locatorModal) {
+  locatorModal.addEventListener("click", (e) => { if (e.target === locatorModal) closeLocator(); });
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && locatorModal && !locatorModal.classList.contains("hidden")) closeLocator();
+});
 
 
 function getActiveCountiesPool() {
@@ -2432,7 +2743,11 @@ function getActiveCountiesPool() {
 // ones you struggled with" / the initial suggestion. Capped rather than
 // selecting every county with any mistake at all, since that list grows
 // unhelpfully long once more states/counties have been played.
-const SUGGESTION_LIMIT = 5;
+// (Now a setting — see Settings > General > "Best-Known Counties to
+// Select". This getter keeps the old call sites simple.)
+function getSuggestionLimit() {
+  return gameSettings.bestKnownCount;
+}
 
 
 // Returns the ids of up to `limit` currently-rendered counties with the
@@ -2456,13 +2771,13 @@ radioSpecific.forEach(radio => {
 
 
       // Start with nothing selected — the user can check counties
-      // manually, or use the "Select your 5 best-known" button.
+      // manually, or use the "Select your N best-known" button.
       countyCheckboxes.forEach(cb => {
         cb.checked = false;
       });
 
 
-      const topMistakeIds = getLowestMistakeCountyIds(SUGGESTION_LIMIT);
+      const topMistakeIds = getLowestMistakeCountyIds(getSuggestionLimit());
       if (suggestionBox) {
         if (topMistakeIds.length > 0) {
           suggestionBox.classList.remove("hidden");
@@ -2541,7 +2856,7 @@ if (btnSelectSuggested) {
       cb.checked = false;
     });
 
-    const topMistakeIds = getLowestMistakeCountyIds(SUGGESTION_LIMIT);
+    const topMistakeIds = getLowestMistakeCountyIds(getSuggestionLimit());
     document.querySelectorAll(".county-checkbox").forEach(cb => {
       if (topMistakeIds.includes(cb.value)) cb.checked = true;
     });
