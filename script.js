@@ -735,6 +735,10 @@ let scoreRight = 0;
 let scoreWrong = 0;
 let isGameActive = false;
 let missedCounties = new Set();
+// How many targets were forfeited this round via "Forfeit This One" —
+// they leave the pool without being found, so the progress counter has
+// to subtract them or it would count them as found.
+let forfeitedCount = 0;
 // True for the duration of a game round started via "Retry Missed" — see
 // initGame()'s isRetryMissedRun param and markCountyLearned() below.
 let currentRunIsRetryMissed = false;
@@ -1111,6 +1115,7 @@ const typeInputBox = document.getElementById("type-input-box");
 const typeInput = document.getElementById("type-input");
 const btnQuitGame = document.getElementById("btn-quit-game");
 const btnGiveUp = document.getElementById("btn-give-up");
+const btnForfeitTarget = document.getElementById("btn-forfeit-target");
 const btnGameSettings = document.getElementById("btn-game-settings");
 const btnNewGame = document.getElementById("btn-new-game");
 const btnToggleCountyList = document.getElementById("btn-toggle-county-list");
@@ -3009,6 +3014,57 @@ if (btnGiveUp) {
 }
 
 
+// --- Forfeit This One ---
+// Gives up on just the county currently being asked about: it's counted
+// as a miss (same as a wrong guess — it lands in the end-of-game "What
+// you missed" list, the persistent mistake tally, and Retry Missed),
+// revealed on the map, and the game moves straight on to the next
+// target. Unlike Give Up, the rest of the round carries on.
+//
+// Pin mode keeps found counties on the map permanently, so the
+// forfeited one stays red (hover it to see its name). The other modes
+// never leave anything on the map between targets, so the reveal is
+// brief.
+function forfeitCurrentTarget() {
+  if (!isGameActive || !currentTarget || selectedMode === "type") return;
+
+  const forfeited = currentTarget;
+
+  scoreWrong++;
+  missedCounties.add(forfeited);
+  forfeitedCount++;
+  countyMistakes[forfeited.id] = (countyMistakes[forfeited.id] || 0) + 1;
+  localStorage.setItem("countyMistakes", JSON.stringify(countyMistakes));
+  playSound("wrong");
+
+  // Drop the pulsing "this is the one" highlight (Type/Verbatim, or a
+  // Pin/Flash reveal-after-mistakes) so it doesn't fight the red reveal.
+  getCountyElements(forfeited.id).forEach(el => {
+    el.classList.remove("typing-highlight");
+    el.classList.add("given-up-missed");
+    el.style.pointerEvents = "auto";
+    if (selectedMode !== "pin") {
+      setTimeout(() => {
+        el.classList.remove("given-up-missed");
+        if (TYPE_MODES.has(selectedMode)) el.style.pointerEvents = "none";
+      }, 1800);
+    }
+  });
+
+  if (feedbackEl) {
+    feedbackEl.textContent = `Forfeited. That was ${getDisplayName(forfeited)}.`;
+    feedbackEl.className = "feedback-message error";
+  }
+
+  targetPool = targetPool.filter(c => c.id !== forfeited.id);
+  pickNextTarget();
+}
+
+if (btnForfeitTarget) {
+  btnForfeitTarget.addEventListener("click", forfeitCurrentTarget);
+}
+
+
 // --- Game Loop Functions ---
 // isRetryMissedRun: true only when this round was started via "Retry
 // Missed" (either the modal button or the Admire bar's retry button) —
@@ -3024,6 +3080,7 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   scoreWrong = 0;
   isGameActive = true;
   missedCounties.clear();
+  forfeitedCount = 0;
   currentAttemptMistakes = 0;
   currentRunIsRetryMissed = isRetryMissedRun;
   // Recompute per-game: e.g. retrying only Delaware's missed counties
@@ -3050,6 +3107,9 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
     btnToggleCountyList.textContent = "Show List";
   }
   if (countyListPanel) countyListPanel.classList.add("hidden");
+  // List mode is free recall — there's no single "current" county to
+  // forfeit — so the button only appears in the other four modes.
+  if (btnForfeitTarget) btnForfeitTarget.classList.toggle("hidden", selectedMode === "type");
 
 
   countyPaths.forEach(path => {
@@ -3072,7 +3132,7 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
 // this game (e.g. "1/3"), regardless of mode.
 function updateProgressCounter() {
   if (!progressCounter) return;
-  const found = totalTargetsCount - targetPool.length;
+  const found = totalTargetsCount - targetPool.length - forfeitedCount;
   progressCounter.textContent = `${found}/${totalTargetsCount}`;
 }
 
@@ -3229,6 +3289,9 @@ function pickNextTarget() {
 function handleCountyClick(pathEl) {
   if (!isGameActive || !currentTarget) return;
   if (TYPE_MODES.has(selectedMode)) return; // clicking doesn't solve typing modes
+  // A county revealed by "Forfeit This One" stays hoverable (for its
+  // name popout) but isn't a valid guess anymore.
+  if (pathEl.classList.contains("given-up-missed")) return;
 
 
   // The Kalawao callout circle carries data-county-id="kalawao" so it
