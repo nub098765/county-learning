@@ -2830,6 +2830,10 @@ if (btnSelectAllStates) {
 
 if (btnDeselectAllStates) {
   btnDeselectAllStates.addEventListener("click", () => {
+    // Nothing selected, so there's nothing to deselect — do nothing
+    // (otherwise the refresh below pops up the greyed-out Play button).
+    if (activeStateKeys.length === 0) return;
+
     // Clear the active set and un-highlight every currently-rendered row,
     // mirroring the same side effects a single toggleState() click does.
     activeStateKeys.length = 0;
