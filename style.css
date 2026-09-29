@@ -2966,3 +2966,49 @@ body.dark-mode .setting-item input[type="number"] {
   justify-content: center;
  }
 }
+
+/* Learn > Study */
+.study-select {
+  width: 100%;
+  padding: 0.55rem;
+  font: inherit;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+}
+body.dark-mode .study-select { background: #2a2a2a; color: #eee; border-color: #555; }
+.study-name {
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 0.5rem 0 0.9rem;
+}
+.study-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.study-choices:empty { display: none; }
+.study-feedback { text-align: center; min-height: 1.4em; margin: 0.6rem 0 0; }
+.study-nav { display: flex; justify-content: center; gap: 0.5rem; margin-top: 0.8rem; }
+.study-choices .study-correct { background: #2e7d32; border-color: #2e7d32; color: #fff; }
+.study-choices .study-wrong { background: #b3261e; border-color: #b3261e; color: #fff; }
+@media (max-width: 480px) { .study-choices { grid-template-columns: 1fr; } }
+
+/* Study: state list extras */
+#study-states { margin-bottom: 0.8rem; }
+.study-learned-panel { max-height: 40vh; overflow-y: auto; margin-bottom: 0.8rem; }
+.study-learned-state h3 { font-size: 0.95rem; margin: 0.6rem 0 0.4rem; }
+.study-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.study-chip {
+  font-size: 0.78rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  color: #666;
+}
+.study-chip.learned { background: #2e7d32; border-color: #2e7d32; color: #fff; }
+body.dark-mode .study-chip { border-color: #555; color: #aaa; }
+body.dark-mode .study-chip.learned { color: #fff; border-color: #2e7d32; }
+.study-skip { display: flex; align-items: center; gap: 0.5rem; margin: 0.4rem 0; font-size: 0.9rem; }

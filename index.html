@@ -29,6 +29,7 @@
    <p class="subtitle">How would you like to learn the US, county by county?</p>
    <div class="menu-buttons">
      <button id="btn-goto-modes" class="btn-primary">Play</button>
+     <button id="btn-goto-learn" class="btn-secondary">Learn</button>
      <button id="btn-goto-settings" class="btn-secondary">Settings</button>
    </div>
    <button type="button" class="report-link" data-open-report>Report a bug</button>
@@ -135,7 +136,7 @@
        <div class="setting-item" id="setting-reset-progress">
          <div class="setting-text">
            <label>Progress</label>
-           <p class="setting-desc">Clear completed states, mistake history, and best-known suggestions.</p>
+           <p class="setting-desc">Clear completed states, mistake history, best-known suggestions, and Study progress.</p>
          </div>
          <button id="btn-reset-progress" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Reset Progress</button>
        </div>
@@ -275,6 +276,43 @@
 
 
 
+
+ <section id="screen-learn" class="screen">
+   <h2>Learn</h2>
+   <div class="mode-options">
+     <button id="btn-goto-study" class="btn-mode mode-list">
+       <strong>Study</strong>
+       <span>See each county highlighted on the map with its name, five at a time, then get quizzed on them.</span>
+     </button>
+   </div>
+   <button class="btn-back" data-target="screen-home">Back</button>
+ </section>
+
+ <section id="screen-study" class="screen">
+   <h2>Study</h2>
+   <div id="study-pick">
+     <p class="subtitle study-hint">Select state(s) to study. Each row shows how many counties you've learned.</p>
+     <button id="study-select-all" type="button" class="btn-secondary" style="margin-bottom: 0.6rem;">Select all</button>
+     <button id="study-deselect-all" type="button" class="btn-secondary" style="margin-bottom: 0.6rem; margin-left: 0.5rem;">Deselect all</button>
+     <div id="study-states" class="states-list"></div>
+     <div id="study-learned-panel" class="study-learned-panel"></div>
+     <label class="study-skip"><input type="checkbox" id="study-skip-learned" checked> Skip counties I've already learned</label>
+     <p id="study-pick-msg" class="study-feedback" aria-live="polite"></p>
+     <button id="study-start" type="button" class="btn-primary" disabled>Start</button>
+   </div>
+   <div id="study-run" class="hidden">
+     <p id="study-progress" class="progress-counter" aria-live="polite"></p>
+     <div id="study-map" class="locator-map-holder"></div>
+     <p id="study-name" class="study-name" aria-live="polite"></p>
+     <div id="study-choices" class="study-choices"></div>
+     <p id="study-feedback" class="study-feedback" aria-live="polite"></p>
+     <div class="study-nav">
+       <button id="study-prev" type="button" class="btn-secondary hidden">Previous</button>
+       <button id="study-next" type="button" class="btn-primary">Next</button>
+     </div>
+   </div>
+   <button class="btn-back" data-target="screen-learn">Back</button>
+ </section>
 
  <section id="screen-setup" class="screen">
    <p id="setup-mode-indicator" class="setup-mode-indicator"></p>

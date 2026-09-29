@@ -1065,7 +1065,7 @@ const screens = document.querySelectorAll(".screen");
 const btnGotoModes = document.getElementById("btn-goto-modes");
 const btnGotoSettings = document.getElementById("btn-goto-settings");
 const backButtons = document.querySelectorAll(".btn-back");
-const modeButtons = document.querySelectorAll(".btn-mode");
+const modeButtons = document.querySelectorAll(".btn-mode[data-mode]");
 
 
 // --- Setup Screen DOM Elements ---
@@ -1608,6 +1608,224 @@ function showScreen(screenId) {
 
 
 if (btnGotoModes) btnGotoModes.addEventListener("click", () => showScreen("screen-modes"));
+
+// --- Learn > Study ---------------------------------------------------
+// Pick one or more states from a list (like the game setup screen), then
+// walk through their counties five at a time: each is shown highlighted
+// on its map with its name, then the group is quizzed. A county counts as
+// "learned" once you get it right in a Study quiz (a wrong answer unlearns
+// it). That's stored separately from countyProgress/countyMistakes, under
+// localStorage "studyLearned" (cleared by Reset Progress).
+(function initStudy() {
+  const $ = id => document.getElementById(id);
+  const BATCH = 5, KEY = "studyLearned";
+  const selected = new Set();
+  let counties = [], start = 0, batch = [], quizSet = [], i = 0, phase = "learn", score = 0, answered = false;
+
+  const shuffle = a => { a = a.slice(); for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; };
+  const loadLearned = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
+  const setLearned = (id, yes) => {
+    const l = loadLearned();
+    if (yes) l[id] = true; else delete l[id];
+    localStorage.setItem(KEY, JSON.stringify(l));
+  };
+  const studyStates = () => Object.entries(stateData)
+    .filter(([, s]) => document.getElementById(s.svgId))
+    .sort((a, b) => a[1].name.localeCompare(b[1].name));
+
+  // ----- state list + learned panel -----
+  function renderPick() {
+    const learned = loadLearned();
+    const list = $("study-states");
+    const panel = $("study-learned-panel");
+    list.innerHTML = "";
+    panel.innerHTML = "";
+    studyStates().forEach(([key, s]) => {
+      const done = s.counties.filter(c => learned[c.id]).length;
+      const row = document.createElement("div");
+      row.className = "state-row" + (selected.has(key) ? " selected" : "");
+      row.tabIndex = 0;
+      row.setAttribute("role", "button");
+      row.setAttribute("aria-pressed", selected.has(key));
+      row.innerHTML = '<span class="state-name"></span><span class="state-count"></span>';
+      row.children[0].textContent = s.name;
+      row.children[1].textContent = `${done} of ${s.counties.length} learned`;
+      const toggle = () => { selected.has(key) ? selected.delete(key) : selected.add(key); renderPick(); };
+      row.addEventListener("click", toggle);
+      row.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+      list.appendChild(row);
+
+      if (selected.has(key)) {
+        const block = document.createElement("div");
+        block.className = "study-learned-state";
+        const h = document.createElement("h3");
+        h.textContent = `${s.name}: ${done} of ${s.counties.length} learned`;
+        block.appendChild(h);
+        const chips = document.createElement("div");
+        chips.className = "study-chips";
+        s.counties.forEach(c => {
+          const chip = document.createElement("span");
+          const ok = !!learned[c.id];
+          chip.className = "study-chip" + (ok ? " learned" : "");
+          chip.textContent = (ok ? "\u2713 " : "") + c.name;
+          chips.appendChild(chip);
+        });
+        block.appendChild(chips);
+        panel.appendChild(block);
+      }
+    });
+    $("study-start").disabled = selected.size === 0;
+    $("study-pick-msg").textContent = "";
+  }
+
+  // ----- map -----
+  function drawMap(county) {
+    const holder = $("study-map");
+    const src = document.getElementById(stateData[county.stateKey]?.svgId);
+    holder.innerHTML = "";
+    if (!src) return;
+    const svg = src.cloneNode(true);
+    const targets = [];
+    svg.querySelectorAll("[id]").forEach(el => { if (el.id === county.id) targets.push(el); });
+    svg.querySelectorAll(`[data-county-id="${county.id}"]`).forEach(el => { if (!targets.includes(el)) targets.push(el); });
+    svg.querySelectorAll(".county").forEach(el => { el.setAttribute("class", "county"); el.style.removeProperty("fill"); el.style.removeProperty("stroke"); });
+    targets.forEach(el => el.classList.add("locator-target"));
+    // Strip ids so the clone can never be picked up by getElementById in the game code.
+    svg.removeAttribute("id");
+    svg.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
+    svg.querySelectorAll("[tabindex]").forEach(el => el.removeAttribute("tabindex"));
+    svg.querySelectorAll("[role]").forEach(el => el.removeAttribute("role"));
+    svg.setAttribute("class", "locator-map");
+    ["width", "height", "style"].forEach(a => svg.removeAttribute(a));
+    svg.setAttribute("aria-label", `Map of ${stateData[county.stateKey].name} with a county highlighted`);
+    holder.appendChild(svg);
+    // Circle tiny counties so they aren't missed.
+    requestAnimationFrame(() => {
+      try {
+        const t = targets.find(x => x.getBoundingClientRect().width > 0) || targets[0];
+        if (!t) return;
+        const r = t.getBoundingClientRect(), sr = svg.getBoundingClientRect();
+        if (!sr.width || Math.max(r.width, r.height) > sr.width * 0.08) return;
+        const inv = svg.getScreenCTM().inverse(), p = svg.createSVGPoint();
+        p.x = r.left; p.y = r.top; const a = p.matrixTransform(inv);
+        p.x = r.right; p.y = r.bottom; const b = p.matrixTransform(inv);
+        const vb = svg.viewBox.baseVal && svg.viewBox.baseVal.width ? svg.viewBox.baseVal.width : 800;
+        const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        ring.setAttribute("class", "locator-ring");
+        ring.setAttribute("cx", (a.x + b.x) / 2);
+        ring.setAttribute("cy", (a.y + b.y) / 2);
+        ring.setAttribute("r", Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y)) / 2 + vb * 0.02);
+        svg.appendChild(ring);
+      } catch (err) { /* the highlight alone is fine */ }
+    });
+  }
+
+  // ----- study / quiz flow -----
+  function render() {
+    const learn = phase === "learn";
+    const list = learn ? batch : quizSet;
+    const c = list[i];
+    $("study-progress").textContent = `${learn ? "Study" : "Quiz"}: ${i + 1} of ${list.length} (counties ${start + 1}-${start + batch.length} of ${counties.length})`;
+    drawMap(c);
+    $("study-name").textContent = learn ? getDisplayName(c) : "Which county is highlighted?";
+    $("study-feedback").textContent = "";
+    const ch = $("study-choices");
+    ch.innerHTML = "";
+    answered = false;
+    if (!learn) {
+      // Wrong choices come from the counties in this batch (the ones just
+      // studied), so every option is one you've seen. Counties from the rest
+      // of the session only fill in if the batch is too small (e.g. a last
+      // batch of 1-3 counties).
+      const others = [...shuffle(batch.filter(x => x !== c)), ...shuffle(counties.filter(x => !batch.includes(x)))];
+      shuffle([c, ...others.slice(0, 3)]).forEach(o => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn-secondary";
+        b.textContent = getDisplayName(o);
+        b.dataset.correct = o === c ? "1" : "";
+        b.addEventListener("click", () => answer(b, o === c, c));
+        ch.appendChild(b);
+      });
+    }
+    $("study-prev").classList.toggle("hidden", !learn || i === 0);
+    $("study-next").classList.toggle("hidden", !learn);
+    $("study-next").textContent = learn ? (i === list.length - 1 ? "Start quiz" : "Next") : "Next";
+  }
+
+  function answer(btn, ok, c) {
+    if (answered) return;
+    answered = true;
+    if (ok) score++;
+    setLearned(c.id, ok);
+    btn.classList.add(ok ? "study-correct" : "study-wrong");
+    $("study-choices").querySelectorAll("button").forEach(b => { if (b.dataset.correct) b.classList.add("study-correct"); });
+    $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getDisplayName(c)}.`;
+    $("study-next").textContent = i === quizSet.length - 1 ? "See results" : "Next";
+    $("study-next").classList.remove("hidden");
+  }
+
+  function results() {
+    $("study-map").innerHTML = "";
+    $("study-progress").textContent = "Quiz complete";
+    $("study-name").textContent = `You got ${score} of ${quizSet.length}.`;
+    $("study-feedback").textContent = "";
+    $("study-prev").classList.add("hidden");
+    $("study-next").classList.add("hidden");
+    const ch = $("study-choices");
+    ch.innerHTML = "";
+    const add = (label, fn, cls) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = cls || "btn-secondary"; b.textContent = label;
+      b.addEventListener("click", fn); ch.appendChild(b);
+    };
+    if (start + BATCH < counties.length) add(`Next ${Math.min(BATCH, counties.length - start - BATCH)} counties`, () => { start += BATCH; beginBatch(); }, "btn-primary");
+    add("Study these again", beginBatch);
+    add("Back to state list", openStudy);
+  }
+
+  function beginBatch() {
+    batch = counties.slice(start, start + BATCH);
+    i = 0; phase = "learn";
+    render();
+  }
+
+  function openStudy() {
+    $("study-pick").classList.remove("hidden");
+    $("study-run").classList.add("hidden");
+    renderPick();
+    showScreen("screen-study");
+  }
+
+  $("btn-goto-learn").addEventListener("click", () => showScreen("screen-learn"));
+  $("btn-goto-study").addEventListener("click", openStudy);
+  $("study-select-all").addEventListener("click", () => { studyStates().forEach(([k]) => selected.add(k)); renderPick(); });
+  $("study-deselect-all").addEventListener("click", () => { selected.clear(); renderPick(); });
+  $("study-start").addEventListener("click", () => {
+    const learned = loadLearned();
+    const skip = $("study-skip-learned").checked;
+    const pool = [];
+    studyStates().forEach(([k, s]) => { if (selected.has(k)) s.counties.forEach(c => { if (!(skip && learned[c.id])) pool.push(c); }); });
+    if (!pool.length) {
+      $("study-pick-msg").textContent = "You've already learned every county in your selection. Untick \"Skip counties I've already learned\" to review them.";
+      return;
+    }
+    counties = shuffle(pool);
+    start = 0;
+    $("study-pick").classList.add("hidden");
+    $("study-run").classList.remove("hidden");
+    beginBatch();
+  });
+  $("study-prev").addEventListener("click", () => { if (i > 0) { i--; render(); } });
+  $("study-next").addEventListener("click", () => {
+    if (phase === "learn") {
+      if (i < batch.length - 1) { i++; render(); }
+      else { phase = "quiz"; quizSet = shuffle(batch); i = 0; score = 0; render(); }
+    } else if (answered) {
+      if (i < quizSet.length - 1) { i++; render(); } else results();
+    }
+  });
+})();
 if (btnGotoSettings) {
   btnGotoSettings.addEventListener("click", () => openSettings("screen-home"));
 }
@@ -1838,6 +2056,7 @@ btnResetProgress.addEventListener("click", () => {
     countyMistakes = {};
     statsHiddenOverride = {};
     localStorage.removeItem("countyProgress");
+    localStorage.removeItem("studyLearned");
     localStorage.removeItem("countyMistakes");
     renderStateListUI();
     renderCountyCheckboxes(); // redraw checkboxes so mistake badges clear too
