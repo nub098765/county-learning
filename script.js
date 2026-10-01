@@ -841,15 +841,15 @@ function foldDiacriticsForComparison(str) {
 
 
 // Normalizes a typed guess for comparison: lowercase, trims, collapses
-// repeated whitespace, and folds apostrophe-*like* characters (okina,
-// curly quotes, backtick, acute accent) down to a single plain
-// apostrophe — so it doesn't matter which mark you actually type, but
-// the mark itself is still required. Hawaiʻi and Kauaʻi are stored with
-// a real ʻokina (U+02BB) so they display correctly, but because every
-// apostrophe-like character folds to the same plain one here (on both
-// the typed guess and the stored name), a plain ' still works for
-// anyone who can't type an ʻokina. Typing "kauai" with nothing there
-// is still wrong.
+// repeated whitespace, and folds ordinary apostrophe-like characters
+// (straight, curly, backtick, acute accent) down to one plain apostrophe,
+// so a name like "Prince George's" works however the apostrophe is typed.
+// The Hawaiian ʻokina (U+02BB) is NOT one of those: a plain ' is never
+// accepted in place of it. The ʻokina is treated as a diacritic mark, so
+// it's only required when "Require Diacritic Marks" is on (then it has to
+// be the real ʻokina, typed with the button). With the setting off it's
+// dropped from both sides, so "Kauai" and "Kauaʻi" are both accepted,
+// but "Kaua'i" is still wrong.
 //
 // Diacritic marks (the diaeresis in New Hampshire's Coös County, for
 // instance) are handled separately from apostrophes, via the "Require
@@ -876,11 +876,11 @@ function normalizeTypedName(str) {
   let result = str
     .normalize("NFC")
     .toLowerCase()
-    .replace(/[\u02BB\u2018\u2019'`´]/g, "'")
+    .replace(/[\u2018\u2019'`´]/g, "'")
     .trim()
     .replace(/\s+/g, " ");
   if (!gameSettings.requireDiacritics) {
-    result = foldDiacriticsForComparison(result);
+    result = foldDiacriticsForComparison(result).replace(/\u02BB/g, "");
   }
   return result;
 }
@@ -1603,24 +1603,121 @@ function showScreen(screenId) {
     // it needs more horizontal room than the normal narrow card to fit
     // the table-of-contents sidebar beside the settings list.
     appContainer.classList.toggle("wide-settings", screenId === "screen-settings");
+    // The state-picker map (setup + Study's state list) gets a wide card; the
+    // rest of those screens stays in a normal-width column (see .wide-picker in
+    // style.css). Study narrows it again once a session starts.
+    appContainer.classList.toggle("wide-picker", screenId === "screen-setup" || screenId === "screen-study");
   }
 }
 
 
 if (btnGotoModes) btnGotoModes.addEventListener("click", () => showScreen("screen-modes"));
 
+// --- US map state picker --------------------------------------------------
+// Shared by the setup screen and Study. The map lives once in
+// <template id="us-map-template"> and is cloned into each screen. A state is
+// clickable when it exists in stateData AND its county map is on the page;
+// everything else (including the territories) is greyed out and inert, so new
+// states light up automatically once they're built.
+function initUsMap(holder, { isSelected, toggle }) {
+  const tpl = document.getElementById("us-map-template");
+  if (!tpl || !holder) return { sync() {} };
+  holder.replaceChildren(tpl.content.cloneNode(true));
+  const keyByName = {};
+  Object.entries(stateData).forEach(([k, s]) => { keyByName[s.name.toLowerCase()] = k; });
+  const els = [...holder.querySelectorAll("[data-code]")];
+  els.forEach(el => {
+    const key = keyByName[(el.dataset.name || "").toLowerCase()];
+    const built = !!(key && document.getElementById(stateData[key].svgId));
+    el.classList.add(built ? "built" : "unbuilt");
+    if (!built) return;
+    el.dataset.key = key;
+    if (el.tagName.toLowerCase() === "path") {
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("role", "button");
+      el.setAttribute("aria-label", el.dataset.name);
+    }
+  });
+  const svg = holder.querySelector("svg");
+  svg.addEventListener("click", e => { const el = e.target.closest("[data-key]"); if (el) toggle(el.dataset.key); });
+  svg.addEventListener("keydown", e => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const el = e.target.closest("[data-key]");
+    if (el) { e.preventDefault(); toggle(el.dataset.key); }
+  });
+  return {
+    sync() {
+      els.forEach(el => {
+        if (!el.dataset.key) return;
+        const on = !!isSelected(el.dataset.key);
+        el.classList.toggle("selected", on);
+        if (el.getAttribute("role")) el.setAttribute("aria-pressed", on);
+      });
+    }
+  };
+}
+
+// "Selected: ..." summary under a map. entries: [{ name, text, n }]
+function renderPicked(el, entries) {
+  if (!el) return;
+  el.replaceChildren();
+  if (!entries.length) {
+    el.textContent = "No states selected yet. Click a state on the map to select it; click it again to deselect.";
+    return;
+  }
+  const total = entries.reduce((sum, e) => sum + e.n, 0);
+  const head = document.createElement("div");
+  head.className = "us-picked-head";
+  head.textContent = `Selected: ${entries.length} state${entries.length === 1 ? "" : "s"}, ${total} in total`;
+  const chips = document.createElement("div");
+  chips.className = "us-picked-chips";
+  entries.forEach(e => {
+    const c = document.createElement("span");
+    c.className = "us-chip";
+    c.textContent = `${e.name}: ${e.text}`;
+    chips.appendChild(c);
+  });
+  el.append(head, chips);
+}
+
+// Setup screen: the map clicks the (now hidden) state rows, so all the existing
+// selection, stats-panel and Play-button logic keeps working untouched; a
+// MutationObserver mirrors the rows' "selected" state back onto the map.
+setTimeout(() => {
+  const holder = document.getElementById("setup-map");
+  const picked = document.getElementById("setup-picked");
+  if (!holder) return;
+  const map = initUsMap(holder, {
+    isSelected: key => activeStateKeys.includes(key),
+    toggle: key => { const row = document.getElementById(`state-${key}`); if (row) row.click(); }
+  });
+  const refresh = () => {
+    map.sync();
+    const entries = activeStateKeys.filter(k => stateData[k]).map(k => {
+      const cnt = document.querySelector(`#state-${k} .state-count`);
+      const n = stateData[k].counties.length;
+      return { name: stateData[k].name, text: cnt ? cnt.textContent : `${n} counties`, n };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+    renderPicked(picked, entries);
+  };
+  const list = document.querySelector("#screen-setup .states-list");
+  if (list) new MutationObserver(refresh).observe(list, { subtree: true, attributes: true, attributeFilter: ["class"] });
+  refresh();
+}, 0);
+
+
 // --- Learn > Study ---------------------------------------------------
 // Pick one or more states from a list (like the game setup screen), then
 // walk through their counties five at a time: each is shown highlighted
 // on its map with its name, then the group is quizzed. A county counts as
-// "learned" once you get it right in a Study quiz (a wrong answer unlearns
-// it). That's stored separately from countyProgress/countyMistakes, under
+// "learned" once you TYPE it correctly in a Study round (a wrong answer
+// unlearns it). That's stored separately from countyProgress/countyMistakes, under
 // localStorage "studyLearned" (cleared by Reset Progress).
 (function initStudy() {
   const $ = id => document.getElementById(id);
   const BATCH = 5, KEY = "studyLearned";
   const selected = new Set();
-  let counties = [], start = 0, batch = [], quizSet = [], i = 0, phase = "learn", score = 0, answered = false;
+  let counties = [], start = 0, batch = [], quizSet = [], typeSet = [], i = 0, phase = "learn", score = 0, typeScore = 0, answered = false;
 
   const shuffle = a => { a = a.slice(); for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; };
   const loadLearned = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
@@ -1633,46 +1730,41 @@ if (btnGotoModes) btnGotoModes.addEventListener("click", () => showScreen("scree
     .filter(([, s]) => document.getElementById(s.svgId))
     .sort((a, b) => a[1].name.localeCompare(b[1].name));
 
-  // ----- state list + learned panel -----
+  // ----- state map + learned panel -----
+  let pickMap = null;
   function renderPick() {
+    if (!pickMap) pickMap = initUsMap($("study-pick-map"), {
+      isSelected: k => selected.has(k),
+      toggle: k => { selected.has(k) ? selected.delete(k) : selected.add(k); renderPick(); }
+    });
+    pickMap.sync();
     const learned = loadLearned();
-    const list = $("study-states");
     const panel = $("study-learned-panel");
-    list.innerHTML = "";
     panel.innerHTML = "";
-    studyStates().forEach(([key, s]) => {
+    const chosen = studyStates().filter(([k]) => selected.has(k));
+    renderPicked($("study-picked"), chosen.map(([k, s]) => ({
+      name: s.name,
+      text: `${s.counties.length} ${k === "alaska" ? "boroughs & census areas" : "counties"}`,
+      n: s.counties.length
+    })).sort((a, b) => a.name.localeCompare(b.name)));
+    chosen.forEach(([key, s]) => {
       const done = s.counties.filter(c => learned[c.id]).length;
-      const row = document.createElement("div");
-      row.className = "state-row" + (selected.has(key) ? " selected" : "");
-      row.tabIndex = 0;
-      row.setAttribute("role", "button");
-      row.setAttribute("aria-pressed", selected.has(key));
-      row.innerHTML = '<span class="state-name"></span><span class="state-count"></span>';
-      row.children[0].textContent = s.name;
-      row.children[1].textContent = `${done} of ${s.counties.length} learned`;
-      const toggle = () => { selected.has(key) ? selected.delete(key) : selected.add(key); renderPick(); };
-      row.addEventListener("click", toggle);
-      row.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
-      list.appendChild(row);
-
-      if (selected.has(key)) {
-        const block = document.createElement("div");
-        block.className = "study-learned-state";
-        const h = document.createElement("h3");
-        h.textContent = `${s.name}: ${done} of ${s.counties.length} learned`;
-        block.appendChild(h);
-        const chips = document.createElement("div");
-        chips.className = "study-chips";
-        s.counties.forEach(c => {
-          const chip = document.createElement("span");
-          const ok = !!learned[c.id];
-          chip.className = "study-chip" + (ok ? " learned" : "");
-          chip.textContent = (ok ? "\u2713 " : "") + c.name;
-          chips.appendChild(chip);
-        });
-        block.appendChild(chips);
-        panel.appendChild(block);
-      }
+      const block = document.createElement("div");
+      block.className = "study-learned-state";
+      const h = document.createElement("h3");
+      h.textContent = `${s.name}: ${done} of ${s.counties.length} learned`;
+      block.appendChild(h);
+      const chips = document.createElement("div");
+      chips.className = "study-chips";
+      s.counties.forEach(c => {
+        const chip = document.createElement("span");
+        const ok = !!learned[c.id];
+        chip.className = "study-chip" + (ok ? " learned" : "");
+        chip.textContent = (ok ? "\u2713 " : "") + c.name;
+        chips.appendChild(chip);
+      });
+      block.appendChild(chips);
+      panel.appendChild(block);
     });
     $("study-start").disabled = selected.size === 0;
     $("study-pick-msg").textContent = "";
@@ -1720,19 +1812,54 @@ if (btnGotoModes) btnGotoModes.addEventListener("click", () => showScreen("scree
     });
   }
 
-  // ----- study / quiz flow -----
+  // ----- study / quiz / type flow -----
+  const OK = "\u02BB";
+  const lastIn = list => i === list.length - 1;
+
+  // Special-character buttons for the typing step, shown only while
+  // "Require Diacritic Marks" is on (same as the game's own button bar).
+  function buildChars() {
+    const found = new Set();
+    batch.forEach(c => { for (const ch of c.name.normalize("NFC").toLowerCase()) if (/[^\x00-\x7F]/.test(ch)) found.add(ch); });
+    const chars = [...found].filter(() => gameSettings.requireDiacritics)
+      .sort((a, b) => (b === OK) - (a === OK) || a.localeCompare(b));
+    $("study-chars").replaceChildren(...chars.map(ch => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "special-char-btn";
+      b.textContent = ch;
+      b.title = ch === OK ? "ʻokina (Hawaiian glottal stop)" : ch;
+      b.addEventListener("mousedown", e => e.preventDefault()); // keep focus in the text box
+      b.addEventListener("click", () => {
+        const inp = $("study-input");
+        const s = inp.selectionStart ?? inp.value.length, e = inp.selectionEnd ?? s;
+        inp.setRangeText(ch, s, e, "end");
+        inp.focus();
+      });
+      return b;
+    }));
+  }
+
   function render() {
-    const learn = phase === "learn";
-    const list = learn ? batch : quizSet;
+    const learn = phase === "learn", typing = phase === "type";
+    const list = learn ? batch : typing ? typeSet : quizSet;
     const c = list[i];
-    $("study-progress").textContent = `${learn ? "Study" : "Quiz"}: ${i + 1} of ${list.length} (counties ${start + 1}-${start + batch.length} of ${counties.length})`;
+    $("study-progress").textContent = `${learn ? "Study" : typing ? "Type" : "Quiz"}: ${i + 1} of ${list.length} (counties ${start + 1}-${start + batch.length} of ${counties.length})`;
     drawMap(c);
-    $("study-name").textContent = learn ? getDisplayName(c) : "Which county is highlighted?";
+    $("study-name").textContent = learn ? getDisplayName(c) : typing ? "Type the name of the highlighted county." : "Which county is highlighted?";
     $("study-feedback").textContent = "";
     const ch = $("study-choices");
     ch.innerHTML = "";
     answered = false;
-    if (!learn) {
+    $("study-type").classList.toggle("hidden", !typing);
+    if (typing) {
+      const inp = $("study-input");
+      inp.value = "";
+      inp.disabled = false;
+      $("study-submit").classList.remove("hidden");
+      buildChars();
+      inp.focus({ preventScroll: true });
+    } else if (!learn) {
       // Wrong choices come from the counties in this batch (the ones just
       // studied), so every option is one you've seen. Counties from the rest
       // of the session only fill in if the batch is too small (e.g. a last
@@ -1750,25 +1877,42 @@ if (btnGotoModes) btnGotoModes.addEventListener("click", () => showScreen("scree
     }
     $("study-prev").classList.toggle("hidden", !learn || i === 0);
     $("study-next").classList.toggle("hidden", !learn);
-    $("study-next").textContent = learn ? (i === list.length - 1 ? "Start quiz" : "Next") : "Next";
+    $("study-next").textContent = learn ? (lastIn(list) ? "Start quiz" : "Next") : "Next";
   }
 
   function answer(btn, ok, c) {
     if (answered) return;
     answered = true;
     if (ok) score++;
-    setLearned(c.id, ok);
     btn.classList.add(ok ? "study-correct" : "study-wrong");
     $("study-choices").querySelectorAll("button").forEach(b => { if (b.dataset.correct) b.classList.add("study-correct"); });
     $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getDisplayName(c)}.`;
-    $("study-next").textContent = i === quizSet.length - 1 ? "See results" : "Next";
+    $("study-next").textContent = lastIn(quizSet) ? "Now type them" : "Next";
     $("study-next").classList.remove("hidden");
+  }
+
+  // Same matching rules as the game's Type modes (including the
+  // "Require Diacritic Marks" setting and the ʻokina rule).
+  function submitType() {
+    const inp = $("study-input"), c = typeSet[i];
+    if (answered || !inp.value.trim()) return;
+    answered = true;
+    const ok = normalizeTypedName(inp.value) === normalizeTypedName(c.name);
+    if (ok) typeScore++;
+    setLearned(c.id, ok);
+    inp.disabled = true;
+    $("study-submit").classList.add("hidden");
+    $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getDisplayName(c)}.`;
+    $("study-next").textContent = lastIn(typeSet) ? "See results" : "Next";
+    $("study-next").classList.remove("hidden");
+    $("study-next").focus(); // so Enter carries straight on
   }
 
   function results() {
     $("study-map").innerHTML = "";
-    $("study-progress").textContent = "Quiz complete";
-    $("study-name").textContent = `You got ${score} of ${quizSet.length}.`;
+    $("study-type").classList.add("hidden");
+    $("study-progress").textContent = "Round complete";
+    $("study-name").textContent = `Quiz: ${score} of ${batch.length}. Typed: ${typeScore} of ${batch.length}.`;
     $("study-feedback").textContent = "";
     $("study-prev").classList.add("hidden");
     $("study-next").classList.add("hidden");
@@ -1779,10 +1923,14 @@ if (btnGotoModes) btnGotoModes.addEventListener("click", () => showScreen("scree
       b.type = "button"; b.className = cls || "btn-secondary"; b.textContent = label;
       b.addEventListener("click", fn); ch.appendChild(b);
     };
+    add("Type again", startType);
+    add("Pin again", startQuiz);
     if (start + BATCH < counties.length) add(`Next ${Math.min(BATCH, counties.length - start - BATCH)} counties`, () => { start += BATCH; beginBatch(); }, "btn-primary");
-    add("Study these again", beginBatch);
     add("Back to state list", openStudy);
   }
+
+  function startQuiz() { phase = "quiz"; quizSet = shuffle(batch); i = 0; score = 0; render(); }
+  function startType() { phase = "type"; typeSet = shuffle(batch); i = 0; typeScore = 0; render(); }
 
   function beginBatch() {
     batch = counties.slice(start, start + BATCH);
@@ -1814,17 +1962,22 @@ if (btnGotoModes) btnGotoModes.addEventListener("click", () => showScreen("scree
     start = 0;
     $("study-pick").classList.add("hidden");
     $("study-run").classList.remove("hidden");
+    document.querySelector(".app-container").classList.remove("wide-picker");
     beginBatch();
   });
   $("study-prev").addEventListener("click", () => { if (i > 0) { i--; render(); } });
   $("study-next").addEventListener("click", () => {
     if (phase === "learn") {
-      if (i < batch.length - 1) { i++; render(); }
-      else { phase = "quiz"; quizSet = shuffle(batch); i = 0; score = 0; render(); }
+      if (i < batch.length - 1) { i++; render(); } else startQuiz();
     } else if (answered) {
-      if (i < quizSet.length - 1) { i++; render(); } else results();
+      const list = phase === "quiz" ? quizSet : typeSet;
+      if (i < list.length - 1) { i++; render(); }
+      else if (phase === "quiz") startType();
+      else results();
     }
   });
+  $("study-submit").addEventListener("click", submitType);
+  $("study-input").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitType(); } });
 })();
 if (btnGotoSettings) {
   btnGotoSettings.addEventListener("click", () => openSettings("screen-home"));

@@ -3012,3 +3012,70 @@ body.dark-mode .study-select { background: #2a2a2a; color: #eee; border-color: #
 body.dark-mode .study-chip { border-color: #555; color: #aaa; }
 body.dark-mode .study-chip.learned { color: #fff; border-color: #2e7d32; }
 .study-skip { display: flex; align-items: center; gap: 0.5rem; margin: 0.4rem 0; font-size: 0.9rem; }
+
+.study-hint { margin-bottom: 1rem; text-align: left; }
+
+/* Study: typing step */
+.study-type { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; align-items: center; }
+.study-type.hidden { display: none; }
+.study-chars { display: flex; gap: 0.4rem; width: 100%; justify-content: center; }
+.study-chars:empty { display: none; }
+.study-chars .special-char-btn {
+  min-width: 2.2rem; padding: 0.3rem 0.6rem; font-size: 1.1rem; cursor: pointer;
+  border: 1px solid #ccc; border-radius: 6px; background: #fff; color: #111;
+}
+.study-input {
+  flex: 1 1 12rem; min-width: 0; padding: 0.55rem; font: inherit;
+  border: 1px solid #ccc; border-radius: 6px; background: #fff; color: #111;
+}
+body.dark-mode .study-input,
+body.dark-mode .study-chars .special-char-btn { background: #2a2a2a; color: #eee; border-color: #555; }
+
+/* US map state picker (setup + Study) */
+#screen-setup .states-list,
+#screen-setup #state-search,
+#screen-setup #state-search-empty { display: none; } /* rows stay in the DOM; the map drives them */
+/* The card goes wide on the picker screens, but everything except the map stays in
+   a normal-width column; the map holder then breaks out of that column. */
+.app-container.wide-picker { max-width: 96vw; width: 96vw; }
+.app-container.wide-picker .screen { max-width: 396px; margin-left: auto; margin-right: auto; }
+.us-map-holder {
+  position: relative; left: 50%; transform: translateX(-50%);
+  width: min(calc(96vw - 4rem), 130vh, 1600px);
+  overflow-x: auto; margin-bottom: 0.6rem;
+}
+.us-map { display: block; width: 100%; min-width: 640px; height: auto; margin: 0 auto; }
+.us-map .us-st { fill: #e6e6e6; stroke: none; }
+.us-map .us-st.built { fill: #9db8d3; cursor: pointer; }
+.us-map .us-st.built:hover { fill: #86a7c8; }
+.us-map .us-st.selected,
+.us-map .us-st.selected:hover { fill: #e8892b; }
+.us-map .us-st:focus { outline: none; }
+.us-map .us-st:focus-visible { stroke: #000; stroke-width: 2; }
+.us-map .us-borders { fill: none; stroke: #fff; stroke-width: 1; pointer-events: none; }
+.us-map .us-sep { fill: none; stroke: #b0b0b0; stroke-width: 2; }
+.us-map .us-leaders path { fill: none; stroke: #888; stroke-width: 0.7; }
+.us-map .us-leaders circle { fill: #888; }
+.us-map text {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-weight: 700;
+  fill: #8a8a8a; text-anchor: middle; pointer-events: none; /* size is set per label */
+}
+.us-map text.built { fill: #1d3550; }
+.us-map text.selected { fill: #3a1d00; }
+.us-map text.callout.built { pointer-events: auto; cursor: pointer; }
+body.dark-mode .us-map .us-st { fill: #333; }
+body.dark-mode .us-map .us-st.built { fill: #4d6781; }
+body.dark-mode .us-map .us-st.built:hover { fill: #5c7b99; }
+body.dark-mode .us-map .us-st.selected,
+body.dark-mode .us-map .us-st.selected:hover { fill: #c9741f; }
+body.dark-mode .us-map .us-borders { stroke: #1a1a1a; }
+body.dark-mode .us-map .us-sep { stroke: #666; }
+body.dark-mode .us-map text { fill: #888; }
+body.dark-mode .us-map text.built { fill: #dbe8f5; }
+body.dark-mode .us-map text.selected { fill: #fff; }
+.us-picked { margin-bottom: 0.8rem; font-size: 0.9rem; color: #666; }
+body.dark-mode .us-picked { color: #aaa; }
+.us-picked-head { font-weight: 600; margin-bottom: 0.4rem; color: #222; }
+body.dark-mode .us-picked-head { color: #eee; }
+.us-picked-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.us-chip { font-size: 0.8rem; padding: 0.15rem 0.55rem; border-radius: 999px; background: #e8892b; color: #2a1400; }
