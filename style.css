@@ -1368,9 +1368,9 @@ body.scale-states-by-size #svg-wisconsin {
   clickable. Only relevant to the original variable-sized layout — see
   "Scale States by Size". */
 body.scale-states-by-size #svg-alaska {
- max-width: 480px;
- max-height: 640px;
- flex: 1 1 420px;
+ max-width: 720px;
+ max-height: 480px;
+ flex: 1 1 640px;
 }
 
 
@@ -1557,19 +1557,42 @@ body.dark-mode .state-map.zoomed {
  background: #242420;
 }
 
-/* Alaska's own viewBox crops right at the top edge of the North Slope
-  (y≈1 out of 488 — essentially no built-in margin above its northern
-  coastline), unlike other states whose shapes sit with more breathing
-  room inside their viewBox. That leaves it with less real clearance
-  under the fixed target banner than the shared 13.5rem above accounts
-  for, so it still ends up overlapping the banner at some viewport
-  sizes. Push Alaska down a bit further than the rest, adjusting its
-  width/height ceiling to match so it still fits within the viewport. */
-#svg-alaska.zoomed {
- top: 16rem;
- width: min(88vw, calc(90vh - 16rem)) !important;
- max-width: min(88vw, calc(90vh - 16rem)) !important;
- max-height: calc(90vh - 16rem) !important;
+/* Alaska is a wide map (800 x 434 viewBox, ~1.84:1), so the shared
+  zoom size — which is bounded by viewport HEIGHT as if every map were
+  square — would leave it much smaller than the screen allows. Size it
+  by its own aspect ratio instead: as wide as the viewport allows, but
+  never taller than the space under the fixed target banner. (The 3rem
+  in each bound is the map's 1.5rem padding on both sides.) */
+#svg-alaska.zoomed,
+.app-container.solo-map #svg-alaska.zoomed {
+ width: min(calc(94vw - 3rem), calc((90vh - 16.5rem) * 1.84)) !important;
+ max-width: min(calc(94vw - 3rem), calc((90vh - 16.5rem) * 1.84)) !important;
+ max-height: calc(90vh - 16.5rem) !important;
+}
+
+
+/* Alaska: thinner outlines than the shared 2.5px. The panhandle and the
+  Aleutians are made of many small islands, and a 2.5px outline on each
+  one covered most of the land underneath it. */
+#svg-alaska .county {
+ stroke-width: 1.25px;
+}
+
+/* Alaska's real shape is wide, so give it a wide box instead of the
+  square one every other state gets. Solo play: a much bigger map than
+  the shared 560px cap. Uniform grid (4+ states): the Alaska box takes
+  a full row at the shape's own aspect ratio. */
+.app-container.solo-map .map-wrapper:has(#svg-alaska:not(.hidden)) {
+ width: min(88vw, 960px) !important;
+ max-width: min(88vw, 960px) !important;
+}
+.app-container.solo-map #svg-alaska:not(.zoomed) {
+ max-width: 100% !important;
+ max-height: none !important;
+}
+body:not(.scale-states-by-size) .map-box:has(#svg-alaska) {
+ grid-column: 1 / -1;
+ aspect-ratio: 800 / 434;
 }
 
 
@@ -1755,8 +1778,8 @@ body.high-contrast .sf-callout {
 }
 
 
-/* Skagway, Bristol Bay, and Haines get the same treatment on the Alaska
-  map — all three are real boroughs whose actual shapes are about as
+/* Skagway and Bristol Bay get the same treatment on the Alaska
+  map — both are real boroughs whose actual shapes are about as
   tiny, relative to their map, as Kalawao's and San Francisco's are on
   theirs. Same colors as both of those so all five callouts read as
   the same kind of UI element. */
@@ -1824,40 +1847,6 @@ body.dark-mode .bristol-bay-callout {
  stroke: #e0954a;
 }
 body.high-contrast .bristol-bay-callout {
- stroke: #ff8800;
-}
-
-
-.haines-callout-line {
- stroke: #b5651d;
- stroke-width: 1.5px;
- fill: none;
- vector-effect: non-scaling-stroke;
-}
-body.dark-mode .haines-callout-line {
- stroke: #e0954a;
-}
-body.high-contrast .haines-callout-line {
- stroke: #ff8800;
-}
-
-.haines-arrowhead-fill {
- fill: #b5651d;
-}
-body.dark-mode .haines-arrowhead-fill {
- fill: #e0954a;
-}
-body.high-contrast .haines-arrowhead-fill {
- fill: #ff8800;
-}
-
-.haines-callout {
- stroke: #b5651d;
-}
-body.dark-mode .haines-callout {
- stroke: #e0954a;
-}
-body.high-contrast .haines-callout {
  stroke: #ff8800;
 }
 

@@ -772,7 +772,6 @@ let sfCalloutCreated = false;
 // circle-and-line treatment.
 let skagwayCalloutCreated = false;
 let bristolBayCalloutCreated = false;
-let hainesCalloutCreated = false;
 
 
 // Names that are ambiguous *within the counties currently being played*
@@ -2506,7 +2505,7 @@ if (statsPanel) {
 // on that map's own coordinate scale, so it's passed in per-county
 // rather than derived from the offset. Optional `radiusOverride` skips
 // that size-derived formula entirely and uses a fixed radius instead —
-// needed for counties (like Haines) whose real shape isn't actually
+// needed for counties whose real shape isn't actually
 // tiny the way Kalawao/SF/Skagway/Bristol Bay's are, so deriving the
 // circle's size from its own bounding box would make the "click here"
 // circle enormous instead of a small stand-in.
@@ -2756,34 +2755,19 @@ function switchVisibleSvgMap() {
         // easy to miss at normal zoom.
         sfCalloutCreated = setupCountyCallout(targetSvg, "san-francisco", "sf", -90, -10, 6, 9);
       }
+      // Alaska's map is built from real Census boundary data (Alaska
+      // Albers projection, 800-unit-wide viewBox), so the two callouts
+      // below are placed in that coordinate system. Both use the
+      // same fixed radius (14) so the click targets match; offsets are in viewBox units relative to each county's
+      // bounding-box center.
       if (key === "alaska" && !skagwayCalloutCreated) {
-        // Blank space north of the panhandle (Canadian territory isn't
-        // drawn on this map, so it reads the same as open water) —
-        // clear of Haines to the west and Juneau/Hoonah-Angoon below.
-        skagwayCalloutCreated = setupCountyCallout(targetSvg, "skagway", "skagway", 0, -95, 4, 9);
+        // Blank space north-east of the panhandle (Canada isn't drawn,
+        // so it reads as empty space).
+        skagwayCalloutCreated = setupCountyCallout(targetSvg, "skagway", "skagway", 40, -55, 4, 9, 14);
       }
       if (key === "alaska" && !bristolBayCalloutCreated) {
-        // Open water in Bristol Bay itself, just west of the borough —
-        // pulled toward Dillingham's side rather than east, where it
-        // would otherwise overlap Kodiak Island or the Alaska Peninsula
-        // coastline. Pulled further down and left than a first pass,
-        // since it was overlapping a neighboring county's callout.
-        bristolBayCalloutCreated = setupCountyCallout(targetSvg, "bristol-bay", "bristol-bay", -105, 35, 4, 8);
-      }
-      if (key === "alaska" && !hainesCalloutCreated) {
-        // Unlike Kalawao/SF/Skagway/Bristol Bay, Haines's real shape
-        // isn't tiny — it's a few times bigger than Skagway's, so it
-        // gets a fixed radiusOverride instead of the usual size-derived
-        // radius (which would make the circle enormous here). 24 was
-        // picked to visually match Skagway's (~23.8) and Bristol Bay's
-        // (~26.1) own size-derived radii, rather than the much smaller
-        // value used originally. Placed in the open space east of
-        // Hoonah-Angoon and north-east of Haines itself, with a longer
-        // stopShort than usual so the leader line's angle (coming down
-        // from the north-east rather than dead-on from the east) lands
-        // the arrowhead further up and to the right, on Haines's actual
-        // landmass rather than past its edge.
-        hainesCalloutCreated = setupCountyCallout(targetSvg, "haines", "haines", 80, -40, 4, 18, 24);
+        // Open water south-west of the borough in Bristol Bay.
+        bristolBayCalloutCreated = setupCountyCallout(targetSvg, "bristol-bay", "bristol-bay", -85, 15, 4, 8, 14);
       }
     }
   });
