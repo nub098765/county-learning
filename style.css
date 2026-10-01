@@ -1561,13 +1561,15 @@ body.dark-mode .state-map.zoomed {
   zoom size — which is bounded by viewport HEIGHT as if every map were
   square — would leave it much smaller than the screen allows. Size it
   by its own aspect ratio instead: as wide as the viewport allows, but
-  never taller than the space under the fixed target banner. (The 3rem
-  in each bound is the map's 1.5rem padding on both sides.) */
+  never taller than the space under the fixed target banner. (16rem
+  clears the banner, including Type mode's input box; the 3rem in each
+  bound is the map's 1.5rem padding on both sides.) */
 #svg-alaska.zoomed,
 .app-container.solo-map #svg-alaska.zoomed {
- width: min(calc(94vw - 3rem), calc((90vh - 16.5rem) * 1.84)) !important;
- max-width: min(calc(94vw - 3rem), calc((90vh - 16.5rem) * 1.84)) !important;
- max-height: calc(90vh - 16.5rem) !important;
+ top: 16rem;
+ width: min(calc(94vw - 3rem), calc((90vh - 19rem) * 1.84)) !important;
+ max-width: min(calc(94vw - 3rem), calc((90vh - 19rem) * 1.84)) !important;
+ max-height: calc(90vh - 19rem) !important;
 }
 
 
@@ -1858,7 +1860,13 @@ body.high-contrast .bristol-bay-callout {
  border-radius: 16px;
  padding: 1rem 2rem;
  margin: 1rem auto 1.5rem auto;
- max-width: 480px;
+ /* Normally 480px wide, but grows sideways (instead of wrapping the name
+    onto a second line and getting taller) when a long county name needs
+    more room; only capped by the screen itself. */
+ width: fit-content;
+ min-width: min(480px, 100%);
+ max-width: 100%;
+ box-sizing: border-box;
  box-shadow: 0 8px 24px rgba(45, 90, 39, 0.12);
  display: flex;
  flex-direction: column;
@@ -1893,7 +1901,9 @@ body.map-zoomed .prompt-box {
  top: 0.75rem;
  left: 50%;
  transform: translateX(-50%);
- width: min(92vw, 480px);
+ width: fit-content;
+ min-width: min(92vw, 480px);
+ max-width: 96vw;
  margin: 0;
  z-index: 1001;
 }
@@ -1979,6 +1989,14 @@ body.dark-mode .progress-counter {
  font-weight: 700;
  line-height: 1;
  letter-spacing: -0.5px;
+ /* Keep the name on one line and let the box widen to fit. On narrow
+    screens there's no room to widen, so it's allowed to wrap there. */
+ white-space: nowrap;
+}
+@media (max-width: 700px) {
+ #target-prompt .target-name {
+  white-space: normal;
+ }
 }
 #target-prompt .target-state {
  font-size: 1.3rem;
@@ -2954,6 +2972,14 @@ body.dark-mode .setting-item input[type="number"] {
  .game-header {
   justify-content: center;
  }
+}
+
+/* When the game screen's card grows to fit a big map (.wide-map), the
+   header buttons used to spread out to the far edges. Keep them grouped
+   in the middle instead. */
+.app-container.wide-map .game-header {
+ justify-content: center;
+ gap: 0.75rem;
 }
 
 /* Learn > Study */
