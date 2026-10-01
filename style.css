@@ -3193,3 +3193,35 @@ body.dark-mode .us-map .us-st:focus-visible { stroke: #fff; }
 }
 .app-container.wide-study .locator-map { max-height: 60vh; }
 .app-container.wide-study #study-run > :not(#study-map) { max-width: 396px; margin-left: auto; margin-right: auto; }
+
+
+/* ===== Study picker: small state maps with learned counties filled in ===== */
+.study-learned-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+  gap: 0.75rem;
+  align-items: start;
+}
+.study-learned-state {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 0.6rem 0.7rem;
+  background: #fbfaf6;
+  min-width: 0;
+}
+body.dark-mode .study-learned-state { background: #242420; border-color: #3f3f38; }
+/* Opening a state's county list gives that card the full row, so the chips
+   have room instead of stretching one narrow card taller than its neighbours. */
+.study-learned-state:has(details[open]),
+.study-learned-state:only-child { grid-column: 1 / -1; }
+.study-learned-state h3 { margin: 0; font-size: 0.95rem; }
+.study-learned-count { margin: 0 0 0.4rem; font-size: 0.78rem; opacity: 0.75; }
+.study-mini-map { max-height: 170px; margin: 0 auto 0.4rem; }
+/* A lone state has the whole panel to itself, so let its map be bigger. */
+.study-learned-panel:has(.study-learned-state:only-child) .study-mini-map { max-height: 260px; }
+/* Thin fixed outlines: the game's usual 2.5px would swallow a 254-county Texas at this size. */
+.study-mini-map .county { stroke-width: 0.75px !important; }
+.study-mini-map .county.mini-learned,
+.study-mini-map .county.mini-learned path { fill: #2e7d32 !important; stroke: #14401a !important; }
+.study-list-toggle summary { cursor: pointer; font-size: 0.8rem; opacity: 0.85; padding: 0.15rem 0; }
+.study-list-toggle[open] summary { margin-bottom: 0.4rem; }

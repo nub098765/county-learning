@@ -1743,6 +1743,36 @@ setTimeout(() => {
     .filter(([, s]) => document.getElementById(s.svgId))
     .sort((a, b) => a[1].name.localeCompare(b[1].name));
 
+  // A small, non-interactive copy of a state's map with the counties you've
+  // learned filled in (green). Built the same way as the Study map further
+  // down: clone the game's own <svg>, strip its ids so the copy can never be
+  // found by the game code, and drop the game's per-county styling.
+  function miniMap(s, learned) {
+    const src = document.getElementById(s.svgId);
+    if (!src) return null;
+    const svg = src.cloneNode(true);
+    // The click-here callouts (Alaska, Hawaii, California) only exist once
+    // the game has set them up, so leave them out: this overview then looks
+    // the same whether or not you've played yet.
+    svg.querySelectorAll('[class*="callout"], [class*="arrowhead"], defs').forEach(el => el.remove());
+    const done = new Set(s.counties.filter(c => learned[c.id]).map(c => c.id));
+    svg.querySelectorAll(".county").forEach(el => {
+      const cid = el.dataset.countyId || el.id;
+      el.setAttribute("class", done.has(cid) ? "county mini-learned" : "county");
+      el.style.removeProperty("fill");
+      el.style.removeProperty("stroke");
+      el.removeAttribute("tabindex");
+      el.removeAttribute("role");
+    });
+    svg.removeAttribute("id");
+    svg.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
+    ["width", "height", "style"].forEach(a => svg.removeAttribute(a));
+    svg.setAttribute("class", "locator-map study-mini-map");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", `Map of ${s.name}: ${done.size} of ${s.counties.length} learned`);
+    return svg;
+  }
+
   // ----- state map + learned panel -----
   let pickMap = null;
   function renderPick() {
@@ -1760,13 +1790,24 @@ setTimeout(() => {
       text: `${s.counties.length} ${k === "alaska" ? "boroughs & census areas" : "counties"}`,
       n: s.counties.length
     })).sort((a, b) => a.name.localeCompare(b.name)));
+    // One card per chosen state: a small map with the counties you've
+    // learned filled in, plus (optionally) a dropdown with the full county
+    // list. Which dropdowns are open is remembered across re-renders, so
+    // picking another state doesn't snap them all shut.
+    const openLists = (renderPick.openLists = renderPick.openLists || new Set());
     chosen.forEach(([key, s]) => {
       const done = s.counties.filter(c => learned[c.id]).length;
       const block = document.createElement("div");
       block.className = "study-learned-state";
       const h = document.createElement("h3");
-      h.textContent = `${s.name}: ${done} of ${s.counties.length} learned`;
+      h.textContent = s.name;
       block.appendChild(h);
+      const count = document.createElement("p");
+      count.className = "study-learned-count";
+      count.textContent = `${done} of ${s.counties.length} learned`;
+      block.appendChild(count);
+      const map = miniMap(s, learned);
+      if (map) block.appendChild(map);
       const chips = document.createElement("div");
       chips.className = "study-chips";
       s.counties.forEach(c => {
@@ -1776,7 +1817,15 @@ setTimeout(() => {
         chip.textContent = (ok ? "\u2713 " : "") + c.name;
         chips.appendChild(chip);
       });
-      block.appendChild(chips);
+      const list = document.createElement("details");
+      list.className = "study-list-toggle";
+      if (openLists.has(key)) list.open = true;
+      list.addEventListener("toggle", () => { list.open ? openLists.add(key) : openLists.delete(key); });
+      const summary = document.createElement("summary");
+      summary.textContent = "County list";
+      list.appendChild(summary);
+      list.appendChild(chips);
+      block.appendChild(list);
       panel.appendChild(block);
     });
     $("study-start").disabled = selected.size === 0;
@@ -2880,6 +2929,21 @@ function switchVisibleSvgMap() {
   const domOrderedVisibleMaps = Array.from(currentSvgMaps).filter(map => visibleMaps.includes(map));
 
 
+  updateMapDividers();
+}
+
+
+// Works out which visible maps share a row and which wrapped onto a new
+// one, and tags them for the divider lines in style.css (.map-divider /
+// .map-divider-top, only drawn in the "Scale States by Size" layout).
+// Called whenever the set of maps changes (switchVisibleSvgMap) and when
+// the window is resized — rows re-wrap at a new width, which is why the
+// dividers used to go stale until the next time states were toggled.
+function updateMapDividers() {
+  const domOrderedVisibleMaps = Array.from(document.querySelectorAll(".state-map"))
+    .filter(map => !map.classList.contains("hidden") && map.style.display !== "none");
+  domOrderedVisibleMaps.forEach(map => map.classList.remove("map-divider", "map-divider-top"));
+
   // Group the visible maps into their actual visual rows by checking
   // whether their vertical spans overlap, not by comparing top edges.
   // Reading getBoundingClientRect here forces the browser to lay things
@@ -2942,11 +3006,19 @@ function switchVisibleSvgMap() {
         map.classList.add("map-divider");
       }
     });
+    // Every map in a wrapped row (not just its first) gets the top rule,
+    // so the horizontal line runs the full width of that row.
     if (rowIndex > 0) {
-      row.maps[0].classList.add("map-divider-top");
+      row.maps.forEach(map => map.classList.add("map-divider-top"));
     }
   });
 }
+
+let dividerResizeFrame = 0;
+window.addEventListener("resize", () => {
+  cancelAnimationFrame(dividerResizeFrame);
+  dividerResizeFrame = requestAnimationFrame(updateMapDividers);
+});
 
 
 // --- State & County Setup Logic ---
