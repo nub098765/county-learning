@@ -1606,6 +1606,7 @@ function showScreen(screenId) {
     // rest of those screens stays in a normal-width column (see .wide-picker in
     // style.css). Study narrows it again once a session starts.
     appContainer.classList.toggle("wide-picker", screenId === "screen-setup" || screenId === "screen-study");
+    appContainer.classList.remove("wide-study"); // only set while a Study session is running
   }
 }
 
@@ -1698,6 +1699,8 @@ setTimeout(() => {
       return { name: stateData[k].name, text: cnt ? cnt.textContent : `${n} counties`, n };
     }).sort((a, b) => a.name.localeCompare(b.name));
     renderPicked(picked, entries);
+    // With nothing chosen, CSS centres the Back button across the whole screen.
+    document.getElementById("screen-setup").classList.toggle("no-selection", activeStateKeys.length === 0);
   };
   const list = document.querySelector("#screen-setup .states-list");
   if (list) new MutationObserver(refresh).observe(list, { subtree: true, attributes: true, attributeFilter: ["class"] });
@@ -1716,7 +1719,18 @@ setTimeout(() => {
   const $ = id => document.getElementById(id);
   const BATCH = 5, KEY = "studyLearned";
   const selected = new Set();
-  let counties = [], start = 0, batch = [], quizSet = [], typeSet = [], i = 0, phase = "learn", score = 0, typeScore = 0, answered = false;
+  let counties = [], start = 0, batch = [], quizSet = [], typeSet = [], pinSet = [], i = 0, phase = "learn", score = 0, typeScore = 0, pinScore = 0, answered = false;
+  let studyMode = "all";
+  const MODE_SEQ = { all: ["quiz", "type", "pin"], mc: ["quiz"], type: ["type"], pin: ["pin"] };
+  const MODE_NAME = { all: "All", mc: "Multiple-Choice", type: "Type", pin: "Pin" };
+  const PHASE_LABEL = { quiz: "quiz", type: "typing", pin: "pinning" };
+  const seq = () => MODE_SEQ[studyMode];
+  const nextPhaseAfter = p => seq()[seq().indexOf(p) + 1] || null; // p === "learn" -> first
+  const firstPhase = () => seq()[0];
+  const afterLabel = p => { const n = p === "learn" ? firstPhase() : nextPhaseAfter(p); return n ? (p === "learn" ? "Start " + PHASE_LABEL[n] : "Now " + PHASE_LABEL[n]) : "See results"; };
+  // The phase that decides whether a county counts as learned: typing if it is
+  // part of the session (as before), otherwise the last phase.
+  const marker = () => seq().includes("type") ? "type" : seq()[seq().length - 1];
 
   const shuffle = a => { a = a.slice(); for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; };
   const loadLearned = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
@@ -1766,31 +1780,61 @@ setTimeout(() => {
       panel.appendChild(block);
     });
     $("study-start").disabled = selected.size === 0;
+    $("study-pick").classList.toggle("no-selection", selected.size === 0);
     $("study-pick-msg").textContent = "";
   }
 
   // ----- map -----
-  function drawMap(county) {
+  // SVG paints in document order, so a neighbour that comes later in the file would paint its
+  // outline over a highlighted county's border. Re-appending the element puts it on top.
+  const toFront = el => { if (el.parentNode) el.parentNode.appendChild(el); };
+
+  function drawMap(county, pin) {
     const holder = $("study-map");
     const src = document.getElementById(stateData[county.stateKey]?.svgId);
     holder.innerHTML = "";
     if (!src) return;
     const svg = src.cloneNode(true);
+    // The game sets outline widths per state with rules like "#svg-alaska .county" (Alaska's is
+    // thinner). The clone has its ids stripped, so those rules stop matching and every state
+    // would fall back to the thick default. Read the real width off the original and reuse it.
+    const srcCounty = src.querySelector(".county");
+    const outlineW = srcCounty ? getComputedStyle(srcCounty).strokeWidth : "";
+    if (outlineW) svg.querySelectorAll(".county").forEach(el => { el.style.strokeWidth = outlineW; });
     const targets = [];
     svg.querySelectorAll("[id]").forEach(el => { if (el.id === county.id) targets.push(el); });
     svg.querySelectorAll(`[data-county-id="${county.id}"]`).forEach(el => { if (!targets.includes(el)) targets.push(el); });
     svg.querySelectorAll(".county").forEach(el => { el.setAttribute("class", "county"); el.style.removeProperty("fill"); el.style.removeProperty("stroke"); });
-    targets.forEach(el => el.classList.add("locator-target"));
+    if (pin) {
+      svg.querySelectorAll(".county").forEach(el => { el.dataset.cid = el.dataset.countyId || el.id; });
+    } else targets.forEach(el => { el.classList.add("locator-target"); toFront(el); });
     // Strip ids so the clone can never be picked up by getElementById in the game code.
     svg.removeAttribute("id");
     svg.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
-    svg.querySelectorAll("[tabindex]").forEach(el => el.removeAttribute("tabindex"));
-    svg.querySelectorAll("[role]").forEach(el => el.removeAttribute("role"));
-    svg.setAttribute("class", "locator-map");
+    if (pin) {
+      // Keep counties focusable, but drop their names so labels never give the answer away.
+      svg.querySelectorAll(".county").forEach(el => { el.setAttribute("tabindex", "0"); el.setAttribute("role", "button"); el.setAttribute("aria-label", "County"); });
+    } else {
+      svg.querySelectorAll("[tabindex]").forEach(el => el.removeAttribute("tabindex"));
+      svg.querySelectorAll("[role]").forEach(el => el.removeAttribute("role"));
+    }
+    svg.setAttribute("class", "locator-map" + (pin ? " pin-mode" : ""));
     ["width", "height", "style"].forEach(a => svg.removeAttribute(a));
-    svg.setAttribute("aria-label", `Map of ${stateData[county.stateKey].name} with a county highlighted`);
+    svg.setAttribute("aria-label", pin ? `Map of ${stateData[county.stateKey].name}` : `Map of ${stateData[county.stateKey].name} with a county highlighted`);
     holder.appendChild(svg);
-    // Circle tiny counties so they aren't missed.
+    if (pin) {
+      svg.querySelectorAll(".county").forEach(el => {
+        const pick = () => pinAnswer(svg, el, county);
+        el.addEventListener("click", pick);
+        el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+      });
+      return;
+    }
+    addRing(svg, targets);
+  }
+
+  // Circle tiny counties so they aren't missed.
+  function addRing(svg, targets) {
     requestAnimationFrame(() => {
       try {
         const t = targets.find(x => x.getBoundingClientRect().width > 0) || targets[0];
@@ -1840,12 +1884,12 @@ setTimeout(() => {
   }
 
   function render() {
-    const learn = phase === "learn", typing = phase === "type";
-    const list = learn ? batch : typing ? typeSet : quizSet;
+    const learn = phase === "learn", typing = phase === "type", pinning = phase === "pin";
+    const list = learn ? batch : typing ? typeSet : pinning ? pinSet : quizSet;
     const c = list[i];
-    $("study-progress").textContent = `${learn ? "Study" : typing ? "Type" : "Quiz"}: ${i + 1} of ${list.length} (counties ${start + 1}-${start + batch.length} of ${counties.length})`;
-    drawMap(c);
-    $("study-name").textContent = learn ? getDisplayName(c) : typing ? "Type the name of the highlighted county." : "Which county is highlighted?";
+    $("study-progress").textContent = `${learn ? "Study" : typing ? "Type" : pinning ? "Pin" : "Quiz"}: ${i + 1} of ${list.length} (counties ${start + 1}-${start + batch.length} of ${counties.length})`;
+    drawMap(c, pinning);
+    $("study-name").textContent = learn ? getDisplayName(c) : typing ? "Type the name of the highlighted county." : pinning ? `Click ${getDisplayName(c)} on the map.` : "Which county is highlighted?";
     $("study-feedback").textContent = "";
     const ch = $("study-choices");
     ch.innerHTML = "";
@@ -1858,7 +1902,7 @@ setTimeout(() => {
       $("study-submit").classList.remove("hidden");
       buildChars();
       inp.focus({ preventScroll: true });
-    } else if (!learn) {
+    } else if (!learn && !pinning) {
       // Wrong choices come from the counties in this batch (the ones just
       // studied), so every option is one you've seen. Counties from the rest
       // of the session only fill in if the batch is too small (e.g. a last
@@ -1876,7 +1920,7 @@ setTimeout(() => {
     }
     $("study-prev").classList.toggle("hidden", !learn || i === 0);
     $("study-next").classList.toggle("hidden", !learn);
-    $("study-next").textContent = learn ? (lastIn(list) ? "Start quiz" : "Next") : "Next";
+    $("study-next").textContent = learn ? (lastIn(list) ? afterLabel("learn") : "Next") : "Next";
   }
 
   function answer(btn, ok, c) {
@@ -1885,8 +1929,9 @@ setTimeout(() => {
     if (ok) score++;
     btn.classList.add(ok ? "study-correct" : "study-wrong");
     $("study-choices").querySelectorAll("button").forEach(b => { if (b.dataset.correct) b.classList.add("study-correct"); });
+    if (marker() === "quiz") setLearned(c.id, ok);
     $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getDisplayName(c)}.`;
-    $("study-next").textContent = lastIn(quizSet) ? "Now type them" : "Next";
+    $("study-next").textContent = lastIn(quizSet) ? afterLabel("quiz") : "Next";
     $("study-next").classList.remove("hidden");
   }
 
@@ -1898,20 +1943,42 @@ setTimeout(() => {
     answered = true;
     const ok = normalizeTypedName(inp.value) === normalizeTypedName(c.name);
     if (ok) typeScore++;
-    setLearned(c.id, ok);
+    if (marker() === "type") setLearned(c.id, ok);
     inp.disabled = true;
     $("study-submit").classList.add("hidden");
     $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getDisplayName(c)}.`;
-    $("study-next").textContent = lastIn(typeSet) ? "See results" : "Next";
+    $("study-next").textContent = lastIn(typeSet) ? afterLabel("type") : "Next";
     $("study-next").classList.remove("hidden");
     $("study-next").focus(); // so Enter carries straight on
   }
+
+  function pinAnswer(svg, el, c) {
+    if (answered) return;
+    answered = true;
+    const ok = el.dataset.cid === c.id;
+    if (ok) pinScore++;
+    if (marker() === "pin") setLearned(c.id, ok);
+    svg.classList.add("pin-done");
+    const targets = [...svg.querySelectorAll(".county")].filter(x => x.dataset.cid === c.id);
+    if (!ok) { el.classList.add("locator-wrong"); toFront(el); }
+    targets.forEach(x => { x.classList.add("locator-target"); toFront(x); }); // correct county last, so it's on top
+    if (!ok) addRing(svg, targets);
+    $("study-feedback").textContent = ok ? "Correct!" : `Not quite. That one is ${el.dataset.cid ? (findCounty(el.dataset.cid) || {}).name || "another county" : "another county"}; ${getDisplayName(c)} is highlighted.`;
+    $("study-next").textContent = lastIn(pinSet) ? afterLabel("pin") : "Next";
+    $("study-next").classList.remove("hidden");
+    $("study-next").focus();
+  }
+  const findCounty = id => { for (const s of Object.values(stateData)) { const f = s.counties.find(x => x.id === id); if (f) return f; } return null; };
 
   function results() {
     $("study-map").innerHTML = "";
     $("study-type").classList.add("hidden");
     $("study-progress").textContent = "Round complete";
-    $("study-name").textContent = `Quiz: ${score} of ${batch.length}. Typed: ${typeScore} of ${batch.length}.`;
+    const parts = [];
+    if (seq().includes("quiz")) parts.push(`Quiz: ${score} of ${batch.length}.`);
+    if (seq().includes("type")) parts.push(`Typed: ${typeScore} of ${batch.length}.`);
+    if (seq().includes("pin")) parts.push(`Pinned: ${pinScore} of ${batch.length}.`);
+    $("study-name").textContent = parts.join(" ");
     $("study-feedback").textContent = "";
     $("study-prev").classList.add("hidden");
     $("study-next").classList.add("hidden");
@@ -1922,13 +1989,15 @@ setTimeout(() => {
       b.type = "button"; b.className = cls || "btn-secondary"; b.textContent = label;
       b.addEventListener("click", fn); ch.appendChild(b);
     };
-    add("Type again", startType);
-    add("Pin again", startQuiz);
+    if (seq().includes("quiz")) add("Quiz again", startQuiz);
+    if (seq().includes("type")) add("Type again", startType);
+    if (seq().includes("pin")) add("Pin again", startPin);
     if (start + BATCH < counties.length) add(`Next ${Math.min(BATCH, counties.length - start - BATCH)} counties`, () => { start += BATCH; beginBatch(); }, "btn-primary");
     add("Back to state list", openStudy);
   }
 
   function startQuiz() { phase = "quiz"; quizSet = shuffle(batch); i = 0; score = 0; render(); }
+  function startPin() { phase = "pin"; pinSet = shuffle(batch); i = 0; pinScore = 0; render(); }
   function startType() { phase = "type"; typeSet = shuffle(batch); i = 0; typeScore = 0; render(); }
 
   function beginBatch() {
@@ -1936,16 +2005,19 @@ setTimeout(() => {
     i = 0; phase = "learn";
     render();
   }
+  function startPhase(p) { ({ quiz: startQuiz, type: startType, pin: startPin })[p](); }
 
   function openStudy() {
     $("study-pick").classList.remove("hidden");
     $("study-run").classList.add("hidden");
+    $("study-mode-indicator").textContent = `Mode: ${MODE_NAME[studyMode]}`;
     renderPick();
     showScreen("screen-study");
   }
 
   $("btn-goto-learn").addEventListener("click", () => showScreen("screen-learn"));
-  $("btn-goto-study").addEventListener("click", openStudy);
+  $("btn-goto-study").addEventListener("click", () => showScreen("screen-study-modes"));
+  document.querySelectorAll("[data-study-mode]").forEach(b => b.addEventListener("click", () => { studyMode = b.dataset.studyMode; openStudy(); }));
   $("study-select-all").addEventListener("click", () => { studyStates().forEach(([k]) => selected.add(k)); renderPick(); });
   $("study-deselect-all").addEventListener("click", () => { selected.clear(); renderPick(); });
   $("study-start").addEventListener("click", () => {
@@ -1961,17 +2033,26 @@ setTimeout(() => {
     start = 0;
     $("study-pick").classList.add("hidden");
     $("study-run").classList.remove("hidden");
-    document.querySelector(".app-container").classList.remove("wide-picker");
+    const app = document.querySelector(".app-container");
+    app.classList.remove("wide-picker");
+    // Size the card to the widest map in this session (wide maps like Alaska get a wide card,
+    // tall ones like Delaware stay narrow); see .wide-study in style.css.
+    const aspect = Math.max(...[...new Set(counties.map(c => c.stateKey))].map(k => {
+      const vb = document.getElementById(stateData[k].svgId)?.viewBox?.baseVal;
+      return vb && vb.height ? vb.width / vb.height : 1;
+    }));
+    app.style.setProperty("--study-aspect", aspect);
+    app.classList.add("wide-study");
     beginBatch();
   });
   $("study-prev").addEventListener("click", () => { if (i > 0) { i--; render(); } });
   $("study-next").addEventListener("click", () => {
     if (phase === "learn") {
-      if (i < batch.length - 1) { i++; render(); } else startQuiz();
+      if (i < batch.length - 1) { i++; render(); } else startPhase(firstPhase());
     } else if (answered) {
-      const list = phase === "quiz" ? quizSet : typeSet;
+      const list = phase === "quiz" ? quizSet : phase === "pin" ? pinSet : typeSet;
       if (i < list.length - 1) { i++; render(); }
-      else if (phase === "quiz") startType();
+      else if (nextPhaseAfter(phase)) startPhase(nextPhaseAfter(phase));
       else results();
     }
   });
@@ -2516,6 +2597,19 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
   let bbox;
   try {
     bbox = countyPath.getBBox();
+    // Counties with far-off islands (e.g. San Francisco's Farallones) would
+    // pull the callout off target, so measure just the largest piece
+    // (apply_maps.py writes each county's biggest outline first).
+    const dAttr = countyPath.getAttribute && countyPath.getAttribute("d");
+    if (dAttr && dAttr.indexOf("M", 1) > 0) {
+      const tmp = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      tmp.setAttribute("d", dAttr.slice(0, dAttr.indexOf("M", 1)));
+      tmp.style.visibility = "hidden";
+      targetSvg.appendChild(tmp);
+      const mainBox = tmp.getBBox();
+      targetSvg.removeChild(tmp);
+      if (mainBox.width || mainBox.height) bbox = mainBox;
+    }
   } catch (e) {
     return false; // Bail quietly if the browser can't compute it yet.
   }
@@ -2746,14 +2840,14 @@ function switchVisibleSvgMap() {
         // the leader line actually reads as a line pointing to a
         // distant marker, rather than a circle sitting right on top of
         // the coastline with the arrowhead barely poking out.
-        kalawaoCalloutCreated = setupCountyCallout(targetSvg, "kalawao", "kalawao", -4200, -7800, 350, 150);
+        kalawaoCalloutCreated = setupCountyCallout(targetSvg, "kalawao", "kalawao", -59, -110, 5, 2);
       }
       if (key === "california" && !sfCalloutCreated) {
         // Open Pacific water just west of the city, clear of Marin
         // (north), San Mateo (south), and Alameda (east) — the three
         // counties boxing San Francisco in and making its real shape
         // easy to miss at normal zoom.
-        sfCalloutCreated = setupCountyCallout(targetSvg, "san-francisco", "sf", -90, -10, 6, 9);
+        sfCalloutCreated = setupCountyCallout(targetSvg, "san-francisco", "sf", -150, -17, 10, 15);
       }
       // Alaska's map is built from real Census boundary data (Alaska
       // Albers projection, 800-unit-wide viewBox), so the two callouts

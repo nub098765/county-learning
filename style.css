@@ -1106,7 +1106,7 @@ body.scale-states-by-size .map-wrapper {
  flex-direction: row;
  flex-wrap: wrap;
  justify-content: center;
- align-items: center;
+ align-items: stretch;
 }
 
 
@@ -1303,14 +1303,35 @@ body.high-contrast .county.correct-recovered {
    state noticeably more room to stay legible before Hawaii/California/
    Texas's own larger overrides below even come into play. */
 body.scale-states-by-size .state-map {
- width: 100%;
+ /* Each state's on-screen width comes from its own --w (set per state
+    below). They're picked so every state ends up with a roughly similar
+    amount of screen AREA — a little more for states with lots of
+    counties, a little less for ones with only a few — instead of the
+    old hand-tuned widths, which gave Arizona about a tenth of Texas's
+    room. --w includes the padding below (border-box). */
+ --w: 330px;
+ width: var(--w);
  height: auto;
- max-width: 230px;
- max-height: 520px;
+ max-width: 100%;
+ max-height: none;
  display: block;
- margin: 0 auto;
- flex: 1 1 190px;
- padding: 0 0.85rem;
+ margin: 0;
+ flex: 0 0 var(--w); /* no shrinking: wrap to a new row instead */
+ box-sizing: border-box;
+ /* Even breathing room on every side, so a divider sits exactly halfway
+    between two maps (and between two rows). */
+ padding: 0.85rem;
+ /* Stretch to the full height of the row (see .map-wrapper below). The
+    map itself stays centered and un-distorted inside, but the box — and
+    therefore its divider border — now spans the whole row instead of
+    just that one map's own height. */
+ align-self: stretch;
+}
+/* A zoomed map is a floating overlay, not a map in the row: keep its own
+   roomier padding and no divider lines. */
+body.scale-states-by-size .state-map.zoomed {
+ padding: 1.5rem;
+ border: 0 !important; /* beats the (later) .map-divider / .map-divider-top rules */
 }
 
 
@@ -1319,10 +1340,7 @@ body.scale-states-by-size .state-map {
   states to stay legible. Only relevant to the original variable-sized
   layout — see "Scale States by Size" — since every state gets the same
   size box in the default uniform layout. */
-body.scale-states-by-size #svg-hawaii {
- max-width: 320px;
- flex: 1 1 280px;
-}
+body.scale-states-by-size #svg-hawaii { --w: 430px; }
 
 
 /* California has 58 densely-packed counties, so it needs considerably
@@ -1331,34 +1349,22 @@ body.scale-states-by-size #svg-hawaii {
   variable-sized layout — see "Scale States by Size". Its solo-play size
   now comes from the generic .app-container.solo-map rule below instead
   of a California-specific one. */
-body.scale-states-by-size #svg-california {
- max-width: 520px;
- max-height: 720px;
- flex: 1 1 460px;
-}
+body.scale-states-by-size #svg-california { --w: 395px; }
 
 
 /* Texas has 254 counties — more than 4x California's — packed into a
   similarly dense grid, so it gets at least as much room as California
   when sharing the screen with other states. Only relevant to the
   original variable-sized layout — see "Scale States by Size". */
-body.scale-states-by-size #svg-texas {
- max-width: 560px;
- max-height: 760px;
- flex: 1 1 480px;
-}
+body.scale-states-by-size #svg-texas { --w: 580px; }
 
 
 /* Wisconsin has 72 counties in a compact area — noticeably denser than
   the small states, though not as sprawling as Texas or California — so
   it lands between them for on-screen room. Only relevant to the
   original variable-sized layout — see "Scale States by Size". */
-body.scale-states-by-size #svg-ohio,
-body.scale-states-by-size #svg-wisconsin {
- max-width: 480px;
- max-height: 680px;
- flex: 1 1 420px;
-}
+body.scale-states-by-size #svg-ohio { --w: 435px; }
+body.scale-states-by-size #svg-wisconsin { --w: 450px; }
 
 
 /* Alaska's 30 boroughs/census areas are spread across a wide, thin,
@@ -1367,11 +1373,7 @@ body.scale-states-by-size #svg-wisconsin {
   room than a compact state would to keep those shapes legible and
   clickable. Only relevant to the original variable-sized layout — see
   "Scale States by Size". */
-body.scale-states-by-size #svg-alaska {
- max-width: 720px;
- max-height: 480px;
- flex: 1 1 640px;
-}
+body.scale-states-by-size #svg-alaska { --w: 570px; }
 
 
 /* Solo play: exactly one state selected, so there's no row of other maps
@@ -1427,28 +1429,24 @@ body.scale-states-by-size #svg-alaska {
 }
 
 
-/* Subtle divider line between two or more maps shown side by side.
-  Applied via JS (switchVisibleSvgMap) only to maps that are actually
-  visible, so a hidden map never leaves a stray line behind. Only used
-  by the original variable-sized layout — the default uniform boxes
-  already look tidy side by side without one. */
+/* Divider lines between maps shown side by side. Applied via JS
+  (updateMapDividers, run whenever the maps change AND whenever the window
+  is resized) only to maps that are actually visible, so a hidden map never
+  leaves a stray line behind.
+  - .map-divider: a vertical line to the right of every map that has a
+    neighbour beside it in the same row. Because every map is stretched to
+    the full height of its row, the line runs the whole height of the row.
+  - .map-divider-top: a horizontal line along the top of every map in a
+    row that wrapped below another one, so the rule runs the whole width
+    of that row. */
 body.scale-states-by-size .state-map.map-divider {
  border-right: 1px solid #ddd;
 }
 body.dark-mode.scale-states-by-size .state-map.map-divider {
  border-right-color: #3f3f38;
 }
-
-
-/* Divider for a map that wrapped onto its own new row (e.g. Hawaii
-  dropping below Delaware + Rhode Island when all three are selected).
-  A vertical line would look wrong once the map isn't actually beside
-  its neighbor anymore, so this draws a horizontal rule above it instead,
-  along with a little breathing room on both sides of the line. */
 body.scale-states-by-size .state-map.map-divider-top {
  border-top: 1px solid #ddd;
- padding-top: 0.85rem;
- margin-top: 0.85rem;
 }
 body.dark-mode.scale-states-by-size .state-map.map-divider-top {
  border-top-color: #3f3f38;
@@ -1592,8 +1590,21 @@ body.dark-mode .state-map.zoomed {
  max-width: 100% !important;
  max-height: none !important;
 }
-body:not(.scale-states-by-size) .map-box:has(#svg-alaska) {
- grid-column: 1 / -1;
+/* Uniform grid: Alaska is a normal one-cell card like every other state
+   (spanning a whole row left a lone neighbour stranded beside empty
+   space whenever Alaska wasn't first in the order), but the grid is a bit
+   wider while Alaska is in play so its wide shape still gets a decent
+   amount of room in its cell. */
+body:not(.scale-states-by-size) .map-wrapper:has(#svg-alaska:not(.hidden)) {
+ /* The card hugs its content (.wide-map is fit-content), so a bigger
+    max-width alone wouldn't widen it — the width has to be explicit. The
+    calc() keeps it inside the screen (and the card's own padding). */
+ width: min(860px, calc(96vw - 5rem));
+ max-width: none;
+}
+/* One column (a single state): the box is the whole row, so use Alaska's
+   own wide shape instead of a square. */
+body:not(.scale-states-by-size) .map-wrapper[style*="--states-per-row: 1;"] .map-box:has(#svg-alaska) {
  aspect-ratio: 800 / 434;
 }
 
@@ -2625,10 +2636,16 @@ body.dark-mode .county-hover-tooltip {
  color: #111;
 }
 
-body.scale-states-by-size #svg-new-hampshire {
-  max-width: 280px;
-  flex: 1 1 240px;
-}
+body.scale-states-by-size #svg-new-hampshire { --w: 295px; }
+
+/* The remaining states, sized by the same rough-equal-area idea: a state's
+   width follows its shape (tall and narrow states are wider than their
+   outline suggests, short and wide ones narrower) so that none of them
+   ends up looking tiny next to the big ones. */
+body.scale-states-by-size #svg-arizona { --w: 370px; }
+body.scale-states-by-size #svg-alabama { --w: 350px; }
+body.scale-states-by-size #map-delaware { --w: 295px; }
+body.scale-states-by-size #svg-rhode-island { --w: 315px; }
 
 
 /* --- Special-character buttons (Type modes, "Require Diacritic Marks") ---
@@ -3060,7 +3077,7 @@ body.dark-mode .study-chars .special-char-btn { background: #2a2a2a; color: #eee
   overflow-x: auto; margin-bottom: 0.6rem;
 }
 .us-map { display: block; width: 100%; min-width: 640px; height: auto; margin: 0 auto; }
-.us-map .us-st { fill: #e6e6e6; stroke: none; }
+.us-map .us-st { fill: #e6e6e6; stroke: #fff; stroke-width: 0.9; stroke-linejoin: round; }
 .us-map .us-st.built { fill: #9db8d3; cursor: pointer; }
 .us-map .us-st.built:hover { fill: #86a7c8; }
 .us-map .us-st.selected,
@@ -3094,3 +3111,85 @@ body.dark-mode .us-picked { color: #aaa; }
 body.dark-mode .us-picked-head { color: #eee; }
 .us-picked-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .us-chip { font-size: 0.8rem; padding: 0.15rem 0.55rem; border-radius: 999px; background: #e8892b; color: #2a1400; }
+
+/* ===== Setup screen: map on the left, everything else on the right ===== */
+.app-container.wide-picker #screen-setup { max-width: none; }
+@media (min-width: 900px) {
+  #screen-setup.active {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(340px, 1fr);
+    gap: 0.5rem 2rem;
+    align-items: start;
+  }
+  #screen-setup .setup-mode-indicator { grid-column: 1 / -1; }
+  #screen-setup .setup-left { position: sticky; top: 1rem; min-width: 0; }
+  #screen-setup .setup-right {
+    min-width: 0;
+    max-height: calc(100vh - 6rem);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+  #screen-setup .us-map-holder { left: 0; transform: none; width: 100%; overflow: visible; }
+  #screen-setup .us-map { min-width: 0; max-height: calc(100vh - 13rem); }
+}
+
+
+/* ===== Study: Pin phase ===== */
+.locator-map.pin-mode .county { pointer-events: auto; cursor: pointer; }
+.locator-map.pin-mode .county:hover { fill: #9db8d3; }
+.locator-map.pin-mode.pin-done .county { pointer-events: none; }
+.locator-map .county.locator-wrong,
+.locator-map .county.locator-wrong path { fill: #b3261e !important; stroke: #5c0f0b !important; }
+.locator-map.pin-mode .county:focus-visible { outline: 2px solid #000; }
+
+/* Territories strip + insets on the picker map */
+.us-map .us-box { fill: none; stroke: #b0b0b0; stroke-width: 1.2; pointer-events: none; }
+body.dark-mode .us-map .us-box { stroke: #666; }
+body.dark-mode .us-map .us-st { stroke: #1a1a1a; }
+body.dark-mode .us-map .us-st:focus-visible { stroke: #fff; }
+
+/* ===== Study: state picker laid out like the setup screen (map left, everything else right) ===== */
+#study-pick:not(.hidden) ~ .study-back-run { display: none; } /* the picker has its own Back */
+@media (min-width: 900px) {
+  .app-container.wide-picker #screen-study { max-width: none; }
+  #study-pick {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(340px, 1fr);
+    gap: 0.5rem 2rem;
+    align-items: start;
+  }
+  #study-pick.hidden { display: none; }
+  #study-pick .study-left { position: sticky; top: 1rem; min-width: 0; }
+  #study-pick .study-right { min-width: 0; max-height: calc(100vh - 6rem); overflow-y: auto; padding-right: 0.5rem; }
+  #study-pick .us-map-holder { left: 0; transform: none; width: 100%; overflow: visible; }
+  #study-pick .us-map { min-width: 0; max-height: calc(100vh - 13rem); }
+  #study-pick .study-learned-panel { max-height: none; overflow: visible; }
+  /* Nothing chosen yet: the right column only holds Back. Keep it in the right column,
+     but put it on the same grid row as the map so it's vertically centred with the map
+     (not with the whole left stack, which also has the title and buttons). The left
+     column's pieces become individual grid rows to make that possible. */
+  #screen-setup.no-selection .setup-left,
+  #study-pick.no-selection .study-left { display: contents; }
+  #screen-setup.no-selection .setup-left > *,
+  #study-pick.no-selection .study-left > * { grid-column: 1; }
+  #screen-setup.no-selection .setup-right { grid-column: 2; grid-row: 4; align-self: center; max-height: none; overflow: visible; }
+  #study-pick.no-selection .study-right { grid-column: 2; grid-row: 3; align-self: center; max-height: none; overflow: visible; }
+}
+
+/* Like setup's Play button, Start (and its options) only appear once a state is chosen. */
+#study-pick.no-selection .study-skip,
+#study-pick.no-selection #study-start,
+#study-pick.no-selection #study-pick-msg { display: none; }
+
+
+/* ===== Study session: card sized to the map ===== */
+/* --study-aspect is the widest map's width/height, set in script.js when a session starts.
+   The map gets up to 60vh of height, so the card is that many vh times the aspect wide
+   (never narrower than the normal card, never wider than the screen), and the controls
+   stay in a normal-width column under the map. */
+.app-container.wide-study {
+  width: calc(clamp(396px, calc(var(--study-aspect, 1) * 60vh), 1100px) + 4rem);
+  max-width: 96vw;
+}
+.app-container.wide-study .locator-map { max-height: 60vh; }
+.app-container.wide-study #study-run > :not(#study-map) { max-width: 396px; margin-left: auto; margin-right: auto; }
