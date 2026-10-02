@@ -3261,3 +3261,36 @@ body.dark-mode .rs-of, body.dark-mode .rs-detail { color: #888; }
 .rs-arrow { position: absolute; top: 34%; width: 1.9rem; height: 1.9rem; padding: 0; border-radius: 50%; font-size: 1.3rem; line-height: 1; display: flex; align-items: center; justify-content: center; opacity: 0.85; z-index: 1; }
 .rs-arrow.left { left: -0.3rem; } .rs-arrow.right { right: -0.3rem; }
 .rs-arrow:disabled { opacity: 0; pointer-events: none; }
+
+/* Bigger carousel */
+.app-container.wide-study:has(.study-summary.rs-grid:not(.hidden)) {
+  width: calc(max(clamp(396px, calc(var(--study-aspect, 1) * 60vh), 1100px), 640px) + 4rem);
+}
+.app-container.wide-study #study-run > .study-summary.rs-grid { max-width: 640px; }
+.rs-track { gap: 0.8rem; }
+.rs-track .rs-card { flex: 0 0 205px; padding: 0.55rem; border-radius: 10px; }
+.rs-map .locator-map, .app-container.wide-study .rs-map .locator-map { max-height: 170px; }
+.rs-cap { font-size: 1rem; line-height: 1.3; margin-top: 0.5rem; }
+.rs-arrow { width: 2.4rem; height: 2.4rem; font-size: 1.7rem; top: 36%; }
+
+/* Fit: carousel always matches the card's inner width, never wider */
+.app-container.wide-study #study-run > .study-summary.rs-grid {
+  width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-left: 0; margin-right: 0;
+}
+.rs-track { width: 100%; min-width: 0; box-sizing: border-box; scroll-padding: 0 0.2rem; }
+.rs-track .rs-card { max-width: 100%; }
+.rs-arrow.left { left: 0.35rem; } .rs-arrow.right { right: 0.35rem; }
+.app-container.wide-study:has(.study-summary.rs-grid:not(.hidden)) { box-sizing: border-box; max-width: 96vw; }
+
+/* Beat the older "#study-run > :not(#study-map) { max-width: 396px }" rule (that :not() counts as an id) */
+.app-container.wide-study #study-run > #study-summary.study-summary.rs-grid {
+  width: 100%; max-width: 100%; margin-left: 0; margin-right: 0;
+}
+.app-container.wide-study #study-run > #study-summary.study-summary.rs-board { max-width: 480px; }
+/* a lone Continue button spans the row, centered */
+.study-choices > .btn-primary:only-child { grid-column: 1 / -1; justify-self: center; min-width: 14rem; }
+
+/* One section per mode on the round summary */
+.rs-section { margin-bottom: 0.9rem; }
+.rs-section-title { font-size: 1.2rem; font-weight: 600; text-align: left; margin: 0.2rem 0 0.5rem; }
+.rs-carousel { position: relative; }

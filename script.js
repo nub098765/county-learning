@@ -2217,34 +2217,40 @@ setTimeout(() => {
     const l = mk(-1, "Scroll left"), r = mk(1, "Scroll right");
     const upd = () => { l.disabled = track.scrollLeft <= 2; r.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2; };
     track.addEventListener("scroll", upd);
-    sumEl.replaceChildren(track, l, r);
-    requestAnimationFrame(upd);
+    const wrap = el("div", "rs-carousel");
+    wrap.append(track, l, r);
+    requestAnimationFrame(() => { track.scrollLeft = 0; upd(); });
+    return wrap;
   }
 
-  // Shown after the last county of each phase: what you did on every one, as snapshots.
-  function showSummary(p) {
+  // Shown once, after the last phase of the round (so in All mode: after Multiple-Choice,
+  // Type and Pin). One section per mode, each a sideways-scrolling row of snapshots.
+  function showSummary() {
     clearRun();
-    const list = roundLog[p];
-    const right = list.filter(e => e.ok).length;
-    $("study-progress").textContent = `${PHASE_TITLE[p]} summary`;
-    $("study-name").textContent = `${PHASE_TITLE[p]}: ${right} of ${list.length}`;
+    $("study-progress").textContent = "Round summary";
+    $("study-name").textContent = "";
     sumEl.className = "study-summary rs-grid";
     const rings = [];
-    const cards = list.map(e => {
-      const card = el("div", "rs-card " + (e.ok ? "ok" : "bad"));
-      const holder = el("div", "rs-map");
-      const m = roundMap(e.c, p === "type" ? null : e.chosen);
-      if (m) { holder.appendChild(m.svg); rings.push(m); }
-      const cap = el("div", "rs-cap");
-      if (e.ok) cap.append(el("div", "rs-right", `\u2713 ${getDisplayName(e.c)}`));
-      else cap.append(el("div", "rs-you", `\u2717 ${youLine(p, e)}`), el("div", "rs-answer", `Answer: ${getDisplayName(e.c)}`));
-      card.append(holder, cap);
-      return card;
-    });
-    buildTrack(cards);
+    sumEl.replaceChildren(...seq().map(p => {
+      const list = roundLog[p], right = list.filter(e => e.ok).length;
+      const sec = el("div", "rs-section");
+      sec.append(el("div", "rs-section-title", `${PHASE_TITLE[p]}: ${right} of ${list.length}`));
+      const cards = list.map(e => {
+        const card = el("div", "rs-card " + (e.ok ? "ok" : "bad"));
+        const holder = el("div", "rs-map");
+        const m = roundMap(e.c, p === "type" ? null : e.chosen);
+        if (m) { holder.appendChild(m.svg); rings.push(m); }
+        const cap = el("div", "rs-cap");
+        if (e.ok) cap.append(el("div", "rs-right", `\u2713 ${getDisplayName(e.c)}`));
+        else cap.append(el("div", "rs-you", `\u2717 ${youLine(p, e)}`), el("div", "rs-answer", `Answer: ${getDisplayName(e.c)}`));
+        card.append(holder, cap);
+        return card;
+      });
+      sec.append(buildTrack(cards));
+      return sec;
+    }));
     rings.forEach(m => addRing(m.svg, m.targets));
-    const next = nextPhaseAfter(p);
-    addBtn("Continue", () => (next ? startPhase(next) : results()), "btn-primary").focus();
+    addBtn("Continue", results, "btn-primary").focus();
   }
 
   function results() {
@@ -2332,7 +2338,8 @@ setTimeout(() => {
     } else if (answered) {
       const list = phase === "quiz" ? quizSet : phase === "pin" ? pinSet : typeSet;
       if (i < list.length - 1) { i++; render(); }
-      else showSummary(phase);
+      else if (nextPhaseAfter(phase)) startPhase(nextPhaseAfter(phase));
+      else showSummary();
     }
   });
   $("study-submit").addEventListener("click", submitType);
