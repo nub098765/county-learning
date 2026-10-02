@@ -1203,7 +1203,7 @@ body.scale-states-by-size .map-box {
 .county {
  fill: #e8e4d9;
  stroke: #2b4c32;
- stroke-width: 2.5px;
+ stroke-width: 1.25px;
  vector-effect: non-scaling-stroke;
  cursor: pointer;
  transition: fill 0.2s ease, stroke 0.2s ease;
@@ -1330,7 +1330,7 @@ body.scale-states-by-size .state-map {
 /* A zoomed map is a floating overlay, not a map in the row: keep its own
    roomier padding and no divider lines. */
 body.scale-states-by-size .state-map.zoomed {
- padding: 1.5rem;
+ padding: 1rem;
  border: 0 !important; /* beats the (later) .map-divider / .map-divider-top rules */
 }
 
@@ -1521,61 +1521,39 @@ body.scale-states-by-size .app-container.wide-map #svg-alaska {
  display: block;
 }
 
-/* FIX: was centered on the full viewport (top: 50%), which put its top
-  edge above the fixed target banner (body.map-zoomed .prompt-box below)
-  and let the banner cover the state's northern counties. Anchoring to a
-  fixed top offset instead keeps the whole map below the banner. 13.5rem
-  clears the banner's tallest state (label + 3.2rem target name + state
-  line + feedback line + Type mode's input box + padding/border) with
-  room to spare. The vh-bound dimension is shrunk by that same offset so
-  the map is only a touch smaller, not cramped.
-  FIX 2: 12rem turned out not to be enough room to spare after all —
-  every state was clipping slightly, not just the ones (New Hampshire's
-  real shape, Hawaii's Kalawao callout circle) that happened to sit
-  closest to the top of their own viewBox with the least margin to
-  lose. Bumped to 13.5rem across the board instead of chasing it with
-  more and more per-state overrides. */
-.state-map.zoomed {
- position: fixed !important;
- top: 13.5rem;
- left: 50%;
- transform: translateX(-50%);
+/* The zoomed map lives inside .zoom-scroller (created in script.js): a fixed
+  layer that starts just below the target banner (its top is measured in
+  JS, because the banner's height changes while you play) and scrolls if
+  the map is bigger than the space available. The map's own width/height
+  are also set in JS, with !important inline, from that measured space and
+  the state's aspect ratio — so no per-state or per-layout size rule can
+  override them any more. Only the look is defined here. */
+.zoom-scroller {
+ position: fixed;
+ left: 0;
+ right: 0;
+ bottom: 0;
  z-index: 1000;
- width: min(88vw, calc(90vh - 13.5rem)) !important;
- max-width: min(88vw, calc(90vh - 13.5rem)) !important;
- max-height: calc(90vh - 13.5rem) !important;
- flex: none !important;
+ overflow: auto;
+ overscroll-behavior: contain;
+ display: flex;
+ justify-content: center;
+ align-items: flex-start;
+ padding-bottom: 8px;
+}
+.state-map.zoomed {
+ position: static !important;
+ margin: 0 auto !important;
+ transform: none !important;
+ align-self: flex-start !important; /* not the row-stretch the "Scale States by Size" layout gives every map */
  background: #ffffff;
  border-radius: 16px;
  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
- padding: 1.5rem;
+ padding: 1rem;
  cursor: zoom-out;
 }
 body.dark-mode .state-map.zoomed {
  background: #242420;
-}
-
-/* Alaska is a wide map (800 x 434 viewBox, ~1.84:1), so the shared
-  zoom size — which is bounded by viewport HEIGHT as if every map were
-  square — would leave it much smaller than the screen allows. Size it
-  by its own aspect ratio instead: as wide as the viewport allows, but
-  never taller than the space under the fixed target banner. (16rem
-  clears the banner, including Type mode's input box; the 3rem in each
-  bound is the map's 1.5rem padding on both sides.) */
-#svg-alaska.zoomed,
-.app-container.solo-map #svg-alaska.zoomed {
- top: 16rem;
- width: min(calc(94vw - 3rem), calc((90vh - 19rem) * 1.84)) !important;
- max-width: min(calc(94vw - 3rem), calc((90vh - 19rem) * 1.84)) !important;
- max-height: calc(90vh - 19rem) !important;
-}
-
-
-/* Alaska: thinner outlines than the shared 2.5px. The panhandle and the
-  Aleutians are made of many small islands, and a 2.5px outline on each
-  one covered most of the land underneath it. */
-#svg-alaska .county {
- stroke-width: 1.25px;
 }
 
 /* Alaska's real shape is wide, so give it a wide box instead of the
@@ -3175,10 +3153,8 @@ body.dark-mode .us-map .us-st:focus-visible { stroke: #fff; }
   #screen-setup.no-selection .setup-right { grid-column: 2; grid-row: 4; align-self: center; max-height: none; overflow: visible; }
   #study-pick.no-selection .study-right { grid-column: 2; grid-row: 3; align-self: center; max-height: none; overflow: visible; }
 }
-
-/* Like setup's Play button, Start (and its options) only appear once a state is chosen. */
+/* The Study button stays visible (greyed out) like Play; only its options wait for a chosen state. */
 #study-pick.no-selection .study-skip,
-#study-pick.no-selection #study-start,
 #study-pick.no-selection #study-pick-msg { display: none; }
 
 

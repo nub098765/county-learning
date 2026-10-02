@@ -1143,11 +1143,85 @@ zoomBackdrop.className = "zoom-backdrop";
 document.body.appendChild(zoomBackdrop);
 let zoomedMap = null;
 
-function exitMapZoom() {
-  if (zoomedMap) {
-    zoomedMap.classList.remove("zoomed");
-    zoomedMap = null;
+// ---- How the zoomed map is sized and placed ----
+// The zoomed map is moved (in place, via a placeholder) into a fixed,
+// scrollable layer that starts just below the target banner. It's sized
+// from the REAL space available — the banner's actual bottom edge and the
+// map's own aspect ratio — instead of a fixed guess that assumed every
+// state is square and reserved a big chunk of the screen for the banner.
+// That guess is why zoom shrank maps on short screens (a Chromebook).
+//
+// Two guarantees:
+//  * The map is as big as fits below the banner without scrolling, and
+//  * it's never less than ZOOM_MIN_FACTOR times its normal size. If that
+//    is taller than the screen, the layer scrolls (the banner stays
+//    pinned), so zooming in always actually zooms in.
+// Sizes are set inline with !important so no per-state / per-layout size
+// rule can override them (several used to win in solo play, which made
+// zoom do nothing at all for some states).
+const ZOOM_MIN_FACTOR = 1.3;
+const ZOOM_GOOD_ENOUGH = 1.15;
+const zoomScroller = document.createElement("div");
+zoomScroller.className = "zoom-scroller";
+zoomScroller.addEventListener("click", (e) => { if (e.target === zoomScroller) exitMapZoom(); });
+let zoomPlaceholder = null;
+let zoomNormalWidth = 0;
+let zoomBannerWatch = null;
+
+function visibleBanner() {
+  return Array.from(document.querySelectorAll(".prompt-box"))
+    .find(el => el.getClientRects().length > 0) || null;
+}
+
+function layoutZoom() {
+  if (!zoomedMap) return;
+  const banner = visibleBanner();
+  const top = Math.ceil((banner ? banner.getBoundingClientRect().bottom : 0) + 8);
+  zoomScroller.style.top = top + "px";
+  const cs = getComputedStyle(zoomedMap);
+  const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+  const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+  const vb = zoomedMap.viewBox && zoomedMap.viewBox.baseVal;
+  const ratio = vb && vb.width && vb.height ? vb.width / vb.height : 1;
+  const availH = Math.max(window.innerHeight - top - 8, 160);
+  const maxW = window.innerWidth - 16;
+  const fitW = (availH - pad) * ratio + padX;           // biggest that fits without scrolling
+  // zoomNormalWidth is the width the map itself is DRAWN at normally (not
+  // its box: a tall state sitting in a square box is drawn narrower than
+  // the box). If the biggest no-scroll size is already a clear step up
+  // from that, use it; otherwise insist on ZOOM_MIN_FACTOR and let the
+  // layer scroll — the map was already about screen-sized.
+  const clearStepUp = zoomNormalWidth * ZOOM_GOOD_ENOUGH + padX;
+  const wantW = fitW >= clearStepUp ? fitW : Math.max(fitW, zoomNormalWidth * ZOOM_MIN_FACTOR + padX);
+  const w = Math.round(Math.max(Math.min(wantW, maxW), 120));
+  const set = (k, v) => zoomedMap.style.setProperty(k, v, "important");
+  set("box-sizing", "border-box");
+  set("width", w + "px");
+  set("max-width", "none");
+  set("height", "auto");
+  set("max-height", "none");
+  set("flex", "none");
+}
+
+function releaseZoomedMap() {
+  if (!zoomedMap) return;
+  const svg = zoomedMap;
+  svg.classList.remove("zoomed");
+  ["box-sizing", "width", "max-width", "height", "max-height", "flex"].forEach(k => svg.style.removeProperty(k));
+  // Put the map back exactly where it was in the page.
+  if (zoomPlaceholder && zoomPlaceholder.parentNode) {
+    zoomPlaceholder.parentNode.insertBefore(svg, zoomPlaceholder);
+    zoomPlaceholder.remove();
   }
+  zoomPlaceholder = null;
+  zoomedMap = null;
+}
+
+function exitMapZoom() {
+  if (zoomBannerWatch) { zoomBannerWatch.disconnect(); zoomBannerWatch = null; }
+  releaseZoomedMap();
+  zoomScroller.remove();
+  zoomScroller.scrollTop = 0;
   zoomBackdrop.classList.remove("active");
   // See enterMapZoom below for what this class does.
   document.body.classList.remove("map-zoomed");
@@ -1155,9 +1229,27 @@ function exitMapZoom() {
 
 function enterMapZoom(svg) {
   // Only one map can be zoomed at a time — swap instead of stacking.
-  if (zoomedMap && zoomedMap !== svg) {
-    zoomedMap.classList.remove("zoomed");
+  if (zoomedMap === svg) return;
+  if (zoomedMap) {
+    if (zoomBannerWatch) { zoomBannerWatch.disconnect(); zoomBannerWatch = null; }
+    releaseZoomedMap();
   }
+  // Measure the map at its normal size BEFORE it's moved out of the page.
+  {
+    const r = svg.getBoundingClientRect();
+    const cs = getComputedStyle(svg);
+    const px = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    const py = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const ratio = vb && vb.width && vb.height ? vb.width / vb.height : 1;
+    // The drawing is letterboxed to fit its box: width- or height-limited.
+    zoomNormalWidth = Math.max(Math.min(r.width - px, (r.height - py) * ratio), 40);
+  }
+  zoomPlaceholder = document.createComment("zoomed map");
+  svg.parentNode.insertBefore(zoomPlaceholder, svg);
+  zoomScroller.scrollTop = 0;
+  document.body.appendChild(zoomScroller);
+  zoomScroller.appendChild(svg);
   svg.classList.add("zoomed");
   zoomedMap = svg;
   zoomBackdrop.classList.add("active");
@@ -1168,7 +1260,16 @@ function enterMapZoom(svg) {
   // hunting for a specific county. This class lets style.css lift
   // .prompt-box above both of them for as long as any map is zoomed.
   document.body.classList.add("map-zoomed");
+  layoutZoom();
+  // The banner changes height while you play (a "Wrong!" line appears, Type
+  // mode adds its input box), so keep the map clear of it.
+  const banner = visibleBanner();
+  if (banner && window.ResizeObserver) {
+    zoomBannerWatch = new ResizeObserver(layoutZoom);
+    zoomBannerWatch.observe(banner);
+  }
 }
+window.addEventListener("resize", layoutZoom);
 
 function toggleMapZoom(svg) {
   if (svg.classList.contains("zoomed")) {
@@ -1828,9 +1929,33 @@ setTimeout(() => {
       block.appendChild(list);
       panel.appendChild(block);
     });
-    $("study-start").disabled = selected.size === 0;
     $("study-pick").classList.toggle("no-selection", selected.size === 0);
-    $("study-pick-msg").textContent = "";
+    updateStudyStart();
+  }
+
+  // The counties a Study session would cover, honouring "Skip counties I've already learned".
+  function studyPool() {
+    const learned = loadLearned();
+    const skip = $("study-skip-learned").checked;
+    const pool = [];
+    studyStates().forEach(([k, s]) => { if (selected.has(k)) s.counties.forEach(c => { if (!(skip && learned[c.id])) pool.push(c); }); });
+    return pool;
+  }
+
+  // The Study button is always visible (same green button as Play). It's greyed out
+  // when there's nothing to study: no state picked, or every county in the picks is
+  // already learned while "Skip counties I've already learned" is on.
+  function updateStudyStart() {
+    const btn = $("study-start"), msg = $("study-pick-msg");
+    let reason = "", note = "";
+    if (selected.size === 0) {
+      reason = "Select at least one state to study.";
+    } else if (!studyPool().length) {
+      reason = note = "You've already learned every county in your selection. Untick \"Skip counties I've already learned\" to review them.";
+    }
+    btn.disabled = !!reason;
+    if (reason) btn.title = reason; else btn.removeAttribute("title");
+    msg.textContent = note;
   }
 
   // ----- map -----
@@ -2069,15 +2194,10 @@ setTimeout(() => {
   document.querySelectorAll("[data-study-mode]").forEach(b => b.addEventListener("click", () => { studyMode = b.dataset.studyMode; openStudy(); }));
   $("study-select-all").addEventListener("click", () => { studyStates().forEach(([k]) => selected.add(k)); renderPick(); });
   $("study-deselect-all").addEventListener("click", () => { selected.clear(); renderPick(); });
+  $("study-skip-learned").addEventListener("change", updateStudyStart);
   $("study-start").addEventListener("click", () => {
-    const learned = loadLearned();
-    const skip = $("study-skip-learned").checked;
-    const pool = [];
-    studyStates().forEach(([k, s]) => { if (selected.has(k)) s.counties.forEach(c => { if (!(skip && learned[c.id])) pool.push(c); }); });
-    if (!pool.length) {
-      $("study-pick-msg").textContent = "You've already learned every county in your selection. Untick \"Skip counties I've already learned\" to review them.";
-      return;
-    }
+    const pool = studyPool();
+    if (!pool.length) { updateStudyStart(); return; }   // (the button is disabled in this case anyway)
     counties = shuffle(pool);
     start = 0;
     $("study-pick").classList.add("hidden");
@@ -2837,6 +2957,8 @@ function updateMapGridColumns() {
 
 
 function switchVisibleSvgMap() {
+  // A zoomed map lives outside its normal spot in the page; put it back first.
+  exitMapZoom();
   // The active state selection is what both of these depend on, and this
   // is the one function guaranteed to run any time that selection changes
   // (a state gets toggled on the setup screen, or a game is started) —
@@ -2941,7 +3063,7 @@ function switchVisibleSvgMap() {
 // dividers used to go stale until the next time states were toggled.
 function updateMapDividers() {
   const domOrderedVisibleMaps = Array.from(document.querySelectorAll(".state-map"))
-    .filter(map => !map.classList.contains("hidden") && map.style.display !== "none");
+    .filter(map => !map.classList.contains("hidden") && map.style.display !== "none" && !map.classList.contains("zoomed"));
   domOrderedVisibleMaps.forEach(map => map.classList.remove("map-divider", "map-divider-top"));
 
   // Group the visible maps into their actual visual rows by checking
@@ -3407,27 +3529,27 @@ if (btnDeselectAll) {
 
 
 function updateSetupPlayButton() {
-if (!btnStartGame) return;
+  if (!btnStartGame) return;
 
+  // The Play button is always visible, so it's clear what the screen is
+  // building toward. It's just greyed out (with a tooltip saying why)
+  // until the setup is playable: at least one state, and — if you're
+  // choosing specific counties — at least one of them ticked.
+  let blockedReason = "";
+  if (activeStateKeys.length === 0) {
+    blockedReason = "Select at least one state to play.";
+  } else {
+    const specificRadio = document.querySelector('input[name="specific-counties"]:checked');
+    const isSpecificYes = specificRadio ? specificRadio.value === "yes" : false;
+    if (isSpecificYes && document.querySelectorAll(".county-checkbox:checked").length < 1) {
+      blockedReason = "Select at least one county to play, or choose \"No\" to play them all.";
+    }
+  }
 
-if (activeStateKeys.length === 0) {
   btnStartGame.classList.remove("hidden");
-  btnStartGame.setAttribute("disabled", "true");
-  return;
-}
-
-
-const specificRadio = document.querySelector('input[name="specific-counties"]:checked');
-const isSpecificYes = specificRadio ? specificRadio.value === "yes" : false;
-
-
-if (!isSpecificYes || document.querySelectorAll(".county-checkbox:checked").length >= 1) {
-  btnStartGame.classList.remove("hidden");
-  btnStartGame.removeAttribute("disabled");
-} else {
-  btnStartGame.classList.add("hidden");
-  btnStartGame.setAttribute("disabled", "true");
-}
+  btnStartGame.disabled = !!blockedReason;
+  if (blockedReason) btnStartGame.title = blockedReason;
+  else btnStartGame.removeAttribute("title");
 }
 
 
