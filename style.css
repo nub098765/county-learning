@@ -3083,7 +3083,11 @@ body.dark-mode .us-map .us-sep { stroke: #666; }
 body.dark-mode .us-map text { fill: #888; }
 body.dark-mode .us-map text.built { fill: #dbe8f5; }
 body.dark-mode .us-map text.selected { fill: #fff; }
-.us-picked { margin-bottom: 0.8rem; font-size: 0.9rem; color: #666; }
+.us-picked { margin-bottom: 0.8rem; font-size: 0.9rem; color: #666;
+  /* Fixed height = the heading plus two rows of chips (one chip row is ~1.6rem), so picking
+     a state never makes this area grow and shove the map and everything else around.
+     More chips than that scroll inside the box. */
+  height: 4.3rem; overflow-y: auto; }
 body.dark-mode .us-picked { color: #aaa; }
 .us-picked-head { font-weight: 600; margin-bottom: 0.4rem; color: #222; }
 body.dark-mode .us-picked-head { color: #eee; }
@@ -3146,17 +3150,34 @@ body.dark-mode .us-map .us-st:focus-visible { stroke: #fff; }
      but put it on the same grid row as the map so it's vertically centred with the map
      (not with the whole left stack, which also has the title and buttons). The left
      column's pieces become individual grid rows to make that possible. */
+  /* "display: contents" below turns each left-column piece into its own grid row, and the grid's
+     row-gap would then add 8px between every piece that the normal (one-block) layout doesn't have,
+     so the map jumped up 16px on the first click. Zero the gap; the one gap that really exists in
+     both layouts (under the mode indicator, on the setup screen) is put back as a margin. */
+  /* The right column used to be allowed to grow taller than the map column as more states were
+     picked (its county lists get longer), which stretched the whole card and shifted the map.
+     `contain: size` stops its content from sizing the row; `stretch` makes it exactly as tall as the
+     map column, and it already scrolls (max-height / overflow-y above) if its content is longer. */
+  #screen-setup .setup-right, #study-pick .study-right { align-self: stretch; contain: size; }
+  #screen-setup.no-selection, #study-pick.no-selection { row-gap: 0; }
+  #screen-setup.no-selection .setup-left > :first-child { margin-top: 0.5rem; }
   #screen-setup.no-selection .setup-left,
   #study-pick.no-selection .study-left { display: contents; }
   #screen-setup.no-selection .setup-left > *,
   #study-pick.no-selection .study-left > * { grid-column: 1; }
-  #screen-setup.no-selection .setup-right { grid-column: 2; grid-row: 4; align-self: center; max-height: none; overflow: visible; }
-  #study-pick.no-selection .study-right { grid-column: 2; grid-row: 3; align-self: center; max-height: none; overflow: visible; }
+  #screen-setup.no-selection .setup-right { grid-column: 2; grid-row: 4; align-self: center; max-height: none; overflow: visible; contain: none; }
+  #study-pick.no-selection .study-right { grid-column: 2; grid-row: 3; align-self: center; max-height: none; overflow: visible; contain: none; }
 }
 /* The Study button stays visible (greyed out) like Play; only its options wait for a chosen state. */
 #study-pick.no-selection .study-skip,
 #study-pick.no-selection #study-pick-msg { display: none; }
 
+
+/* Stacked (narrow) picker layout: selecting a state adds content below the map. The page centres the
+   card vertically, so a taller card would move the map up; anchor it to the top instead. */
+@media (max-width: 899px) {
+  .app-container.wide-picker { align-self: flex-start; margin: 1rem 0; }
+}
 
 /* ===== Study session: card sized to the map ===== */
 /* --study-aspect is the widest map's width/height, set in script.js when a session starts.
@@ -3201,3 +3222,42 @@ body.dark-mode .study-learned-state { background: #242420; border-color: #3f3f38
 .study-mini-map .county.mini-learned path { fill: #2e7d32 !important; stroke: #14401a !important; }
 .study-list-toggle summary { cursor: pointer; font-size: 0.8rem; opacity: 0.85; padding: 0.15rem 0; }
 .study-list-toggle[open] summary { margin-bottom: 0.4rem; }
+
+/* ===== Study: per-round summary + results board ===== */
+.app-container.wide-study #study-run > .study-summary { max-width: 396px; }
+.study-summary.rs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 0.5rem; margin-bottom: 0.9rem; text-align: left; }
+.rs-card { border: 1px solid #ddd; border-top: 3px solid #2e7d32; border-radius: 8px; padding: 0.35rem; background: #fafafa; min-width: 0; }
+.rs-card.bad { border-top-color: #b3261e; }
+.rs-map .locator-map, .app-container.wide-study .rs-map .locator-map { max-height: 96px; width: 100%; }
+.rs-cap { margin-top: 0.3rem; font-size: 0.74rem; line-height: 1.25; overflow-wrap: anywhere; }
+.rs-right { color: #2e7d32; font-weight: 600; }
+.rs-you { color: #b3261e; }
+.rs-answer { font-weight: 600; margin-top: 0.1rem; }
+.study-summary.rs-board { margin-bottom: 0.9rem; text-align: left; }
+.rs-row { padding: 0.55rem 0 0.7rem; border-bottom: 1px solid #e3e3e3; }
+.rs-row:last-child { border-bottom: 0; }
+.rs-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+.rs-label { font-size: 1.15rem; font-weight: 600; padding-bottom: 0.45rem; }
+.rs-score { display: inline-flex; align-items: flex-end; line-height: 1; }
+.rs-big { font-size: 3.6rem; font-weight: 700; letter-spacing: -0.03em; }
+.rs-of { font-size: 1.35rem; font-weight: 600; color: #9a9a9a; margin: 0 0 0.45rem 0.1rem; }
+.rs-perfect { font-size: 0.85rem; color: #2e7d32; }
+.rs-missed { margin: 0.1rem 0 0; padding-left: 1.1rem; font-size: 0.88rem; color: #b3261e; }
+.rs-missed li { margin: 0.15rem 0; }
+.rs-missed b { color: inherit; }
+.rs-detail { color: #888; }
+body.dark-mode .rs-card { background: #242420; border-color: #3f3f38; }
+body.dark-mode .rs-card.ok { border-top-color: #2e7d32; } body.dark-mode .rs-card.bad { border-top-color: #e57368; }
+body.dark-mode .rs-right { color: #7fd68a; }
+body.dark-mode .rs-you, body.dark-mode .rs-missed { color: #ff9d94; }
+body.dark-mode .rs-row { border-bottom-color: #3f3f38; }
+body.dark-mode .rs-perfect { color: #7fd68a; }
+body.dark-mode .rs-of, body.dark-mode .rs-detail { color: #888; }
+
+/* Carousel: one row, fixed-size cards, scroll sideways */
+.study-summary.rs-grid { display: block; position: relative; }
+.rs-track { display: flex; gap: 0.5rem; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 0 0.45rem; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+.rs-track .rs-card { flex: 0 0 128px; scroll-snap-align: start; }
+.rs-arrow { position: absolute; top: 34%; width: 1.9rem; height: 1.9rem; padding: 0; border-radius: 50%; font-size: 1.3rem; line-height: 1; display: flex; align-items: center; justify-content: center; opacity: 0.85; z-index: 1; }
+.rs-arrow.left { left: -0.3rem; } .rs-arrow.right { right: -0.3rem; }
+.rs-arrow:disabled { opacity: 0; pointer-events: none; }

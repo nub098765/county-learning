@@ -1822,6 +1822,13 @@ setTimeout(() => {
   const selected = new Set();
   let counties = [], start = 0, batch = [], quizSet = [], typeSet = [], pinSet = [], i = 0, phase = "learn", score = 0, typeScore = 0, pinScore = 0, answered = false;
   let studyMode = "all";
+  // What you picked in each phase of the current round, for the summary screens.
+  const roundLog = { quiz: [], type: [], pin: [] };
+  const PHASE_TITLE = { quiz: "Multiple-Choice", type: "Type", pin: "Pin" };
+  const sumEl = document.createElement("div");
+  sumEl.id = "study-summary";
+  sumEl.className = "study-summary hidden";
+  $("study-map").after(sumEl);
   const MODE_SEQ = { all: ["quiz", "type", "pin"], mc: ["quiz"], type: ["type"], pin: ["pin"] };
   const MODE_NAME = { all: "All", mc: "Multiple-Choice", type: "Type", pin: "Pin" };
   const PHASE_LABEL = { quiz: "quiz", type: "typing", pin: "pinning" };
@@ -2058,6 +2065,7 @@ setTimeout(() => {
   }
 
   function render() {
+    sumEl.classList.add("hidden");
     const learn = phase === "learn", typing = phase === "type", pinning = phase === "pin";
     const list = learn ? batch : typing ? typeSet : pinning ? pinSet : quizSet;
     const c = list[i];
@@ -2088,7 +2096,7 @@ setTimeout(() => {
         b.className = "btn-secondary";
         b.textContent = getDisplayName(o);
         b.dataset.correct = o === c ? "1" : "";
-        b.addEventListener("click", () => answer(b, o === c, c));
+        b.addEventListener("click", () => answer(b, o === c, c, o));
         ch.appendChild(b);
       });
     }
@@ -2097,10 +2105,11 @@ setTimeout(() => {
     $("study-next").textContent = learn ? (lastIn(list) ? afterLabel("learn") : "Next") : "Next";
   }
 
-  function answer(btn, ok, c) {
+  function answer(btn, ok, c, chosen) {
     if (answered) return;
     answered = true;
     if (ok) score++;
+    roundLog.quiz.push({ c, ok, chosen });
     btn.classList.add(ok ? "study-correct" : "study-wrong");
     $("study-choices").querySelectorAll("button").forEach(b => { if (b.dataset.correct) b.classList.add("study-correct"); });
     if (marker() === "quiz") setLearned(c.id, ok);
@@ -2117,6 +2126,7 @@ setTimeout(() => {
     answered = true;
     const ok = normalizeTypedName(inp.value) === normalizeTypedName(c.name);
     if (ok) typeScore++;
+    roundLog.type.push({ c, ok, typed: inp.value.trim() });
     if (marker() === "type") setLearned(c.id, ok);
     inp.disabled = true;
     $("study-submit").classList.add("hidden");
@@ -2131,6 +2141,7 @@ setTimeout(() => {
     answered = true;
     const ok = el.dataset.cid === c.id;
     if (ok) pinScore++;
+    roundLog.pin.push({ c, ok, chosen: ok ? c : findCounty(el.dataset.cid) });
     if (marker() === "pin") setLearned(c.id, ok);
     svg.classList.add("pin-done");
     const targets = [...svg.querySelectorAll(".county")].filter(x => x.dataset.cid === c.id);
@@ -2144,35 +2155,134 @@ setTimeout(() => {
   }
   const findCounty = id => { for (const s of Object.values(stateData)) { const f = s.counties.find(x => x.id === id); if (f) return f; } return null; };
 
-  function results() {
+  // Small, non-interactive map for a summary card: the right county in orange and,
+  // if you picked a different county in the same state, that one in red.
+  function roundMap(c, wrong) {
+    const src = document.getElementById(stateData[c.stateKey]?.svgId);
+    if (!src) return null;
+    const svg = src.cloneNode(true);
+    const sc = src.querySelector(".county");
+    const outlineW = sc ? getComputedStyle(sc).strokeWidth : "";
+    const find = id => [...svg.querySelectorAll("[id]")].filter(el => el.id === id)
+      .concat([...svg.querySelectorAll(`[data-county-id="${id}"]`)]);
+    const targets = find(c.id);
+    const wrongEls = wrong && wrong.id !== c.id && wrong.stateKey === c.stateKey ? find(wrong.id) : [];
+    svg.querySelectorAll(".county").forEach(el => {
+      el.setAttribute("class", "county");
+      el.style.removeProperty("fill"); el.style.removeProperty("stroke");
+      if (outlineW) el.style.strokeWidth = outlineW;
+    });
+    wrongEls.forEach(el => { el.classList.add("locator-wrong"); toFront(el); });
+    targets.forEach(el => { el.classList.add("locator-target"); toFront(el); });
+    svg.removeAttribute("id");
+    svg.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
+    svg.querySelectorAll("[tabindex]").forEach(el => el.removeAttribute("tabindex"));
+    svg.querySelectorAll("[role]").forEach(el => el.removeAttribute("role"));
+    ["width", "height", "style"].forEach(a => svg.removeAttribute(a));
+    svg.setAttribute("class", "locator-map");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", `Map of ${stateData[c.stateKey].name}, ${getDisplayName(c)} highlighted`);
+    return { svg, targets };
+  }
+
+  const youLine = (p, e) => {
+    if (p === "type") return `You typed: \u201C${e.typed}\u201D`;
+    const who = e.chosen ? getDisplayName(e.chosen) : "another county";
+    return `${p === "pin" ? "You clicked" : "You chose"}: ${who}`;
+  };
+  const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
+  const addBtn = (label, fn, cls) => {
+    const b = el("button", cls || "btn-secondary", label);
+    b.type = "button"; b.addEventListener("click", fn); $("study-choices").appendChild(b); return b;
+  };
+  function clearRun() {
     $("study-map").innerHTML = "";
     $("study-type").classList.add("hidden");
-    $("study-progress").textContent = "Round complete";
-    const parts = [];
-    if (seq().includes("quiz")) parts.push(`Quiz: ${score} of ${batch.length}.`);
-    if (seq().includes("type")) parts.push(`Typed: ${typeScore} of ${batch.length}.`);
-    if (seq().includes("pin")) parts.push(`Pinned: ${pinScore} of ${batch.length}.`);
-    $("study-name").textContent = parts.join(" ");
     $("study-feedback").textContent = "";
     $("study-prev").classList.add("hidden");
     $("study-next").classList.add("hidden");
-    const ch = $("study-choices");
-    ch.innerHTML = "";
-    const add = (label, fn, cls) => {
-      const b = document.createElement("button");
-      b.type = "button"; b.className = cls || "btn-secondary"; b.textContent = label;
-      b.addEventListener("click", fn); ch.appendChild(b);
-    };
-    if (seq().includes("quiz")) add("Quiz again", startQuiz);
-    if (seq().includes("type")) add("Type again", startType);
-    if (seq().includes("pin")) add("Pin again", startPin);
-    if (start + BATCH < counties.length) add(`Next ${Math.min(BATCH, counties.length - start - BATCH)} counties`, () => { start += BATCH; beginBatch(); }, "btn-primary");
-    add("Back to state list", openStudy);
+    $("study-choices").innerHTML = "";
   }
 
-  function startQuiz() { phase = "quiz"; quizSet = shuffle(batch); i = 0; score = 0; render(); }
-  function startPin() { phase = "pin"; pinSet = shuffle(batch); i = 0; pinScore = 0; render(); }
-  function startType() { phase = "type"; typeSet = shuffle(batch); i = 0; typeScore = 0; render(); }
+  // One row of fixed-size cards you scroll/swipe sideways, with arrow buttons for mouse users.
+  function buildTrack(cards) {
+    const track = el("div", "rs-track");
+    track.append(...cards);
+    const mk = (dir, label) => {
+      const b = el("button", "rs-arrow " + (dir < 0 ? "left" : "right"), dir < 0 ? "\u2039" : "\u203A");
+      b.type = "button"; b.setAttribute("aria-label", label);
+      b.addEventListener("click", () => track.scrollBy({ left: dir * track.clientWidth * 0.8, behavior: "smooth" }));
+      return b;
+    };
+    const l = mk(-1, "Scroll left"), r = mk(1, "Scroll right");
+    const upd = () => { l.disabled = track.scrollLeft <= 2; r.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2; };
+    track.addEventListener("scroll", upd);
+    sumEl.replaceChildren(track, l, r);
+    requestAnimationFrame(upd);
+  }
+
+  // Shown after the last county of each phase: what you did on every one, as snapshots.
+  function showSummary(p) {
+    clearRun();
+    const list = roundLog[p];
+    const right = list.filter(e => e.ok).length;
+    $("study-progress").textContent = `${PHASE_TITLE[p]} summary`;
+    $("study-name").textContent = `${PHASE_TITLE[p]}: ${right} of ${list.length}`;
+    sumEl.className = "study-summary rs-grid";
+    const rings = [];
+    const cards = list.map(e => {
+      const card = el("div", "rs-card " + (e.ok ? "ok" : "bad"));
+      const holder = el("div", "rs-map");
+      const m = roundMap(e.c, p === "type" ? null : e.chosen);
+      if (m) { holder.appendChild(m.svg); rings.push(m); }
+      const cap = el("div", "rs-cap");
+      if (e.ok) cap.append(el("div", "rs-right", `\u2713 ${getDisplayName(e.c)}`));
+      else cap.append(el("div", "rs-you", `\u2717 ${youLine(p, e)}`), el("div", "rs-answer", `Answer: ${getDisplayName(e.c)}`));
+      card.append(holder, cap);
+      return card;
+    });
+    buildTrack(cards);
+    rings.forEach(m => addRing(m.svg, m.targets));
+    const next = nextPhaseAfter(p);
+    addBtn("Continue", () => (next ? startPhase(next) : results()), "btn-primary").focus();
+  }
+
+  function results() {
+    clearRun();
+    $("study-progress").textContent = "Round complete";
+    $("study-name").textContent = "";
+    sumEl.className = "study-summary rs-board";
+    sumEl.replaceChildren(...seq().map(p => {
+      const list = roundLog[p], right = list.filter(e => e.ok).length;
+      const row = el("div", "rs-row");
+      const head = el("div", "rs-head");
+      const score = el("div", "rs-score");
+      score.append(el("span", "rs-big", String(right)), el("span", "rs-of", `/${list.length}`));
+      head.append(el("div", "rs-label", PHASE_TITLE[p]), score);
+      row.append(head);
+      const missed = list.filter(e => !e.ok);
+      if (!missed.length) row.append(el("div", "rs-perfect", "Nothing missed"));
+      else {
+        const ul = el("ul", "rs-missed");
+        missed.forEach(e => {
+          const li = el("li");
+          li.append(el("b", "", getDisplayName(e.c)), el("span", "rs-detail", ` \u2014 ${youLine(p, e).replace(/^You /, "you ")}`));
+          ul.append(li);
+        });
+        row.append(ul);
+      }
+      return row;
+    }));
+    if (seq().includes("quiz")) addBtn("Quiz again", startQuiz);
+    if (seq().includes("type")) addBtn("Type again", startType);
+    if (seq().includes("pin")) addBtn("Pin again", startPin);
+    if (start + BATCH < counties.length) addBtn(`Next ${Math.min(BATCH, counties.length - start - BATCH)} counties`, () => { start += BATCH; beginBatch(); }, "btn-primary");
+    addBtn("Back to state list", openStudy);
+  }
+
+  function startQuiz() { phase = "quiz"; quizSet = shuffle(batch); i = 0; score = 0; roundLog.quiz = []; render(); }
+  function startPin() { phase = "pin"; pinSet = shuffle(batch); i = 0; pinScore = 0; roundLog.pin = []; render(); }
+  function startType() { phase = "type"; typeSet = shuffle(batch); i = 0; typeScore = 0; roundLog.type = []; render(); }
 
   function beginBatch() {
     batch = counties.slice(start, start + BATCH);
@@ -2182,6 +2292,7 @@ setTimeout(() => {
   function startPhase(p) { ({ quiz: startQuiz, type: startType, pin: startPin })[p](); }
 
   function openStudy() {
+    sumEl.classList.add("hidden");
     $("study-pick").classList.remove("hidden");
     $("study-run").classList.add("hidden");
     $("study-mode-indicator").textContent = `Mode: ${MODE_NAME[studyMode]}`;
@@ -2221,8 +2332,7 @@ setTimeout(() => {
     } else if (answered) {
       const list = phase === "quiz" ? quizSet : phase === "pin" ? pinSet : typeSet;
       if (i < list.length - 1) { i++; render(); }
-      else if (nextPhaseAfter(phase)) startPhase(nextPhaseAfter(phase));
-      else results();
+      else showSummary(phase);
     }
   });
   $("study-submit").addEventListener("click", submitType);
