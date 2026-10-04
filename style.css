@@ -19,6 +19,16 @@ body {
  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Held on <body> from the first moment until the page has loaded (see the inline script at the top
+   of index.html), so the saved theme and other startup settings take effect instantly instead of
+   fading in. */
+body.no-transition,
+body.no-transition *,
+body.no-transition *::before,
+body.no-transition *::after {
+ transition: none !important;
+}
+
 
 /* Dark Mode Dynamic Class */
 body.dark-mode {
@@ -1219,9 +1229,15 @@ body.scale-states-by-size .map-box {
 }
 
 
-/* Hover state */
-.county:hover {
- fill: #d5cebe;
+/* Hover state: a subtle shift (darker in light mode, lighter in dark mode) so you can see the county
+  under your cursor. It only applies to counties that haven't been answered
+  yet, so found/wrong/revealed colors are never overridden. The selector is
+  deliberately specific so it beats body.dark-mode .county's fill. */
+.county:hover:not(.found):not(.correct):not(.wrong):not(.correct-recovered):not(.given-up-missed):not(.typing-highlight):not(.locator-target):not(.locator-wrong) {
+ fill: #d9d4c5;
+}
+body.dark-mode .county:hover:not(.found):not(.correct):not(.wrong):not(.correct-recovered):not(.given-up-missed):not(.typing-highlight):not(.locator-target):not(.locator-wrong) {
+ fill: #45453f;
 }
 
 
@@ -1349,7 +1365,12 @@ body.scale-states-by-size #svg-hawaii { --w: 430px; }
   variable-sized layout — see "Scale States by Size". Its solo-play size
   now comes from the generic .app-container.solo-map rule below instead
   of a California-specific one. */
-body.scale-states-by-size #svg-california { --w: 395px; }
+/* California's viewBox is 910 wide, starting at x=-110 (it used to be 0..800): San Francisco's "click
+   here" circle sits in the Pacific about 100 units west of the map's own left edge, and in this layout
+   the svg is exactly its viewBox's shape (no letterbox margin) so the circle was clipped away,
+   leaving just the line. The extra 110 units give it room. 446px keeps California itself at the same
+   on-screen size as the old 395px: (395 - 27) * 910 / 800 + 27. */
+body.scale-states-by-size #svg-california { --w: 446px; }
 
 
 /* Texas has 254 counties — more than 4x California's — packed into a
@@ -1592,10 +1613,6 @@ body.dark-mode .county {
  stroke: #6b6b5f;
 }
 
-
-.county:hover {
- fill: #e5e1d3;
-}
 
 
 /* Standard County State Colors */
@@ -2094,7 +2111,8 @@ body.dark-mode .info-example-caption {
 .info-example .demo-banner,
 .info-example .demo-highlight-map,
 .info-example .demo-click-map,
-.info-example .demo-type-box {
+.info-example .demo-type-box,
+.info-example .demo-mc-box {
  display: none;
 }
 .info-example[data-demo="pin"] .demo-banner,
@@ -2103,8 +2121,12 @@ body.dark-mode .info-example-caption {
  display: flex;
 }
 .info-example[data-demo="type-hard"] .demo-highlight-map,
-.info-example[data-demo="type-strict"] .demo-highlight-map {
+.info-example[data-demo="type-strict"] .demo-highlight-map,
+.info-example[data-demo="mc"] .demo-highlight-map {
  display: block;
+}
+.info-example[data-demo="mc"] .demo-mc-box {
+ display: grid;
 }
 .info-example[data-demo="pin"] .demo-click-map,
 .info-example[data-demo="pin-hard"] .demo-click-map {
@@ -3004,6 +3026,16 @@ body.dark-mode .study-select { background: #2a2a2a; color: #eee; border-color: #
 .study-nav { display: flex; justify-content: center; gap: 0.5rem; margin-top: 0.8rem; }
 .study-choices .study-correct { background: #2e7d32; border-color: #2e7d32; color: #fff; }
 .study-choices .study-wrong { background: #b3261e; border-color: #b3261e; color: #fff; }
+/* Answered buttons keep their green/red whether or not the mouse is over them (the generic
+   .btn-secondary:hover rules used to win, especially in dark mode); hovering just lightens them. */
+.study-choices button.study-correct,
+body.dark-mode .study-choices button.study-correct { background: #2e7d32; border-color: #2e7d32; color: #fff; }
+.study-choices button.study-wrong,
+body.dark-mode .study-choices button.study-wrong { background: #b3261e; border-color: #b3261e; color: #fff; }
+.study-choices button.study-correct:hover,
+body.dark-mode .study-choices button.study-correct:hover { background: #43a047; border-color: #43a047; }
+.study-choices button.study-wrong:hover,
+body.dark-mode .study-choices button.study-wrong:hover { background: #cf4a41; border-color: #cf4a41; }
 @media (max-width: 480px) { .study-choices { grid-template-columns: 1fr; } }
 
 /* Study: state list extras */
@@ -3078,8 +3110,8 @@ body.dark-mode .us-map .us-st.built { fill: #4d6781; }
 body.dark-mode .us-map .us-st.built:hover { fill: #5c7b99; }
 body.dark-mode .us-map .us-st.selected,
 body.dark-mode .us-map .us-st.selected:hover { fill: #c9741f; }
-body.dark-mode .us-map .us-borders { stroke: #1a1a1a; }
-body.dark-mode .us-map .us-sep { stroke: #666; }
+body.dark-mode .us-map .us-borders { stroke: #a9a9a2; }
+body.dark-mode .us-map .us-sep { stroke: #a9a9a2; }
 body.dark-mode .us-map text { fill: #888; }
 body.dark-mode .us-map text.built { fill: #dbe8f5; }
 body.dark-mode .us-map text.selected { fill: #fff; }
@@ -3118,7 +3150,9 @@ body.dark-mode .us-picked-head { color: #eee; }
 
 /* ===== Study: Pin phase ===== */
 .locator-map.pin-mode .county { pointer-events: auto; cursor: pointer; }
-.locator-map.pin-mode .county:hover { fill: #9db8d3; }
+/* Learn > Pin hover: same subtle shift as the Play maps (no more bright blue). */
+.locator-map.pin-mode .county:hover { fill: #d9d4c5; }
+body.dark-mode .locator-map.pin-mode .county:hover { fill: #45453f; }
 .locator-map.pin-mode.pin-done .county { pointer-events: none; }
 .locator-map .county.locator-wrong,
 .locator-map .county.locator-wrong path { fill: #b3261e !important; stroke: #5c0f0b !important; }
@@ -3126,8 +3160,8 @@ body.dark-mode .us-picked-head { color: #eee; }
 
 /* Territories strip + insets on the picker map */
 .us-map .us-box { fill: none; stroke: #b0b0b0; stroke-width: 1.2; pointer-events: none; }
-body.dark-mode .us-map .us-box { stroke: #666; }
-body.dark-mode .us-map .us-st { stroke: #1a1a1a; }
+body.dark-mode .us-map .us-box { stroke: #a9a9a2; }
+body.dark-mode .us-map .us-st { stroke: #a9a9a2; }
 body.dark-mode .us-map .us-st:focus-visible { stroke: #fff; }
 
 /* ===== Study: state picker laid out like the setup screen (map left, everything else right) ===== */
@@ -3294,3 +3328,272 @@ body.dark-mode .rs-of, body.dark-mode .rs-detail { color: #888; }
 .rs-section { margin-bottom: 0.9rem; }
 .rs-section-title { font-size: 1.2rem; font-weight: 600; text-align: left; margin: 0.2rem 0 0.5rem; }
 .rs-carousel { position: relative; }
+
+
+/* ===== New home screen: states on the left, modes on the right ===== */
+.app-container.wide-picker #screen-home { max-width: none; position: relative; }
+.home-top-actions { position: absolute; top: 0; right: 0; display: flex; gap: 0.6rem; z-index: 3; }
+.icon-btn { width: 3rem; height: 3rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: #fafaf7; color: #222; border: 1px solid #ddd; cursor: pointer; }
+.icon-btn svg { width: 1.6rem; height: 1.6rem; }
+.icon-btn:hover { filter: brightness(0.95); }
+body.dark-mode .icon-btn { background: #242420; color: #fdeca6; border-color: #444; }
+body.dark-mode .icon-btn:hover { filter: brightness(1.25); }
+.home-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr); gap: 1rem 2.2rem; align-items: start; }
+.home-left, .home-right { min-width: 0; text-align: center; }
+.home-left .us-map-holder { left: 0; transform: none; width: 100%; overflow: visible; }
+.home-left .us-map { min-width: 0; max-height: calc(100vh - 13rem); }
+.home-right h1 { font-size: clamp(2.4rem, 4vw, 3.6rem); margin: 0.2rem 0 0.7rem; }
+.home-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; text-align: left; align-items: start; }
+.home-col h2 { text-align: center; margin-bottom: 0.6rem; }
+.home-col .mode-options { gap: 0.6rem; }
+.home-col .btn-mode { width: 100%; padding: 0.55rem 0.75rem; }
+.home-col .btn-mode strong { font-size: 1rem; }
+.home-col .btn-mode span { font-size: 0.82rem; font-weight: 400; opacity: 0.9; }
+.btn-mode.mode-mc { border-left-color: #5fb04a; }
+.btn-mode.mode-all { border-left-color: #e0736b; }
+.btn-mode.selected { outline: 2px solid #e8892b; outline-offset: 1px; }
+body.dark-mode .btn-mode.selected { outline-color: #fdeca6; }
+.home-map-wrap { position: relative; }
+.home-map-hint { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; pointer-events: none; font-weight: 700; font-size: 1.4rem; color: #444; z-index: 2; text-shadow: 0 0 8px rgba(255,255,255,0.9); }
+body.dark-mode .home-map-hint { color: #fdeca6; text-shadow: 0 0 8px rgba(0,0,0,0.9); }
+.home-layout.no-mode .home-map-hint { display: flex; }
+.home-layout.no-mode .us-map-holder { opacity: 0.35; pointer-events: none; filter: grayscale(0.5); }
+.home-layout.no-mode .picker-actions { opacity: 0.4; pointer-events: none; }
+.home-layout.no-mode #btn-start-game { opacity: 0.5; }
+.home-right #btn-start-game { margin-top: 1.2rem; }
+.home-right .county-panel { margin-top: 1rem; }
+#screen-home > .state-stats-panel { margin-top: 1.5rem; }
+@media (max-width: 899px) {
+  .home-layout { grid-template-columns: 1fr; }
+  .home-right { order: -1; }                 /* on narrow screens the modes come first */
+  .home-columns { grid-template-columns: 1fr; }
+  .home-top-actions { position: static; justify-content: flex-end; margin-bottom: 0.5rem; }
+  .home-left .us-map-holder { overflow-x: auto; }
+  .home-left .us-map { min-width: 640px; }
+}
+
+
+/* ===== Play: Multiple-Choice answer buttons ===== */
+.mc-options { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.9rem auto 0; max-width: 560px; }
+.mc-options .mc-option { display: flex; align-items: center; gap: 0.6rem; text-align: left; padding: 0.7rem 0.9rem; font-size: 1.05rem; border-radius: 10px; border: 1px solid #ccc; background: #fafaf7; color: #111; cursor: pointer; }
+.mc-options .mc-option kbd { font: inherit; font-size: 0.75rem; opacity: 0.55; border: 1px solid currentColor; border-radius: 4px; padding: 0 0.3rem; }
+.mc-options .mc-option:hover:not(:disabled) { background: #eeeadb; }
+.mc-options .mc-option.wrong { background: #f6d5d2; border-color: #b3261e; color: #7a1812; text-decoration: line-through; cursor: default; }
+body.dark-mode .mc-options .mc-option { background: #2b2b26; color: #fdeca6; border-color: #444; }
+body.dark-mode .mc-options .mc-option:hover:not(:disabled) { background: #36362f; }
+body.dark-mode .mc-options .mc-option.wrong { background: #4a2420; border-color: #e57368; color: #ffb4ab; }
+@media (max-width: 520px) { .mc-options { grid-template-columns: 1fr; } }
+
+/* Home must always get the wide card, even before any screen switch has happened */
+.app-container:has(#screen-home.active) { max-width: 96vw; width: 96vw; }
+.app-container:has(#screen-home.active) #screen-home { max-width: none; position: relative; }
+.home-right { padding-top: 2.6rem; }
+@media (max-width: 899px) { .home-right { padding-top: 0; } }
+
+/* Mode strips: Multiple-Choice green, All salmon pink (dark-mode variants so they aren't outranked) */
+.btn-mode.mode-mc { border-left-color: #4caf50; }
+.btn-mode.mode-all { border-left-color: #f4978e; }
+body.dark-mode .btn-mode.mode-mc { border-left-color: #6cc36a; }
+body.dark-mode .btn-mode.mode-all { border-left-color: #f28b82; }
+
+/* Inset boxes (Alaska, Hawaii, ...) are clickable anywhere inside */
+.us-map .us-box[data-key] { fill: transparent; pointer-events: all; cursor: pointer; }
+.us-map .us-box[data-key]:hover { stroke: #86a7c8; }
+.us-map .us-box.selected, .us-map .us-box.selected:hover { stroke: #e8892b; stroke-width: 2; }
+body.dark-mode .us-map .us-box[data-key]:hover { stroke: #5c7b99; }
+body.dark-mode .us-map .us-box.selected, body.dark-mode .us-map .us-box.selected:hover { stroke: #c9741f; }
+.us-map .us-st.built.hover { fill: #86a7c8; }
+.us-map .us-st.selected.hover { fill: #e8892b; }
+body.dark-mode .us-map .us-st.built.hover { fill: #5c7b99; }
+body.dark-mode .us-map .us-st.selected.hover { fill: #c9741f; }
+
+/* Home screen: anchor the card to the top so panels appearing below (exclude counties, skip checkbox,
+   the "selected states" list) never push everything else around. */
+body:has(#screen-home.active) { align-items: flex-start; box-sizing: border-box; padding: 1.5rem 0; }
+html:has(#screen-home.active) { scrollbar-gutter: stable; }   /* no sideways jump when a scrollbar appears */
+
+/* One options card for "skip learned" + "exclude counties" (only shows when it has something to show) */
+.home-options { display: none; margin-top: 1rem; text-align: left; border: 1px solid #ddd; border-radius: 12px; background: #fafaf7; padding: 0.9rem 1.1rem; }
+.home-options:has(> :not(.hidden)) { display: block; }
+.home-options > :not(.hidden) + :not(.hidden) { margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid #e2e2e2; }
+.home-options .county-panel { margin: 0; }
+.home-options .study-skip { margin: 0; font-size: 0.95rem; cursor: pointer; }
+.home-options .plain-prompt { margin: 0 0 0.5rem; font-size: 0.95rem; font-weight: 700; text-align: left; }
+.home-options .radio-group { justify-content: flex-start; gap: 1.3rem; margin: 0; font-size: 0.95rem; }
+.home-options .checkbox-container { margin-top: 0.8rem; }
+.home-options input[type="checkbox"], .home-options input[type="radio"] { accent-color: #e8892b; }
+body.dark-mode .home-options { background: #242420; border-color: #3f3f38; }
+body.dark-mode .home-options > :not(.hidden) + :not(.hidden) { border-top-color: #3f3f38; }
+
+/* Options card: centered */
+.home-options { text-align: center; }
+.home-options .study-skip { justify-content: center; }
+.home-options .plain-prompt { text-align: center; }
+.home-options .radio-group { justify-content: center; }
+.home-options .checkbox-container { text-align: left; }
+
+/* Combined end-of-round page: score header over each carousel */
+.rs-section { margin-bottom: 1.1rem; }
+.rs-section .rs-head { margin-bottom: 0.5rem; }
+.rs-section .rs-label { padding-bottom: 0.3rem; }
+.rs-section .rs-big { font-size: 3rem; }
+.rs-section .rs-of { margin-bottom: 0.3rem; }
+
+/* Carousel scrollbar: slim and on-theme instead of the browser's white default */
+.rs-track { scrollbar-width: thin; scrollbar-color: #c9c4b0 transparent; }
+.rs-track::-webkit-scrollbar { height: 8px; }
+.rs-track::-webkit-scrollbar-track { background: rgba(0,0,0,0.06); border-radius: 8px; }
+.rs-track::-webkit-scrollbar-thumb { background: #c9c4b0; border-radius: 8px; }
+.rs-track::-webkit-scrollbar-thumb:hover { background: #b0aa92; }
+body.dark-mode .rs-track { scrollbar-color: #5c5a4a #242420; }
+body.dark-mode .rs-track::-webkit-scrollbar-track { background: #242420; }
+body.dark-mode .rs-track::-webkit-scrollbar-thumb { background: #5c5a4a; }
+body.dark-mode .rs-track::-webkit-scrollbar-thumb:hover { background: #fdeca6; }
+
+/* Home notice under the Play/Learn button: a small muted warning chip, hidden when empty */
+#home-msg { min-height: 0; margin: 0.7rem 0 0; padding: 0.5rem 0.8rem; font-size: 0.85rem; line-height: 1.35; text-align: center; border-radius: 10px; color: #8a3b33; background: rgba(224, 115, 107, 0.12); border: 1px solid rgba(224, 115, 107, 0.35); }
+#home-msg:empty { display: none; }
+body.dark-mode #home-msg { color: #f2a69e; background: rgba(242, 139, 130, 0.1); border-color: rgba(242, 139, 130, 0.3); }
+
+/* Play | Learn switch above the progress tables */
+.stats-view-toggle { display: inline-flex; border: 1px solid #ccc; border-radius: 8px; overflow: hidden; margin: 0 0.6rem; }
+.stats-view-toggle button { border: 0; border-radius: 0; padding: 0.3rem 0.9rem; font-size: 0.85rem; cursor: pointer; background: #fafaf7; color: #333; }
+.stats-view-toggle button + button { border-left: 1px solid #ccc; }
+.stats-view-toggle button[aria-pressed="true"] { background: #e8892b; color: #fff; }
+body.dark-mode .stats-view-toggle { border-color: #444; }
+body.dark-mode .stats-view-toggle button { background: #242420; color: #fdeca6; }
+body.dark-mode .stats-view-toggle button + button { border-left-color: #444; }
+body.dark-mode .stats-view-toggle button[aria-pressed="true"] { background: #c9741f; color: #fff; }
+
+/* ===== Progress tables: a real grid, sized to its columns instead of the whole page ===== */
+#screen-home > .state-stats-panel { max-width: 880px; margin-left: auto; margin-right: auto; }
+.stats-table-wrap { display: flex; justify-content: center; padding: 0.2rem 0 0.4rem; }
+.stats-table { width: auto; min-width: min(100%, 26rem); border-collapse: collapse; font-size: 0.82rem; border: 1px solid #cfcfc6; }
+.stats-table th, .stats-table td { border: 1px solid #d8d8d0; padding: 0.45rem 0.8rem; min-width: 5.2rem; }
+.stats-table thead th { background: #efeee6; border-bottom: 2px solid #c8c8bd; }
+.stats-table .stats-county-name { min-width: 9rem; background: #f6f5ef; }
+.stats-table .stats-summary-row td { background: #f3f1e8; border-bottom: 2px solid #c8c8bd; }
+.stats-table tbody tr:not(.stats-summary-row):hover td { background: #fff3d6; }   /* follow the row across */
+.stats-table .stats-check-cell { font-size: 1rem; font-weight: 700; }
+.stats-table .stats-check-cell.stats-yes { background: rgba(76, 175, 80, 0.14); }
+.stats-table .stats-check-cell.stats-retry { background: rgba(232, 137, 43, 0.16); }
+.stats-table tbody tr:not(.stats-summary-row):hover .stats-check-cell.stats-yes { background: rgba(76, 175, 80, 0.28); }
+.stats-table tbody tr:not(.stats-summary-row):hover .stats-check-cell.stats-retry { background: rgba(232, 137, 43, 0.3); }
+body.dark-mode .stats-table { border-color: #4a4a42; }
+body.dark-mode .stats-table th, body.dark-mode .stats-table td { border-color: #3f3f38; }
+body.dark-mode .stats-table thead th { background: #2a2a25; border-bottom-color: #55554a; }
+body.dark-mode .stats-table .stats-county-name { background: #242420; }
+body.dark-mode .stats-table .stats-summary-row td { background: #2a2a25; border-bottom-color: #55554a; }
+body.dark-mode .stats-table tbody tr:not(.stats-summary-row):hover td { background: #33332c; }
+body.dark-mode .stats-table .stats-check-cell.stats-yes { background: rgba(129, 199, 132, 0.14); }
+body.dark-mode .stats-table .stats-check-cell.stats-retry { background: rgba(255, 183, 77, 0.16); }
+body.dark-mode .stats-table tbody tr:not(.stats-summary-row):hover .stats-check-cell.stats-yes { background: rgba(129, 199, 132, 0.28); }
+body.dark-mode .stats-table tbody tr:not(.stats-summary-row):hover .stats-check-cell.stats-retry { background: rgba(255, 183, 77, 0.3); }
+
+/* Fix: long labels like "Completed (Retry Missed)" wrap instead of forcing the table to scroll sideways */
+.stats-table th, .stats-table td { white-space: normal; line-height: 1.25; }
+.stats-table .stats-county-name { white-space: nowrap; }
+.stats-table .stats-summary-cell { min-width: 6.2rem; }
+.stats-table th, .stats-table td { padding: 0.45rem 0.65rem; }
+.stats-table-wrap { max-width: 100%; }
+#screen-home > .state-stats-panel { max-width: 960px; }
+
+/* ===== How to Play: Multiple-Choice demo ("You'll do" side) =====
+   A tiny copy of .mc-option buttons. 5s loop: the cursor clicks a WRONG answer (red, crossed out, like
+   .mc-option.wrong), then the RIGHT one (green with a check). Colours are variables so dark mode can swap them. */
+.mini-mc-box {
+  --mc-bg: #fafaf7; --mc-bd: #ccc; --mc-fg: #111;
+  --mc-wrong-bg: #f6d5d2; --mc-wrong-bd: #b3261e; --mc-wrong-fg: #7a1812;
+  --mc-right-bg: #2e7d32; --mc-right-bd: #2e7d32; --mc-right-fg: #fff;
+  position: relative;
+  width: 100%; max-width: 200px;
+  grid-template-columns: 1fr 1fr; gap: 0.3rem;
+  container-type: inline-size;   /* lets the buttons size their text from this box's width (cqw below) */
+}
+body.dark-mode .mini-mc-box {
+  --mc-bg: #2b2b26; --mc-bd: #444; --mc-fg: #fdeca6;
+  --mc-wrong-bg: #4a2420; --mc-wrong-bd: #e57368; --mc-wrong-fg: #ffb4ab;
+}
+.mini-mc-opt {
+  display: flex; align-items: center; gap: 0.3em; min-width: 0; overflow: hidden;
+  padding: 0.3em 0.4em; border-radius: 7px; border: 1px solid var(--mc-bd);
+  background: var(--mc-bg); color: var(--mc-fg);
+  /* Text scales with the box (so "Sonoma" always fits its button) and is capped at 0.62rem */
+  font-size: clamp(0.45rem, 6.4cqw, 0.62rem); font-weight: 600; line-height: 1.1; white-space: nowrap;
+}
+.mini-mc-opt kbd {
+  font: inherit; font-size: 0.8em; opacity: 0.55;
+  border: 1px solid currentColor; border-radius: 3px; padding: 0 0.25em;
+}
+.mini-mc-opt.o1 { text-decoration: line-through; text-decoration-color: transparent; animation: miniMcWrong 5s ease-in-out infinite; }
+.mini-mc-opt.o2 { animation: miniMcRight 5s ease-in-out infinite; }
+.mini-mc-cursor {
+  position: absolute; width: 10px; height: auto; fill: #111; pointer-events: none;
+  transform-origin: 0 0; animation: miniMcCursor 5s ease-in-out infinite;
+}
+body.dark-mode .mini-mc-cursor { fill: #fdeca6; }
+@keyframes miniMcCursor {
+  0%        { left: 96%; top: 108%; opacity: 0; transform: scale(1); }
+  8%        { opacity: 1; }
+  24%       { left: 22%; top: 24%; transform: scale(1); }
+  27%       { transform: scale(0.8); }
+  31%, 44%  { left: 22%; top: 24%; transform: scale(1); }
+  62%       { left: 70%; top: 24%; transform: scale(1); }
+  65%       { transform: scale(0.8); }
+  69%, 90%  { left: 70%; top: 24%; transform: scale(1); opacity: 1; }
+  100%      { left: 96%; top: 108%; opacity: 0; transform: scale(1); }
+}
+@keyframes miniMcWrong {
+  0%, 27%   { background: var(--mc-bg); border-color: var(--mc-bd); color: var(--mc-fg); text-decoration-color: transparent; }
+  31%, 94%  { background: var(--mc-wrong-bg); border-color: var(--mc-wrong-bd); color: var(--mc-wrong-fg); text-decoration-color: var(--mc-wrong-fg); }
+  100%      { background: var(--mc-bg); border-color: var(--mc-bd); color: var(--mc-fg); text-decoration-color: transparent; }
+}
+@keyframes miniMcRight {
+  0%, 65%   { background: var(--mc-bg); border-color: var(--mc-bd); color: var(--mc-fg); }
+  69%, 94%  { background: var(--mc-right-bg); border-color: var(--mc-right-bd); color: var(--mc-right-fg); }
+  100%      { background: var(--mc-bg); border-color: var(--mc-bd); color: var(--mc-fg); }
+}
+
+/* Study: reserve room for the Next and Check buttons while a question is unanswered. They used to be
+   display:none until you answered, so they popped in and the (vertically centred) card jumped up to
+   make room. Now they're just invisible until needed. The feedback line already reserves its own
+   line (.study-feedback min-height). On the end-of-round summary there's no Next button, so that
+   case still collapses it. */
+#study-next.hidden,
+#study-submit.hidden { display: inline-block !important; visibility: hidden; transition: none; }
+/* ^ transition: none because the global "button { transition: all 0.2s }" also animates visibility,
+   which would keep the button on screen for a moment after it should disappear. */
+#study-run:has(> #study-summary:not(.hidden)) #study-next.hidden { display: none !important; }
+
+/* A wrong Pin answer says what the county was AND what you clicked, which wraps to two lines, so
+   reserve two lines for the answer feedback or the card shifts down when it appears. (Scoped to the
+   session screen; the state picker's own message line keeps its single line.) */
+#study-run .study-feedback { line-height: 1.4; min-height: 2.8em; }
+
+/* Learn progress view: a minimap per state, above its county table */
+.stats-minimap { margin: 0.4rem 0 0.7rem; text-align: center; }
+.stats-minimap .study-mini-map { max-height: 220px; margin-bottom: 0.3rem; }
+.stats-minimap-note { margin: 0; font-size: 0.78rem; opacity: 0.75; }
+
+/* ===== Manual deep zoom controls (see script.js) ===== */
+.zoom-scroller { touch-action: pan-x pan-y; }   /* we handle pinch ourselves */
+.zoom-scroller.zoom-deep .state-map.zoomed { cursor: default; }
+.zoom-scroller.zoom-panning, .zoom-scroller.zoom-panning .state-map.zoomed { cursor: grabbing !important; }
+.zoom-controls {
+  position: fixed; right: 14px; bottom: 14px; z-index: 1100;
+  display: flex; align-items: center; gap: 4px; padding: 6px;
+  background: rgba(255, 255, 255, 0.94); border: 1px solid #c9c9c4; border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); font: inherit;
+}
+.zoom-controls button {
+  min-width: 34px; height: 34px; padding: 0 10px; border: 1px solid #c9c9c4; border-radius: 999px;
+  background: #fff; color: #1c1c1a; font: inherit; font-size: 1rem; font-weight: 700; cursor: pointer;
+}
+.zoom-controls button:disabled { opacity: 0.4; cursor: default; }
+.zoom-controls button:not(:disabled):hover { background: #f1efe8; }
+.zoom-controls .zoom-level { min-width: 3ch; text-align: center; font-size: 0.85rem; font-weight: 700; }
+body.dark-mode .zoom-controls { background: rgba(36, 36, 33, 0.95); border-color: #55554f; }
+body.dark-mode .zoom-controls button { background: #2b2b28; color: #fdeca6; border-color: #55554f; }
+body.dark-mode .zoom-controls button:not(:disabled):hover { background: #3a3a35; }
+
+.site-credits a { color: inherit; text-decoration: underline; pointer-events: auto; }

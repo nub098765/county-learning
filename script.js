@@ -692,14 +692,16 @@ let selectedMode = "pin"; // "pin" | "pin-hard" | "type" | "type-hard" | "type-s
 // map — checked in a few places (input box visibility, disabling
 // click-to-solve, resetting classes between games) so it's kept as one
 // Set rather than repeating the string comparisons everywhere.
-const TYPE_MODES = new Set(["type", "type-hard", "type-strict"]);
+// "mc" (Multiple-Choice) is grouped in here too: like the typing modes it is answered by name, not by
+// clicking the map, and has one highlighted target. It just shows answer buttons instead of the text box.
+const TYPE_MODES = new Set(["type", "type-hard", "type-strict", "mc"]);
 // Typing modes where only the single highlighted county counts as a
 // match — as opposed to "type" (List), where typing any remaining
 // county's name resolves it. Both "type-hard" (Type) and "type-strict"
 // (Verbatim) work this way; they differ in submission behavior (see
 // the Instant Check listener) and in how unforgivingly they treat a
 // wrong guess.
-const SINGLE_TARGET_TYPE_MODES = new Set(["type-hard", "type-strict"]);
+const SINGLE_TARGET_TYPE_MODES = new Set(["type-hard", "type-strict", "mc"]);
 // How many wrong guesses on the same target it takes before the
 // "Reveal Answer After Mistakes" setting kicks in — naming it outright
 // in Type/Verbatim (see registerWrongTypedGuess() and
@@ -707,7 +709,7 @@ const SINGLE_TARGET_TYPE_MODES = new Set(["type-hard", "type-strict"]);
 // (see handleCountyClick()).
 const REVEAL_ANSWER_AFTER_MISTAKES = 3;
 // All five modes, in the order they should appear as stats-panel columns.
-const MODE_LIST = ["pin", "pin-hard", "type", "type-hard", "type-strict"];
+const MODE_LIST = ["pin", "pin-hard", "mc", "type", "type-hard", "type-strict"];
 // NOTE: the "type" / "type-hard" mode ids are unchanged from before so
 // saved progress/localStorage keeps working — only the display labels
 // swapped: "type" (free, any-order typing) is now shown as "List",
@@ -723,6 +725,7 @@ const MODE_LIST = ["pin", "pin-hard", "type", "type-hard", "type-strict"];
 const MODE_LABELS = {
   pin: "Pin",
   "pin-hard": "Flash",
+  mc: "Multiple-Choice",
   type: "List",
   "type-hard": "Type",
   "type-strict": "Verbatim"
@@ -1033,6 +1036,23 @@ if (!Number.isInteger(gameSettings.bestKnownCount) || gameSettings.bestKnownCoun
 // manually overridden yet.
 let statsHiddenOverride = {};
 
+// Learn-mode progress, kept per mode: studyLearnedByMode = { countyId: { pin: true, mc: true, type: true } }.
+// "All" has no row of its own: it just runs the Multiple-Choice, Type and Pin phases, and each phase
+// updates its own row. (The old shared "studyLearned" key is no longer read; Reset Progress clears both.)
+const STUDY_KEY = "studyLearnedByMode";
+const STUDY_MODE_LIST = ["pin", "mc", "type"];
+const STUDY_MODE_LABELS = { pin: "Pin", mc: "Multiple-Choice", type: "Type" };
+let statsLearnMode = "all";   // which Learn mode the progress minimaps reflect (set when you pick one on the home page)
+let statsView = "play";   // which progress tables the home screen shows: "play" or "learn"
+function loadStudyLearned() { try { return JSON.parse(localStorage.getItem(STUDY_KEY)) || {}; } catch (e) { return {}; } }
+function isStudyLearned(id, mode) { const r = loadStudyLearned()[id]; return !!(r && r[mode]); }
+function setStudyLearned(id, mode, yes) {
+  const all = loadStudyLearned(), rec = all[id] || {};
+  if (yes) rec[mode] = true; else delete rec[mode];
+  if (Object.keys(rec).length) all[id] = rec; else delete all[id];
+  localStorage.setItem(STUDY_KEY, JSON.stringify(all));
+}
+
 
 function isStatsHidden(stateKey) {
   return Object.prototype.hasOwnProperty.call(statsHiddenOverride, stateKey)
@@ -1111,6 +1131,7 @@ const progressCounter = document.getElementById("progress-counter");
 const targetPrompt = document.getElementById("target-prompt");
 const feedbackEl = document.getElementById("feedback");
 const typeInputBox = document.getElementById("type-input-box");
+const mcOptions = document.getElementById("mc-options");
 const typeInput = document.getElementById("type-input");
 const btnQuitGame = document.getElementById("btn-quit-game");
 const btnGiveUp = document.getElementById("btn-give-up");
@@ -1142,6 +1163,9 @@ const zoomBackdrop = document.createElement("div");
 zoomBackdrop.className = "zoom-backdrop";
 document.body.appendChild(zoomBackdrop);
 let zoomedMap = null;
+// Manual deep zoom inside the lightbox (+/-, Ctrl/Cmd+scroll, pinch). Nothing ever changes it automatically.
+let zoomLevel = 1;
+const ZOOM_MAX = 20;
 
 // ---- How the zoomed map is sized and placed ----
 // The zoomed map is moved (in place, via a placeholder) into a fixed,
@@ -1196,7 +1220,7 @@ function layoutZoom() {
   const w = Math.round(Math.max(Math.min(wantW, maxW), 120));
   const set = (k, v) => zoomedMap.style.setProperty(k, v, "important");
   set("box-sizing", "border-box");
-  set("width", w + "px");
+  set("width", Math.round(w * zoomLevel) + "px");
   set("max-width", "none");
   set("height", "auto");
   set("max-height", "none");
@@ -1222,6 +1246,9 @@ function exitMapZoom() {
   releaseZoomedMap();
   zoomScroller.remove();
   zoomScroller.scrollTop = 0;
+  zoomScroller.scrollLeft = 0;
+  zoomLevel = 1;
+  zoomControls.remove();
   zoomBackdrop.classList.remove("active");
   // See enterMapZoom below for what this class does.
   document.body.classList.remove("map-zoomed");
@@ -1252,6 +1279,8 @@ function enterMapZoom(svg) {
   zoomScroller.appendChild(svg);
   svg.classList.add("zoomed");
   zoomedMap = svg;
+  zoomLevel = 1;
+  zoomScroller.scrollLeft = 0;
   zoomBackdrop.classList.add("active");
   // The zoom backdrop and the enlarged map both sit at a z-index well
   // above .prompt-box's normal one, so without this the target banner
@@ -1261,6 +1290,8 @@ function enterMapZoom(svg) {
   // .prompt-box above both of them for as long as any map is zoomed.
   document.body.classList.add("map-zoomed");
   layoutZoom();
+  document.body.appendChild(zoomControls);
+  updateZoomControls();
   // The banner changes height while you play (a "Wrong!" line appears, Type
   // mode adds its input box), so keep the map clear of it.
   const banner = visibleBanner();
@@ -1279,6 +1310,130 @@ function toggleMapZoom(svg) {
   }
 }
 
+// ---- Manual deep zoom controls (zoom in past "fit to screen" to see fine coastline) ----
+// Zoom only ever changes when the player asks: the + / - buttons, Ctrl/Cmd + scroll
+// (which is also what a trackpad pinch sends), two-finger pinch on touch, or the
+// + / - / 0 keys. Panning is the layer's normal scrolling (wheel, trackpad, one-finger
+// drag, scrollbars), plus middle-mouse drag or holding Space and dragging. A plain
+// left-click drag never pans because left-clicks are guesses.
+const zoomControls = document.createElement("div");
+zoomControls.className = "zoom-controls";
+zoomControls.innerHTML =
+  '<button type="button" data-z="out" aria-label="Zoom out" title="Zoom out (-)">\u2212</button>' +
+  '<span class="zoom-level" aria-live="polite">1\u00D7</span>' +
+  '<button type="button" data-z="in" aria-label="Zoom in" title="Zoom in (+). Ctrl/\u2318+scroll or pinch also zooms; scroll or hold Space and drag to pan.">+</button>' +
+  '<button type="button" data-z="reset" aria-label="Reset zoom" title="Reset zoom (0)">Reset</button>';
+const zoomLevelLabel = zoomControls.querySelector(".zoom-level");
+
+function updateZoomControls() {
+  const shown = zoomLevel < 10 ? zoomLevel.toFixed(1).replace(/\.0$/, "") : String(Math.round(zoomLevel));
+  zoomLevelLabel.textContent = shown + "\u00D7";
+  zoomControls.querySelector('[data-z="out"]').disabled = zoomLevel <= 1.001;
+  zoomControls.querySelector('[data-z="in"]').disabled = zoomLevel >= ZOOM_MAX - 0.001;
+  zoomControls.querySelector('[data-z="reset"]').disabled = zoomLevel <= 1.001;
+  zoomScroller.classList.toggle("zoom-deep", zoomLevel > 1.001);
+}
+
+// Change the zoom level while keeping the point under (ax, ay), in screen pixels, put.
+function setZoomLevel(next, ax, ay) {
+  if (!zoomedMap) return;
+  next = Math.min(ZOOM_MAX, Math.max(1, next));
+  if (Math.abs(next - zoomLevel) < 0.001) return;
+  const r = zoomedMap.getBoundingClientRect();
+  if (ax == null) { const s = zoomScroller.getBoundingClientRect(); ax = s.left + s.width / 2; ay = s.top + s.height / 2; }
+  const fx = r.width ? (ax - r.left) / r.width : 0.5;
+  const fy = r.height ? (ay - r.top) / r.height : 0.5;
+  zoomLevel = next;
+  layoutZoom();
+  const r2 = zoomedMap.getBoundingClientRect();
+  zoomScroller.scrollLeft += (r2.left + fx * r2.width) - ax;
+  zoomScroller.scrollTop += (r2.top + fy * r2.height) - ay;
+  updateZoomControls();
+}
+
+zoomControls.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-z]");
+  if (!b) return;
+  e.stopPropagation();
+  if (b.dataset.z === "in") setZoomLevel(zoomLevel * 1.6);
+  else if (b.dataset.z === "out") setZoomLevel(zoomLevel / 1.6);
+  else setZoomLevel(1);
+});
+
+// Ctrl/Cmd + scroll wheel (also a trackpad pinch in Chrome/Edge/Firefox).
+zoomScroller.addEventListener("wheel", (e) => {
+  if (!zoomedMap || !(e.ctrlKey || e.metaKey)) return;
+  e.preventDefault();
+  setZoomLevel(zoomLevel * Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0025)), e.clientX, e.clientY);
+}, { passive: false });
+
+// Keyboard: + / - / 0 while a map is zoomed (ignored while typing in a field).
+let zoomSpaceDown = false;
+document.addEventListener("keydown", (e) => {
+  if (!zoomedMap || e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target;
+  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+  if (e.key === "+" || e.key === "=") { setZoomLevel(zoomLevel * 1.6); e.preventDefault(); }
+  else if (e.key === "-" || e.key === "_") { setZoomLevel(zoomLevel / 1.6); e.preventDefault(); }
+  else if (e.key === "0") { setZoomLevel(1); e.preventDefault(); }
+  else if (e.key === " ") { zoomSpaceDown = true; e.preventDefault(); }
+});
+document.addEventListener("keyup", (e) => { if (e.key === " ") zoomSpaceDown = false; });
+window.addEventListener("blur", () => { zoomSpaceDown = false; });
+
+// Pan by dragging: middle mouse button, or Space + left button. These never become guesses.
+let zoomPan = null;
+["pointerdown", "mousedown"].forEach(type => zoomScroller.addEventListener(type, (e) => {
+  if (!zoomedMap || e.pointerType === "touch") return;
+  if (e.button === 1 || (zoomSpaceDown && e.button === 0)) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (type === "pointerdown") {
+      zoomPan = { x: e.clientX, y: e.clientY, sl: zoomScroller.scrollLeft, st: zoomScroller.scrollTop };
+      zoomScroller.classList.add("zoom-panning");
+    }
+  }
+}, true));
+window.addEventListener("pointermove", (e) => {
+  if (!zoomPan) return;
+  zoomScroller.scrollLeft = zoomPan.sl - (e.clientX - zoomPan.x);
+  zoomScroller.scrollTop = zoomPan.st - (e.clientY - zoomPan.y);
+});
+window.addEventListener("pointerup", () => {
+  if (!zoomPan) return;
+  zoomPan = null;
+  zoomScroller.classList.remove("zoom-panning");
+  suppressClickUntil = Date.now() + 300;   // the release must not count as a guess
+});
+zoomScroller.addEventListener("click", (e) => {
+  if (Date.now() < suppressClickUntil && (zoomSpaceDown || e.button === 1)) { e.stopImmediatePropagation(); e.preventDefault(); }
+}, true);
+
+// Two-finger pinch on touch screens. One-finger drags still scroll natively.
+const zoomTouches = new Map();
+let pinchStart = null;
+zoomScroller.addEventListener("pointerdown", (e) => {
+  if (e.pointerType !== "touch") return;
+  zoomTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (zoomTouches.size === 2) {
+    const [a, b] = [...zoomTouches.values()];
+    pinchStart = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, level: zoomLevel };
+  }
+});
+zoomScroller.addEventListener("pointermove", (e) => {
+  if (e.pointerType !== "touch" || !zoomTouches.has(e.pointerId)) return;
+  zoomTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (zoomTouches.size === 2 && pinchStart) {
+    const [a, b] = [...zoomTouches.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    setZoomLevel(pinchStart.level * d / pinchStart.d, (a.x + b.x) / 2, (a.y + b.y) / 2);
+  }
+});
+["pointerup", "pointercancel", "pointerleave"].forEach(t => zoomScroller.addEventListener(t, (e) => {
+  zoomTouches.delete(e.pointerId);
+  if (zoomTouches.size < 2) pinchStart = null;
+}));
+
 // How long a touch has to be held before it counts as a long press,
 // matching roughly what iOS/Android treat as a "long" press themselves.
 const LONG_PRESS_MS = 500;
@@ -1290,6 +1445,21 @@ const LONG_PRESS_MS = 500;
 // timer already fired for the same gesture is ignored.
 const LONG_PRESS_GUARD_MS = 800;
 let touchLongPressFiredAt = 0;
+
+// ---- Zoom gestures must never count as guesses ----
+// Zooming a map (right-click, Mac Ctrl+click, a touchpad two-finger tap, or a touch long-press) starts
+// with the same press a guess would, so the county handlers below have to tell them apart:
+//  * Mouse-type presses only count if they're the primary button (a right-click is button 2).
+//  * On a Mac, Ctrl+click IS a right-click, so Ctrl-presses are ignored there.
+//  * Touch can't tell a tap from the start of a long press when the finger lands, so a Speedrun touch
+//    guess waits until the finger lifts, and is dropped if that touch turned into a long-press zoom.
+//  * The click the browser sends when a long-press finger lifts is swallowed for a moment.
+const IS_MAC = /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || "");
+let touchGestureWasLongPress = false;
+let suppressClickUntil = 0;
+function isZoomGestureStart(e) {
+  return e.button > 0 || (IS_MAC && e.ctrlKey);
+}
 
 svgMaps.forEach(svg => {
   // Small, discoverable alternative to the right-click/long-press zoom
@@ -1327,10 +1497,12 @@ svgMaps.forEach(svg => {
 
   svg.addEventListener("touchstart", (e) => {
     moved = false;
+    touchGestureWasLongPress = false;
     clearTimeout(pressTimer);
     pressTimer = setTimeout(() => {
       if (moved) return;
       touchLongPressFiredAt = Date.now();
+      touchGestureWasLongPress = true;
       toggleMapZoom(svg);
     }, LONG_PRESS_MS);
   }, { passive: true });
@@ -1342,7 +1514,11 @@ svgMaps.forEach(svg => {
     moved = true;
     cancelPressTimer();
   }, { passive: true });
-  svg.addEventListener("touchend", cancelPressTimer);
+  svg.addEventListener("touchend", () => {
+    cancelPressTimer();
+    // This touch was a long-press zoom: the click the browser fires as the finger lifts isn't a guess.
+    if (touchGestureWasLongPress) suppressClickUntil = Date.now() + 600;
+  });
   svg.addEventListener("touchcancel", cancelPressTimer);
 
   // --- Mouse: right-click (desktop), or Android's native long-press ---
@@ -1391,6 +1567,12 @@ const INFO_MODE_CONFIG = {
     title: "How to Play: Flash",
     intro: "Click (or tap) the county you're asked to find. It flashes briefly, then goes back to blank.",
     demo: "pin-hard",
+    word: "Sonoma",
+  },
+  mc: {
+    title: "How to Play: Multiple-Choice",
+    intro: "A county lights up on the map. Pick its name from the options (or press 1-4). Wrong picks count against you.",
+    demo: "mc",
     word: "Sonoma",
   },
   type: {
@@ -1468,7 +1650,7 @@ function openInfoModalForMode(mode) {
 
   if (infoModalTitle) infoModalTitle.textContent = cfg.title;
   if (infoModalIntro) infoModalIntro.textContent = cfg.intro;
-  if (infoExample) infoExample.setAttribute("data-demo", cfg.demo);
+  if (infoExample) { infoExample.setAttribute("data-demo", cfg.demo); infoExample.classList.toggle("hidden", !!cfg.noDemo); }
 
   if (infoDemoLabel) {
     infoDemoLabel.textContent = cfg.demo === "list" ? "Find any county" : "Find:";
@@ -1706,7 +1888,7 @@ function showScreen(screenId) {
     // The state-picker map (setup + Study's state list) gets a wide card; the
     // rest of those screens stays in a normal-width column (see .wide-picker in
     // style.css). Study narrows it again once a session starts.
-    appContainer.classList.toggle("wide-picker", screenId === "screen-setup" || screenId === "screen-study");
+    appContainer.classList.toggle("wide-picker", screenId === "screen-home" || screenId === "screen-setup" || screenId === "screen-study");
     appContainer.classList.remove("wide-study"); // only set while a Study session is running
   }
 }
@@ -1726,6 +1908,20 @@ function initUsMap(holder, { isSelected, toggle }) {
   holder.replaceChildren(tpl.content.cloneNode(true));
   const keyByName = {};
   Object.entries(stateData).forEach(([k, s]) => { keyByName[s.name.toLowerCase()] = k; });
+  // Not-to-scale insets (Alaska, Hawaii, anything added later): each .us-box adopts the state drawn
+  // inside it (found by where the state's shape sits), so clicking anywhere in the box selects that state.
+  const centerOf = d => {
+    const n = (d.match(/-?\d+\.?\d*/g) || []).map(Number); let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (let i = 0; i + 1 < n.length; i += 2) { x0 = Math.min(x0, n[i]); x1 = Math.max(x1, n[i]); y0 = Math.min(y0, n[i + 1]); y1 = Math.max(y1, n[i + 1]); }
+    return [(x0 + x1) / 2, (y0 + y1) / 2];
+  };
+  const statePaths = [...holder.querySelectorAll("path.us-st")].map(p => ({ p, c: centerOf(p.getAttribute("d") || "") }));
+  holder.querySelectorAll(".us-box").forEach(box => {
+    if (box.dataset.code) return;
+    const x = +box.getAttribute("x"), y = +box.getAttribute("y"), w = +box.getAttribute("width"), h = +box.getAttribute("height");
+    const hit = statePaths.find(({ c }) => c[0] >= x && c[0] <= x + w && c[1] >= y && c[1] <= y + h);
+    if (hit) { box.dataset.code = hit.p.dataset.code; box.dataset.name = hit.p.dataset.name; }
+  });
   const els = [...holder.querySelectorAll("[data-code]")];
   els.forEach(el => {
     const key = keyByName[(el.dataset.name || "").toLowerCase()];
@@ -1740,6 +1936,11 @@ function initUsMap(holder, { isSelected, toggle }) {
     }
   });
   const svg = holder.querySelector("svg");
+  holder.querySelectorAll(".us-box[data-key]").forEach(box => {   // hovering a box lights up its state
+    const path = holder.querySelector(`path.us-st[data-key="${box.dataset.key}"]`);
+    box.addEventListener("mouseenter", () => path && path.classList.add("hover"));
+    box.addEventListener("mouseleave", () => path && path.classList.remove("hover"));
+  });
   svg.addEventListener("click", e => { const el = e.target.closest("[data-key]"); if (el) toggle(el.dataset.key); });
   svg.addEventListener("keydown", e => {
     if (e.key !== "Enter" && e.key !== " ") return;
@@ -1822,6 +2023,7 @@ setTimeout(() => {
   const selected = new Set();
   let counties = [], start = 0, batch = [], quizSet = [], typeSet = [], pinSet = [], i = 0, phase = "learn", score = 0, typeScore = 0, pinScore = 0, answered = false;
   let studyMode = "all";
+  let homeExcluded = new Set(); // counties the home screen's "exclude" list took out
   // What you picked in each phase of the current round, for the summary screens.
   const roundLog = { quiz: [], type: [], pin: [] };
   const PHASE_TITLE = { quiz: "Multiple-Choice", type: "Type", pin: "Pin" };
@@ -1829,57 +2031,33 @@ setTimeout(() => {
   sumEl.id = "study-summary";
   sumEl.className = "study-summary hidden";
   $("study-map").after(sumEl);
-  const MODE_SEQ = { all: ["quiz", "type", "pin"], mc: ["quiz"], type: ["type"], pin: ["pin"] };
+  // "All" runs the modes in the same order the Learn column lists them on the home page.
+  const MODE_SEQ = { all: ["pin", "quiz", "type"], mc: ["quiz"], type: ["type"], pin: ["pin"] };
   const MODE_NAME = { all: "All", mc: "Multiple-Choice", type: "Type", pin: "Pin" };
-  const PHASE_LABEL = { quiz: "quiz", type: "typing", pin: "pinning" };
   const seq = () => MODE_SEQ[studyMode];
   const nextPhaseAfter = p => seq()[seq().indexOf(p) + 1] || null; // p === "learn" -> first
   const firstPhase = () => seq()[0];
-  const afterLabel = p => { const n = p === "learn" ? firstPhase() : nextPhaseAfter(p); return n ? (p === "learn" ? "Start " + PHASE_LABEL[n] : "Now " + PHASE_LABEL[n]) : "See results"; };
-  // The phase that decides whether a county counts as learned: typing if it is
-  // part of the session (as before), otherwise the last phase.
-  const marker = () => seq().includes("type") ? "type" : seq()[seq().length - 1];
+  // Label for the button that ends a phase: "Start Pin" after the study cards, "Continue to Type"
+  // between the phases of All, and "See results" after the last one.
+  const afterLabel = p => {
+    const n = p === "learn" ? firstPhase() : nextPhaseAfter(p);
+    if (!n) return "See results";
+    return (p === "learn" ? "Start " : "Continue to ") + PHASE_TITLE[n];
+  };
 
   const shuffle = a => { a = a.slice(); for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; };
-  const loadLearned = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
-  const setLearned = (id, yes) => {
-    const l = loadLearned();
-    if (yes) l[id] = true; else delete l[id];
-    localStorage.setItem(KEY, JSON.stringify(l));
+  // Counties already learned IN THE CURRENT MODE (for "Skip counties I've already learned"). For All that
+  // means learned in all three rows (Pin, Multiple-Choice and Type).
+  const loadLearned = () => {
+    const all = loadStudyLearned(), need = studyMode === "all" ? STUDY_MODE_LIST : [studyMode], out = {};
+    Object.keys(all).forEach(id => { if (need.every(m => all[id] && all[id][m])) out[id] = true; });
+    return out;
   };
+  const PHASE_ROW = { quiz: "mc", type: "type", pin: "pin" };   // which progress row each phase feeds
   const studyStates = () => Object.entries(stateData)
     .filter(([, s]) => document.getElementById(s.svgId))
     .sort((a, b) => a[1].name.localeCompare(b[1].name));
 
-  // A small, non-interactive copy of a state's map with the counties you've
-  // learned filled in (green). Built the same way as the Study map further
-  // down: clone the game's own <svg>, strip its ids so the copy can never be
-  // found by the game code, and drop the game's per-county styling.
-  function miniMap(s, learned) {
-    const src = document.getElementById(s.svgId);
-    if (!src) return null;
-    const svg = src.cloneNode(true);
-    // The click-here callouts (Alaska, Hawaii, California) only exist once
-    // the game has set them up, so leave them out: this overview then looks
-    // the same whether or not you've played yet.
-    svg.querySelectorAll('[class*="callout"], [class*="arrowhead"], defs').forEach(el => el.remove());
-    const done = new Set(s.counties.filter(c => learned[c.id]).map(c => c.id));
-    svg.querySelectorAll(".county").forEach(el => {
-      const cid = el.dataset.countyId || el.id;
-      el.setAttribute("class", done.has(cid) ? "county mini-learned" : "county");
-      el.style.removeProperty("fill");
-      el.style.removeProperty("stroke");
-      el.removeAttribute("tabindex");
-      el.removeAttribute("role");
-    });
-    svg.removeAttribute("id");
-    svg.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
-    ["width", "height", "style"].forEach(a => svg.removeAttribute(a));
-    svg.setAttribute("class", "locator-map study-mini-map");
-    svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", `Map of ${s.name}: ${done.size} of ${s.counties.length} learned`);
-    return svg;
-  }
 
   // ----- state map + learned panel -----
   let pickMap = null;
@@ -1945,7 +2123,7 @@ setTimeout(() => {
     const learned = loadLearned();
     const skip = $("study-skip-learned").checked;
     const pool = [];
-    studyStates().forEach(([k, s]) => { if (selected.has(k)) s.counties.forEach(c => { if (!(skip && learned[c.id])) pool.push(c); }); });
+    studyStates().forEach(([k, s]) => { if (selected.has(k)) s.counties.forEach(c => { if (!(skip && learned[c.id]) && !homeExcluded.has(c.id)) pool.push(c); }); });
     return pool;
   }
 
@@ -1958,7 +2136,7 @@ setTimeout(() => {
     if (selected.size === 0) {
       reason = "Select at least one state to study.";
     } else if (!studyPool().length) {
-      reason = note = "You've already learned every county in your selection. Untick \"Skip counties I've already learned\" to review them.";
+      reason = note = `You've already learned every county in your selection ${studyMode === "all" ? "in all three Learn modes" : "in " + MODE_NAME[studyMode]}. Untick \"Skip counties I've already learned\" to review them.`;
     }
     btn.disabled = !!reason;
     if (reason) btn.title = reason; else btn.removeAttribute("title");
@@ -2112,7 +2290,7 @@ setTimeout(() => {
     roundLog.quiz.push({ c, ok, chosen });
     btn.classList.add(ok ? "study-correct" : "study-wrong");
     $("study-choices").querySelectorAll("button").forEach(b => { if (b.dataset.correct) b.classList.add("study-correct"); });
-    if (marker() === "quiz") setLearned(c.id, ok);
+    setStudyLearned(c.id, PHASE_ROW.quiz, ok);
     $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getDisplayName(c)}.`;
     $("study-next").textContent = lastIn(quizSet) ? afterLabel("quiz") : "Next";
     $("study-next").classList.remove("hidden");
@@ -2127,7 +2305,7 @@ setTimeout(() => {
     const ok = normalizeTypedName(inp.value) === normalizeTypedName(c.name);
     if (ok) typeScore++;
     roundLog.type.push({ c, ok, typed: inp.value.trim() });
-    if (marker() === "type") setLearned(c.id, ok);
+    setStudyLearned(c.id, PHASE_ROW.type, ok);
     inp.disabled = true;
     $("study-submit").classList.add("hidden");
     $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getDisplayName(c)}.`;
@@ -2142,7 +2320,7 @@ setTimeout(() => {
     const ok = el.dataset.cid === c.id;
     if (ok) pinScore++;
     roundLog.pin.push({ c, ok, chosen: ok ? c : findCounty(el.dataset.cid) });
-    if (marker() === "pin") setLearned(c.id, ok);
+    setStudyLearned(c.id, PHASE_ROW.pin, ok);
     svg.classList.add("pin-done");
     const targets = [...svg.querySelectorAll(".county")].filter(x => x.dataset.cid === c.id);
     if (!ok) { el.classList.add("locator-wrong"); toFront(el); }
@@ -2223,18 +2401,23 @@ setTimeout(() => {
     return wrap;
   }
 
-  // Shown once, after the last phase of the round (so in All mode: after Multiple-Choice,
-  // Type and Pin). One section per mode, each a sideways-scrolling row of snapshots.
+  // The end-of-round page (shown once, after the last phase; in All mode that's after Multiple-Choice,
+  // Type and Pin). One section per mode: the big score, then a sideways-scrolling row of snapshots
+  // showing what you picked and the right answer. Replay / next buttons sit underneath.
   function showSummary() {
     clearRun();
-    $("study-progress").textContent = "Round summary";
+    $("study-progress").textContent = "Round complete";
     $("study-name").textContent = "";
     sumEl.className = "study-summary rs-grid";
     const rings = [];
     sumEl.replaceChildren(...seq().map(p => {
       const list = roundLog[p], right = list.filter(e => e.ok).length;
       const sec = el("div", "rs-section");
-      sec.append(el("div", "rs-section-title", `${PHASE_TITLE[p]}: ${right} of ${list.length}`));
+      const head = el("div", "rs-head");
+      const score = el("div", "rs-score");
+      score.append(el("span", "rs-big", String(right)), el("span", "rs-of", `/${list.length}`));
+      head.append(el("div", "rs-label", PHASE_TITLE[p]), score);
+      sec.append(head);
       const cards = list.map(e => {
         const card = el("div", "rs-card " + (e.ok ? "ok" : "bad"));
         const holder = el("div", "rs-map");
@@ -2250,45 +2433,29 @@ setTimeout(() => {
       return sec;
     }));
     rings.forEach(m => addRing(m.svg, m.targets));
-    addBtn("Continue", results, "btn-primary").focus();
-  }
-
-  function results() {
-    clearRun();
-    $("study-progress").textContent = "Round complete";
-    $("study-name").textContent = "";
-    sumEl.className = "study-summary rs-board";
-    sumEl.replaceChildren(...seq().map(p => {
-      const list = roundLog[p], right = list.filter(e => e.ok).length;
-      const row = el("div", "rs-row");
-      const head = el("div", "rs-head");
-      const score = el("div", "rs-score");
-      score.append(el("span", "rs-big", String(right)), el("span", "rs-of", `/${list.length}`));
-      head.append(el("div", "rs-label", PHASE_TITLE[p]), score);
-      row.append(head);
-      const missed = list.filter(e => !e.ok);
-      if (!missed.length) row.append(el("div", "rs-perfect", "Nothing missed"));
-      else {
-        const ul = el("ul", "rs-missed");
-        missed.forEach(e => {
-          const li = el("li");
-          li.append(el("b", "", getDisplayName(e.c)), el("span", "rs-detail", ` \u2014 ${youLine(p, e).replace(/^You /, "you ")}`));
-          ul.append(li);
-        });
-        row.append(ul);
-      }
-      return row;
-    }));
+    if (start + BATCH < counties.length) addBtn(`Next ${Math.min(BATCH, counties.length - start - BATCH)} counties`, () => { start += BATCH; beginBatch(); }, "btn-primary");
+    if (seq().includes("pin")) addBtn("Pin again", startPin);
     if (seq().includes("quiz")) addBtn("Quiz again", startQuiz);
     if (seq().includes("type")) addBtn("Type again", startType);
-    if (seq().includes("pin")) addBtn("Pin again", startPin);
-    if (start + BATCH < counties.length) addBtn(`Next ${Math.min(BATCH, counties.length - start - BATCH)} counties`, () => { start += BATCH; beginBatch(); }, "btn-primary");
-    addBtn("Back to state list", openStudy);
+    addBtn("Back to home", () => showScreen("screen-home"));
   }
+  function results() { showSummary(); }   // kept so older calls still land on the one combined page
 
-  function startQuiz() { phase = "quiz"; quizSet = shuffle(batch); i = 0; score = 0; roundLog.quiz = []; render(); }
-  function startPin() { phase = "pin"; pinSet = shuffle(batch); i = 0; pinScore = 0; roundLog.pin = []; render(); }
-  function startType() { phase = "type"; typeSet = shuffle(batch); i = 0; typeScore = 0; roundLog.type = []; render(); }
+  // Order for a practice phase (Multiple-Choice / Type / Pin, including the "again" replays): a fresh
+  // shuffle of the batch, except the county you saw LAST while learning never comes first. It's the one
+  // you've just seen, so leading with it would be a free point that tests nothing. (A batch of one has
+  // nothing to swap with, so it's left alone.)
+  function practiceOrder() {
+    const order = shuffle(batch), lastLearned = batch[batch.length - 1];
+    if (order.length > 1 && order[0] === lastLearned) {
+      const j = 1 + Math.floor(Math.random() * (order.length - 1));
+      [order[0], order[j]] = [order[j], order[0]];
+    }
+    return order;
+  }
+  function startQuiz() { phase = "quiz"; quizSet = practiceOrder(); i = 0; score = 0; roundLog.quiz = []; render(); }
+  function startPin() { phase = "pin"; pinSet = practiceOrder(); i = 0; pinScore = 0; roundLog.pin = []; render(); }
+  function startType() { phase = "type"; typeSet = practiceOrder(); i = 0; typeScore = 0; roundLog.type = []; render(); }
 
   function beginBatch() {
     batch = counties.slice(start, start + BATCH);
@@ -2296,6 +2463,23 @@ setTimeout(() => {
     render();
   }
   function startPhase(p) { ({ quiz: startQuiz, type: startType, pin: startPin })[p](); }
+
+  // Called by the home screen: study these states in this mode (returns false if there is nothing to study).
+  window.startStudyFromHome = (mode, keys, skipLearned, excluded) => {
+    studyMode = mode;
+    selected.clear(); keys.forEach(k => selected.add(k));
+    homeExcluded = excluded || new Set();
+    $("study-skip-learned").checked = !!skipLearned;
+    if (!selected.size || !studyPool().length) return false;
+    $("study-mode-indicator").textContent = `Mode: ${MODE_NAME[studyMode]}`;
+    sumEl.classList.add("hidden");
+    $("study-pick").classList.remove("hidden");
+    $("study-run").classList.add("hidden");
+    showScreen("screen-study");
+    updateStudyStart();          // enables the (hidden) Study button, then use its normal start
+    $("study-start").click();
+    return true;
+  };
 
   function openStudy() {
     sumEl.classList.add("hidden");
@@ -2306,8 +2490,6 @@ setTimeout(() => {
     showScreen("screen-study");
   }
 
-  $("btn-goto-learn").addEventListener("click", () => showScreen("screen-learn"));
-  $("btn-goto-study").addEventListener("click", () => showScreen("screen-study-modes"));
   document.querySelectorAll("[data-study-mode]").forEach(b => b.addEventListener("click", () => { studyMode = b.dataset.studyMode; openStudy(); }));
   $("study-select-all").addEventListener("click", () => { studyStates().forEach(([k]) => selected.add(k)); renderPick(); });
   $("study-deselect-all").addEventListener("click", () => { selected.clear(); renderPick(); });
@@ -2576,6 +2758,7 @@ btnResetProgress.addEventListener("click", () => {
     statsHiddenOverride = {};
     localStorage.removeItem("countyProgress");
     localStorage.removeItem("studyLearned");
+    localStorage.removeItem(STUDY_KEY);
     localStorage.removeItem("countyMistakes");
     renderStateListUI();
     renderCountyCheckboxes(); // redraw checkboxes so mistake badges clear too
@@ -2742,6 +2925,36 @@ function markCountyLearned(countyId, mode, viaRetryMissed) {
 // state's table can be individually collapsed via its Hide/Show button
 // (or all at once via Hide All) — see isStatsHidden()/statsHiddenOverride
 // above.
+// A small, non-interactive copy of a state's map with the counties you've
+// learned filled in (green). Built the same way as the Study map further
+// down: clone the game's own <svg>, strip its ids so the copy can never be
+// found by the game code, and drop the game's per-county styling.
+function miniMap(s, learned) {
+  const src = document.getElementById(s.svgId);
+  if (!src) return null;
+  const svg = src.cloneNode(true);
+  // The click-here callouts (Alaska, Hawaii, California) only exist once
+  // the game has set them up, so leave them out: this overview then looks
+  // the same whether or not you've played yet.
+  svg.querySelectorAll('[class*="callout"], [class*="arrowhead"], defs').forEach(el => el.remove());
+  const done = new Set(s.counties.filter(c => learned[c.id]).map(c => c.id));
+  svg.querySelectorAll(".county").forEach(el => {
+    const cid = el.dataset.countyId || el.id;
+    el.setAttribute("class", done.has(cid) ? "county mini-learned" : "county");
+    el.style.removeProperty("fill");
+    el.style.removeProperty("stroke");
+    el.removeAttribute("tabindex");
+    el.removeAttribute("role");
+  });
+  svg.removeAttribute("id");
+  svg.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
+  ["width", "height", "style"].forEach(a => svg.removeAttribute(a));
+  svg.setAttribute("class", "locator-map study-mini-map");
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", `Map of ${s.name}: ${done.size} of ${s.counties.length} learned`);
+  return svg;
+}
+
 function renderStatsPanel() {
   if (!statsPanel || !statsSections) return;
 
@@ -2752,7 +2965,13 @@ function renderStatsPanel() {
     return;
   }
 
-  const headerCells = MODE_LIST.map(mode => `<th>${MODE_LABELS[mode]}</th>`).join("");
+  // Play and Learn each have their own progress; the Play | Learn switch picks which one to show.
+  const learnView = statsView === "learn";
+  const modes = learnView ? STUDY_MODE_LIST : MODE_LIST;
+  const labelOf = m => learnView ? STUDY_MODE_LABELS[m] : MODE_LABELS[m];
+  const statusOf = (id, m) => learnView ? (isStudyLearned(id, m) ? "clean" : null) : getCountyLearnedStatus(id, m);
+  statsPanel.querySelectorAll("[data-stats-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.statsView === statsView)));
+  const headerCells = modes.map(mode => `<th>${labelOf(mode)}</th>`).join("");
 
   const stateSections = getOrderedStateKeys().map(stateKey => {
     const state = stateData[stateKey];
@@ -2762,8 +2981,8 @@ function renderStatsPanel() {
     const total = sortedCounties.length;
     const hidden = isStatsHidden(stateKey);
 
-    const summaryCells = MODE_LIST.map(mode => {
-      const learnedCount = sortedCounties.filter(c => isCountyLearned(c.id, mode)).length;
+    const summaryCells = modes.map(mode => {
+      const learnedCount = sortedCounties.filter(c => !!statusOf(c.id, mode)).length;
       // FIX: "Completed" used to fire whenever every county was *learned*
       // (learnedCount === total), which counts "retry" (–) counties the
       // same as "clean" (✓) ones — see isCountyLearned(). That meant a
@@ -2772,7 +2991,7 @@ function renderStatsPanel() {
       // you don't. Now "Completed" only fires when every county is
       // "clean"; a state that's fully learned but leaning on some retries
       // gets its own distinct label/style instead of either extreme.
-      const cleanCount = sortedCounties.filter(c => getCountyLearnedStatus(c.id, mode) === "clean").length;
+      const cleanCount = sortedCounties.filter(c => statusOf(c.id, mode) === "clean").length;
       const allClean = cleanCount === total;
       const allLearned = learnedCount === total;
       let label, cellClass;
@@ -2790,8 +3009,8 @@ function renderStatsPanel() {
     }).join("");
 
     const countyRows = sortedCounties.map(c => {
-      const cells = MODE_LIST.map(mode => {
-        const status = getCountyLearnedStatus(c.id, mode);
+      const cells = modes.map(mode => {
+        const status = statusOf(c.id, mode);
         // "retry" = learned only during a Retry Missed round, shown as a
         // distinct orange dash rather than the plain green checkmark —
         // see markCountyLearned().
@@ -2809,6 +3028,7 @@ function renderStatsPanel() {
         <button type="button" class="btn-secondary btn-stats-toggle" data-state-key="${stateKey}" aria-expanded="${!hidden}">${hidden ? "Show" : "Hide"}</button>
       </div>
       ${hidden ? "" : `
+      ${learnView ? `<div class="stats-minimap" data-minimap="${stateKey}"></div>` : ""}
       <div class="stats-table-wrap">
         <table class="stats-table">
           <thead>
@@ -2826,6 +3046,23 @@ function renderStatsPanel() {
 
   statsSections.innerHTML = stateSections;
 
+  // Learn view: fill each state's minimap (green = learned in the chosen Learn mode; "All" = in all three).
+  if (learnView) {
+    const mapModes = statsLearnMode === "all" ? STUDY_MODE_LIST : [statsLearnMode];
+    const note = statsLearnMode === "all" ? "Green: learned in all three Learn modes" : `Green: learned in ${STUDY_MODE_LABELS[statsLearnMode]}`;
+    statsSections.querySelectorAll("[data-minimap]").forEach(box => {
+      const s = stateData[box.dataset.minimap];
+      const learned = {};
+      s.counties.forEach(c => { if (mapModes.every(m => isStudyLearned(c.id, m))) learned[c.id] = true; });
+      const map = miniMap(s, learned);
+      if (!map) return;
+      const cap = document.createElement("p");
+      cap.className = "stats-minimap-note";
+      cap.textContent = note;
+      box.append(map, cap);
+    });
+  }
+
   statsPanel.classList.remove("hidden");
   if (statsDivider) statsDivider.classList.remove("hidden");
 }
@@ -2837,6 +3074,8 @@ function renderStatsPanel() {
 // each time statsPanel.innerHTML is replaced.
 if (statsPanel) {
   statsPanel.addEventListener("click", (e) => {
+    const viewBtn = e.target.closest("[data-stats-view]");
+    if (viewBtn) { statsView = viewBtn.dataset.statsView; renderStatsPanel(); return; }
     const hideAllBtn = e.target.closest("#btn-hide-all-stats");
     if (hideAllBtn) {
       activeStateKeys.forEach(stateKey => { statsHiddenOverride[stateKey] = true; });
@@ -2879,6 +3118,13 @@ if (statsPanel) {
 function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPadding, stopShort, radiusOverride) {
   const countyPath = document.getElementById(countyId);
   if (!countyPath || !targetSvg) return false;
+
+  // High-detail maps use a bigger coordinate system (data-unit-scale = how many
+  // times bigger than the old 800-unit-wide maps). The offsets and radii passed
+  // in are written for the 800-unit size, so scale them to match.
+  const us = parseFloat(targetSvg.dataset && targetSvg.dataset.unitScale) || 1;
+  offsetX *= us; offsetY *= us; radiusPadding *= us; stopShort *= us;
+  if (radiusOverride !== undefined) radiusOverride *= us;
 
   let bbox;
   try {
@@ -2952,6 +3198,16 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
     marker.setAttribute("orient", "auto-start-reverse");
     const arrowHead = document.createElementNS(svgNS, "path");
     arrowHead.setAttribute("d", "M0,0 L8,4 L0,8 Z");
+    if (us !== 1) {
+      // Keep the arrowhead the same on-screen size in the bigger coordinate system.
+      const m = 12 * us;
+      marker.setAttribute("markerUnits", "userSpaceOnUse");
+      marker.setAttribute("markerWidth", m);
+      marker.setAttribute("markerHeight", m);
+      marker.setAttribute("refX", 9.75 * us);
+      marker.setAttribute("refY", 6 * us);
+      arrowHead.setAttribute("d", `M0,0 L${m},${m / 2} L0,${m} Z`);
+    }
     arrowHead.setAttribute("class", `${key}-arrowhead-fill`);
     marker.appendChild(arrowHead);
     defs.appendChild(marker);
@@ -3436,7 +3692,9 @@ function openLocator(countyId) {
     el.style.removeProperty("fill");
     el.style.removeProperty("stroke");
   });
-  targets.forEach(el => el.classList.add("locator-target"));
+  // SVG has no z-index: whatever is drawn later paints on top. Re-append the highlighted county(ies) so
+  // they're drawn LAST; otherwise any neighbour that comes after it in the file covers part of its border.
+  targets.forEach(el => { el.classList.add("locator-target"); if (el.parentNode) el.parentNode.appendChild(el); });
   svg.removeAttribute("id");
   svg.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
   svg.querySelectorAll("[tabindex]").forEach(el => el.removeAttribute("tabindex"));
@@ -3708,7 +3966,7 @@ if (btnQuitGame) {
     isGameActive = false;
     if (modalSummary) modalSummary.classList.add("hidden");
     if (admireBar) admireBar.classList.add("hidden");
-    showScreen("screen-modes");
+    showScreen("screen-home");
   });
 }
 
@@ -3760,6 +4018,7 @@ function giveUp() {
   isGameActive = false;
 
   if (typeInputBox) typeInputBox.classList.add("hidden");
+  if (mcOptions) mcOptions.classList.add("hidden");
   if (feedbackEl) {
     feedbackEl.textContent = "";
     feedbackEl.className = "feedback-message";
@@ -3975,7 +4234,7 @@ function refreshTargetPrompt(forceReveal) {
     return;
   }
 
-  if (selectedMode === "type-hard" || selectedMode === "type-strict") {
+  if (selectedMode === "type-hard" || selectedMode === "type-strict" || selectedMode === "mc") {
     if (forceReveal) {
       const { name, state } = getDisplayParts(currentTarget);
       const stateName = state || getStateNameForCounty(currentTarget);
@@ -3991,7 +4250,7 @@ function refreshTargetPrompt(forceReveal) {
       // naming the state up front narrows the search.
       const stateName = gameSettings.showStateInPrompt ? getStateNameForCounty(currentTarget) : "";
       targetPrompt.innerHTML = `
-        <span class="find-label">Type the highlighted county</span>
+        <span class="find-label">${selectedMode === "mc" ? "Which county is highlighted?" : "Type the highlighted county"}</span>
         ${stateName ? `<span class="target-state">(${stateName})</span>` : ""}
       `;
     }
@@ -4012,6 +4271,43 @@ function refreshTargetPrompt(forceReveal) {
   `;
 }
 
+// --- Multiple-Choice ("mc") ---
+// Four answer buttons for the highlighted county: the right one plus three wrong ones, drawn from the
+// same state first (they're the believable ones) and then from the other states in play. A wrong pick
+// goes through the same registerWrongTypedGuess() as Verbatim (counts against you, "Reveal Answer
+// After Mistakes" works), and the right one through acceptTypedMatches() (progress, colours, next target).
+function mcShuffle(a) { a = a.slice(); for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; }
+function renderMcOptions() {
+  if (!mcOptions || !currentTarget) return;
+  const target = currentTarget;
+  const others = getActiveCountiesPool().filter(c => c.id !== target.id);
+  const ordered = [...mcShuffle(others.filter(c => c.stateKey === target.stateKey)), ...mcShuffle(others.filter(c => c.stateKey !== target.stateKey))];
+  const seen = new Set([target.name]), picks = [];
+  for (const c of ordered) { if (picks.length >= 3) break; if (seen.has(c.name)) continue; seen.add(c.name); picks.push(c); }
+  mcOptions.replaceChildren(...mcShuffle([target, ...picks]).map((c, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "mc-option";
+    const key = document.createElement("kbd"); key.textContent = String(i + 1);
+    b.append(key, document.createTextNode(getDisplayName(c)));
+    b.addEventListener("click", () => {
+      if (!isGameActive || !currentTarget || b.disabled) return;
+      if (c.id === currentTarget.id) acceptTypedMatches([currentTarget]);
+      else { registerWrongTypedGuess(); b.disabled = true; b.classList.add("wrong"); }
+    });
+    return b;
+  }));
+  mcOptions.classList.remove("hidden");
+}
+document.addEventListener("keydown", (e) => {
+  if (selectedMode !== "mc" || !isGameActive || e.ctrlKey || e.metaKey || e.altKey) return;
+  const gs = document.getElementById("screen-game");
+  if (!gs || !gs.classList.contains("active")) return;
+  const tag = (document.activeElement && document.activeElement.tagName) || "";
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= 4) { const b = mcOptions.querySelectorAll(".mc-option")[n - 1]; if (b && !b.disabled) b.click(); }
+});
+
 function pickNextTarget() {
   currentAttemptMistakes = 0;
   updateProgressCounter();
@@ -4025,6 +4321,7 @@ function pickNextTarget() {
 
   if (targetPool.length === 0) {
     isGameActive = false;
+    if (mcOptions) mcOptions.classList.add("hidden");
     showSummaryModal();
     return;
   }
@@ -4041,10 +4338,11 @@ function pickNextTarget() {
   }
 
   if (typeInputBox) {
-    typeInputBox.classList.toggle("hidden", !TYPE_MODES.has(selectedMode));
+    typeInputBox.classList.toggle("hidden", !TYPE_MODES.has(selectedMode) || selectedMode === "mc");
   }
+  if (mcOptions) { if (selectedMode === "mc") renderMcOptions(); else mcOptions.classList.add("hidden"); }
   refreshSpecialCharsBar();
-  if (TYPE_MODES.has(selectedMode) && typeInput) {
+  if (TYPE_MODES.has(selectedMode) && selectedMode !== "mc" && typeInput) {
     typeInput.value = "";
     typeInput.focus();
   }
@@ -4187,7 +4485,7 @@ function acceptTypedMatches(matchedCounties) {
       // something there. "Type" (type-hard) doesn't punish a wrong
       // guess the same way, and List's wrong guesses aren't reliably
       // about whichever county ends up matching — both stay plain green.
-      const useRecoveredColor = recoveredFromMistake && selectedMode === "type-strict";
+      const useRecoveredColor = recoveredFromMistake && (selectedMode === "type-strict" || selectedMode === "mc");
       el.classList.add(useRecoveredColor ? "correct-recovered" : "correct", "found");
       el.style.pointerEvents = "none";
     });
@@ -4205,7 +4503,7 @@ function registerWrongTypedGuess() {
   // still track the mistake below (for the shake/sound, the "recovered"
   // state, missed-county suggestions, etc.) but it shouldn't move
   // scoreWrong, since only giving up should knock those modes below 100%.
-  if (selectedMode === "type-strict") scoreWrong++;
+  if (selectedMode === "type-strict" || selectedMode === "mc") scoreWrong++;
   currentAttemptMistakes++;
   playSound("wrong");
 
@@ -4226,7 +4524,7 @@ function registerWrongTypedGuess() {
   // missedCounties alone here and let giveUp() be the only way a
   // List/Type county ends up "missed".
   if (currentTarget) {
-    if (selectedMode === "type-strict") missedCounties.add(currentTarget);
+    if (selectedMode === "type-strict" || selectedMode === "mc") missedCounties.add(currentTarget);
     countyMistakes[currentTarget.id] = (countyMistakes[currentTarget.id] || 0) + 1;
     localStorage.setItem("countyMistakes", JSON.stringify(countyMistakes));
   }
@@ -4237,9 +4535,12 @@ function registerWrongTypedGuess() {
   // shows from the start). Doesn't apply to List ("type") — with no
   // single right answer there, refreshTargetPrompt() ignores the
   // reveal flag for that mode anyway.
+  // Multiple-Choice is excluded: it has 4 options, so by the 3rd wrong pick the other three are already
+  // crossed out and naming the county would reveal nothing.
   if (
     gameSettings.revealAnswerAfterMistakes &&
     SINGLE_TARGET_TYPE_MODES.has(selectedMode) &&
+    selectedMode !== "mc" &&
     currentAttemptMistakes >= REVEAL_ANSWER_AFTER_MISTAKES
   ) {
     refreshTargetPrompt(true);
@@ -4258,7 +4559,7 @@ function registerWrongTypedGuess() {
   // (e.g. "keenyt") sticks around and silently gets prepended to
   // whatever's typed next (e.g. "keenytsussex"), so a perfectly good
   // second guess like "sussex" reads as wrong too.
-  if (typeInput) {
+  if (typeInput && selectedMode !== "mc") {
     typeInput.value = "";
     typeInput.focus();
   }
@@ -4370,7 +4671,7 @@ function getNeededSpecialChars() {
 function refreshSpecialCharsBar() {
   if (!specialCharsBar || !specialCharsButtons) return;
 
-  const chars = (TYPE_MODES.has(selectedMode) && gameSettings.requireDiacritics)
+  const chars = (TYPE_MODES.has(selectedMode) && selectedMode !== "mc" && gameSettings.requireDiacritics)
     ? getNeededSpecialChars()
     : [];
   specialCharsBar.classList.toggle("hidden", chars.length === 0);
@@ -4488,12 +4789,24 @@ function hideHoverTooltip() {
 function bindCountyInteractivity(path) {
   path.addEventListener("pointerdown", (e) => {
     if (!gameSettings.speedrunMode) return;
+    if (isZoomGestureStart(e)) return;       // right-click / Mac Ctrl+click = zoom, not a guess
+    if (e.pointerType === "touch") return;   // touch guesses wait for the finger to lift (below)
+    handleCountyClick(e.currentTarget);
+  });
+
+
+  // Speedrun, touch only: respond when the finger lifts, unless that touch became a long-press zoom.
+  path.addEventListener("pointerup", (e) => {
+    if (!gameSettings.speedrunMode || e.pointerType !== "touch") return;
+    if (touchGestureWasLongPress) return;
     handleCountyClick(e.currentTarget);
   });
 
 
   path.addEventListener("click", (e) => {
     if (gameSettings.speedrunMode) return;
+    if (isZoomGestureStart(e)) return;
+    if (Date.now() < suppressClickUntil) return;   // the click from lifting a long-press zoom
     handleCountyClick(e.currentTarget);
   });
 
@@ -4721,4 +5034,72 @@ if (btnAdmireHome) {
     showScreen("screen-home");
   });
 }
+
+
+// ===== Home screen: pick a mode FIRST, then states, then Play/Learn =====
+// The map, "exclude counties" panel and Play button now live on the home screen but are the
+// same elements (and the same logic) the old Setup screen used. This just gates them behind a
+// mode choice and routes Learn modes to Study.
+(function initHome() {
+  const $ = id => document.getElementById(id);
+  const layout = $("home-layout");
+  if (!layout) return;
+  // The home screen is the first thing shown, and showScreen() never runs for it, so turn on its wide card here.
+  if (appContainer) appContainer.classList.add("wide-picker");
+  const start = $("btn-start-game"), msg = $("home-msg"), skipWrap = $("home-skip-wrap"), skip = $("home-skip-learned");
+  const playBtns = [...layout.querySelectorAll("[data-home-mode]")];
+  const learnBtns = [...layout.querySelectorAll("[data-home-learn]")];
+  let chosen = null; // { kind: "play" | "learn", mode }
+
+  // "Skip counties I've already learned" only means something once you've picked a Learn mode AND a state.
+  function updateSkip() {
+    skipWrap.classList.toggle("hidden", !(chosen && chosen.kind === "learn" && activeStateKeys.length > 0));
+    msg.textContent = "";   // any old notice is stale once the selection changes
+  }
+  skip.addEventListener("change", () => { msg.textContent = ""; });
+  const pickedBox = $("setup-picked");
+  if (pickedBox) new MutationObserver(updateSkip).observe(pickedBox, { childList: true, subtree: true, characterData: true });
+
+  function mark() {
+    playBtns.forEach(b => { const on = !!chosen && chosen.kind === "play" && b.dataset.homeMode === chosen.mode; b.classList.toggle("selected", on); b.setAttribute("aria-pressed", on); });
+    learnBtns.forEach(b => { const on = !!chosen && chosen.kind === "learn" && b.dataset.homeLearn === chosen.mode; b.classList.toggle("selected", on); b.setAttribute("aria-pressed", on); });
+  }
+  function choose(kind, mode) {
+    if (chosen && chosen.kind === kind && chosen.mode === mode) {   // clicking the selected mode again unselects it
+      chosen = null;
+      layout.classList.add("no-mode");
+      start.textContent = "Play";
+      updateSkip();
+      msg.textContent = "";
+      mark();
+      return;
+    }
+    chosen = { kind, mode };
+    statsView = kind === "play" ? "play" : "learn";   // show the progress tables that match the mode
+    if (kind === "learn") statsLearnMode = mode;
+    renderStatsPanel();
+    if (kind === "play") selectedMode = mode;      // the Play game reads this
+    layout.classList.remove("no-mode");
+    start.textContent = kind === "play" ? "Play" : "Learn";
+    updateSkip();
+    msg.textContent = "";
+    mark();
+  }
+  const homeEl = $("screen-home");
+  new MutationObserver(() => { if (homeEl.classList.contains("active")) renderStatsPanel(); }).observe(homeEl, { attributes: true, attributeFilter: ["class"] });
+  playBtns.forEach(b => b.addEventListener("click", () => choose("play", b.dataset.homeMode)));
+  learnBtns.forEach(b => b.addEventListener("click", () => choose("learn", b.dataset.homeLearn)));
+
+  // Capture phase so this runs before the normal Play handler.
+  start.addEventListener("click", e => {
+    if (!chosen) { e.stopImmediatePropagation(); msg.textContent = "Pick a mode first."; return; }
+    if (chosen.kind === "play") return;            // normal Play handler takes it from here
+    e.stopImmediatePropagation();
+    const yes = document.querySelector('input[name="specific-counties"]:checked');
+    const excluded = new Set(yes && yes.value === "yes" ? [...document.querySelectorAll(".county-checkbox:checked")].map(cb => cb.value) : []);
+    const ok = window.startStudyFromHome(chosen.mode, activeStateKeys.slice(), skip.checked, excluded);
+    if (!ok) msg.textContent = `You've already learned every county here ${chosen.mode === "all" ? "in all three Learn modes" : "in " + ({ pin: "Pin", mc: "Multiple-Choice", type: "Type" })[chosen.mode]}. Untick \u201CSkip counties I've already learned\u201D to review them.`;
+  }, true);
+})();
+
 });
