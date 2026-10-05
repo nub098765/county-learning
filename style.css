@@ -180,7 +180,8 @@ body.dark-mode .btn-secondary:hover {
 }
 
 
-.btn-back {
+.btn-back,
+.study-replay-back {
  margin-top: 1.5rem;
  background: transparent;
  border: none;
@@ -188,7 +189,8 @@ body.dark-mode .btn-secondary:hover {
  text-decoration: underline;
  padding: 0.5rem;
 }
-body.dark-mode .btn-back {
+body.dark-mode .btn-back,
+body.dark-mode .study-replay-back {
  color: #aaa;
 }
 
@@ -2645,6 +2647,7 @@ body.scale-states-by-size #svg-new-hampshire { --w: 295px; }
 body.scale-states-by-size #svg-arizona { --w: 370px; }
 body.scale-states-by-size #svg-alabama { --w: 350px; }
 body.scale-states-by-size #map-delaware { --w: 295px; }
+body.scale-states-by-size #svg-florida { --w: 470px; }
 body.scale-states-by-size #svg-rhode-island { --w: 315px; }
 
 
@@ -3597,3 +3600,64 @@ body.dark-mode .zoom-controls button { background: #2b2b28; color: #fdeca6; bord
 body.dark-mode .zoom-controls button:not(:disabled):hover { background: #3a3a35; }
 
 .site-credits a { color: inherit; text-decoration: underline; pointer-events: auto; }
+
+
+/* ===== Learn: one-line prompt, hover names, replay escape ===== */
+/* The prompt stays on one line (script.js shrinks it to fit) and always reserves that line, so the card
+   is the same height on every question and the Next button stays put. It may use the card's full width. */
+#study-name { white-space: nowrap; min-height: 2rem; }
+.app-container.wide-study #study-run > #study-name.study-name { max-width: 100%; }
+/* Buttons that only matter after you answer stay in the layout, invisible, so answering moves nothing. */
+/* Hidden-but-still-in-the-layout (Next before you've answered). "transition: none" matters: buttons
+   have "transition: all 0.2s", and visibility transitions keep the old "visible" value until the end,
+   so without it Next lingered for 0.2s after you pressed it. */
+.study-pending { visibility: hidden; transition: none !important; }
+
+.locator-map.study-hover .county { pointer-events: auto; }
+/* Blue, so a hovered county never looks like the orange study target or the green county outlines. */
+.study-hover-layer .study-hover-clone,
+.study-hover-layer .study-hover-clone path {
+  fill: rgba(30, 105, 220, 0.42);
+  stroke: #0f3f8f;
+  stroke-width: 2px !important;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+body.dark-mode .study-hover-layer .study-hover-clone,
+body.dark-mode .study-hover-layer .study-hover-clone path {
+  fill: rgba(110, 170, 255, 0.4);
+  stroke: #a9ccff;
+}
+.study-hover-tip {
+  position: fixed; z-index: 3000; pointer-events: none; white-space: nowrap;
+  padding: 0.25rem 0.6rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+  background: #1a1a1a; color: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+body.dark-mode .study-hover-tip { background: #f2ecd9; color: #1a1a1a; }
+/* "Back to results" gets its look from the .btn-back rules above (it isn't a real .btn-back because
+   script.js attaches a go-to-screen handler to every .btn-back). Here it's just centered, and when it's
+   showing, the "Back to home" link right under it tucks up close instead of keeping its own big margin. */
+.study-replay-back { display: block; margin: 0.7rem auto 0; }
+#screen-study:has(.study-replay-back:not(.hidden)) .study-back-run { margin-top: 0; }
+/* Buttons have "transition: all 0.2s", which made that margin change animate (Back to home sliding up,
+   or the whole card growing when Back to results goes away). Only the hover colors should ease. */
+.study-back-run { transition: color 0.2s ease, background-color 0.2s ease; }
+
+/* State maps are cropped exactly to the shape (their viewBox has no margin), and an SVG clips to its box by
+   default, so the outer half of every outline along the map's outer edge (e.g. Arizona's flat bottom) was cut
+   off, making those edges look thinner than the borders inside. Let the strokes spill out instead. */
+svg.state-map,
+svg.locator-map { overflow: visible; }
+
+/* State maps load on demand (see loadStateMap in script.js): show a busy cursor and stop the Play /
+   Learn button from being double-clicked while a map file is on its way. */
+body.maps-loading, body.maps-loading * { cursor: progress !important; }
+body.maps-loading #btn-start-game { opacity: 0.6; pointer-events: none; }
+
+/* Settings: a second Back button, top-left, so you don't have to scroll to the bottom to leave */
+#screen-settings { position: relative; }
+.settings-back-top { position: absolute; top: 0; left: 0; margin: 0; padding: 0.35rem 0.7rem; text-decoration: none; border: 1px solid #ccc; border-radius: 8px; background: #fafaf7; color: #444; font-size: 0.9rem; cursor: pointer; z-index: 2; }
+.settings-back-top::before { content: "\2190\00a0"; }
+.settings-back-top:hover { background: #eeeadb; }
+body.dark-mode .settings-back-top { background: #242420; border-color: #444; color: #fdeca6; }
+body.dark-mode .settings-back-top:hover { background: #33332c; }

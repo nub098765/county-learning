@@ -149,6 +149,79 @@ const stateData = {
       { id: "sussex", name: "Sussex", stateKey: "delaware" }
     ]
   },
+  florida: {
+    name: "Florida",
+    svgId: "svg-florida",
+    counties: [
+      { id: "gulf", name: "Gulf", stateKey: "florida" },
+      { id: "polk-fl", name: "Polk", stateKey: "florida" },
+      { id: "madison-fl", name: "Madison", stateKey: "florida" },
+      { id: "dixie", name: "Dixie", stateKey: "florida" },
+      { id: "osceola", name: "Osceola", stateKey: "florida" },
+      { id: "levy", name: "Levy", stateKey: "florida" },
+      { id: "suwannee", name: "Suwannee", stateKey: "florida" },
+      { id: "franklin-fl", name: "Franklin", stateKey: "florida" },
+      { id: "bay", name: "Bay", stateKey: "florida" },
+      { id: "jackson-fl", name: "Jackson", stateKey: "florida" },
+      { id: "indian-river", name: "Indian River", stateKey: "florida" },
+      { id: "palm-beach", name: "Palm Beach", stateKey: "florida" },
+      { id: "duval-fl", name: "Duval", stateKey: "florida" },
+      { id: "gilchrist", name: "Gilchrist", stateKey: "florida" },
+      { id: "miami-dade", name: "Miami-Dade", stateKey: "florida" },
+      { id: "lafayette-fl", name: "Lafayette", stateKey: "florida" },
+      { id: "broward", name: "Broward", stateKey: "florida" },
+      { id: "lake-fl", name: "Lake", stateKey: "florida" },
+      { id: "desoto", name: "DeSoto", stateKey: "florida" },
+      { id: "glades", name: "Glades", stateKey: "florida" },
+      { id: "hendry", name: "Hendry", stateKey: "florida" },
+      { id: "collier", name: "Collier", stateKey: "florida" },
+      { id: "baker", name: "Baker", stateKey: "florida" },
+      { id: "pasco", name: "Pasco", stateKey: "florida" },
+      { id: "sumter-fl", name: "Sumter", stateKey: "florida" },
+      { id: "gadsden", name: "Gadsden", stateKey: "florida" },
+      { id: "monroe-fl", name: "Monroe", stateKey: "florida" },
+      { id: "okaloosa", name: "Okaloosa", stateKey: "florida" },
+      { id: "volusia", name: "Volusia", stateKey: "florida" },
+      { id: "st-lucie", name: "St. Lucie", stateKey: "florida" },
+      { id: "lee-fl", name: "Lee", stateKey: "florida" },
+      { id: "clay-fl", name: "Clay", stateKey: "florida" },
+      { id: "brevard", name: "Brevard", stateKey: "florida" },
+      { id: "taylor-fl", name: "Taylor", stateKey: "florida" },
+      { id: "union-fl", name: "Union", stateKey: "florida" },
+      { id: "hillsborough-fl", name: "Hillsborough", stateKey: "florida" },
+      { id: "charlotte", name: "Charlotte", stateKey: "florida" },
+      { id: "leon-fl", name: "Leon", stateKey: "florida" },
+      { id: "santa-rosa", name: "Santa Rosa", stateKey: "florida" },
+      { id: "sarasota", name: "Sarasota", stateKey: "florida" },
+      { id: "highlands", name: "Highlands", stateKey: "florida" },
+      { id: "citrus", name: "Citrus", stateKey: "florida" },
+      { id: "bradford", name: "Bradford", stateKey: "florida" },
+      { id: "hamilton-fl", name: "Hamilton", stateKey: "florida" },
+      { id: "liberty-fl", name: "Liberty", stateKey: "florida" },
+      { id: "manatee", name: "Manatee", stateKey: "florida" },
+      { id: "calhoun-fl", name: "Calhoun", stateKey: "florida" },
+      { id: "columbia-fl", name: "Columbia", stateKey: "florida" },
+      { id: "holmes-fl", name: "Holmes", stateKey: "florida" },
+      { id: "st-johns", name: "St. Johns", stateKey: "florida" },
+      { id: "martin-fl", name: "Martin", stateKey: "florida" },
+      { id: "jefferson-fl", name: "Jefferson", stateKey: "florida" },
+      { id: "seminole", name: "Seminole", stateKey: "florida" },
+      { id: "hardee", name: "Hardee", stateKey: "florida" },
+      { id: "flagler", name: "Flagler", stateKey: "florida" },
+      { id: "pinellas", name: "Pinellas", stateKey: "florida" },
+      { id: "marion-fl", name: "Marion", stateKey: "florida" },
+      { id: "nassau", name: "Nassau", stateKey: "florida" },
+      { id: "washington-fl", name: "Washington", stateKey: "florida" },
+      { id: "hernando", name: "Hernando", stateKey: "florida" },
+      { id: "wakulla", name: "Wakulla", stateKey: "florida" },
+      { id: "walton", name: "Walton", stateKey: "florida" },
+      { id: "putnam-fl", name: "Putnam", stateKey: "florida" },
+      { id: "alachua", name: "Alachua", stateKey: "florida" },
+      { id: "orange-fl", name: "Orange", stateKey: "florida" },
+      { id: "okeechobee", name: "Okeechobee", stateKey: "florida" },
+      { id: "escambia-fl", name: "Escambia", stateKey: "florida" }
+    ]
+  },
   new_hampshire: {
     name: "New Hampshire",
     svgId: "svg-new-hampshire",
@@ -1150,6 +1223,83 @@ let countyPaths = document.querySelectorAll(".county");
 const svgMaps = document.querySelectorAll(".state-map");
 
 
+// ---- State maps load on demand --------------------------------------------------------------
+// The county shapes used to sit inside index.html (about 6 MB of it). They now live in
+// maps/<svg id>.svg, one file per state (made by split_maps.py). The empty <svg id="svg-alaska" ...>
+// elements stay in the page, so layout, viewBox, data-unit-scale and getElementById keep working;
+// loadStateMap() pours the shapes in the first time a state is needed:
+//   - prefetchStateMaps() starts fetching as soon as a state is selected (see switchVisibleSvgMap),
+//   - ensureStateMaps() is awaited before anything that needs the counties (a game, a Study session).
+// Each map is a small maps/<svg id>.js file that hands its markup to window.__stateMaps, and it is loaded
+// with a <script> tag rather than fetch(): browsers block fetch() on a double-clicked file:// page, but
+// script tags work there too, so the site runs from a plain folder, a local server, or Vercel alike.
+const STATE_MAP_DIR = "maps/";
+const stateMapLoads = {};          // state key -> Promise, so each file is only fetched once
+let mapsLoadingCount = 0;
+
+function stateMapLoaded(key) {
+  const svg = document.getElementById(stateData[key]?.svgId);
+  return !svg || !!svg.querySelector(".county");
+}
+
+function loadStateMap(key) {
+  if (stateMapLoaded(key)) return Promise.resolve();
+  if (stateMapLoads[key]) return stateMapLoads[key];
+  const svg = document.getElementById(stateData[key].svgId);
+  const mapId = stateData[key].svgId;
+  stateMapLoads[key] = new Promise((resolve, reject) => {
+    const tag = document.createElement("script");
+    tag.src = `${STATE_MAP_DIR}${mapId}.js`;
+    tag.onload = () => { tag.remove(); resolve(); };
+    tag.onerror = () => { tag.remove(); reject(new Error(`map ${key}: couldn't load ${tag.src}`)); };
+    document.head.appendChild(tag);
+  })
+    .then(() => {
+      const text = (window.__stateMaps || {})[mapId];
+      if (!text) throw new Error(`map ${key}: ${mapId}.js loaded but had no map data`);
+      delete window.__stateMaps[mapId];
+      const open = text.indexOf("<svg");
+      const start = text.indexOf(">", open) + 1;
+      const end = text.lastIndexOf("</svg>");
+      if (open < 0 || end < start) throw new Error(`map ${key}: unexpected file format`);
+      svg.insertAdjacentHTML("beforeend", text.slice(start, end));
+      // countyPaths was grabbed at page load, when every map was still empty: refresh it, and wire
+      // up the newly arrived counties exactly like the ones that used to be there from the start.
+      countyPaths = document.querySelectorAll(".state-map .county");
+      svg.querySelectorAll(".county").forEach(bindCountyInteractivity);
+    })
+    .catch(err => { delete stateMapLoads[key]; throw err; });
+  return stateMapLoads[key];
+}
+
+// Resolves once every listed state's counties are in the page (rejects if a file can't be fetched).
+function ensureStateMaps(keys) {
+  const pending = [...new Set(keys)].filter(k => stateData[k] && !stateMapLoaded(k));
+  if (!pending.length) return Promise.resolve();
+  mapsLoadingCount++;
+  document.body.classList.add("maps-loading");
+  return Promise.all(pending.map(loadStateMap)).finally(() => {
+    if (--mapsLoadingCount === 0) document.body.classList.remove("maps-loading");
+  });
+}
+
+// Fire-and-forget version used while you're still picking states. When a map arrives, run
+// switchVisibleSvgMap() again (once, however many arrive together) so anything that needed the
+// counties to exist, like the click-here callouts, gets set up.
+let svgRefreshQueued = false;
+function queueSvgRefresh() {
+  if (svgRefreshQueued) return;
+  svgRefreshQueued = true;
+  requestAnimationFrame(() => { svgRefreshQueued = false; switchVisibleSvgMap(); });
+}
+function prefetchStateMaps(keys) {
+  keys.forEach(key => {
+    if (!stateData[key] || stateMapLoaded(key)) return;
+    loadStateMap(key).then(queueSvgRefresh).catch(() => { /* tried again at Play / Study time */ });
+  });
+}
+
+
 // --- Right-click / long-press-to-zoom on state maps ---
 // Small counties (Kalawao, San Francisco, etc.) are hard to click
 // precisely at the map's normal on-screen size, so right-clicking (or, on
@@ -1713,15 +1863,14 @@ document.addEventListener("keydown", (e) => {
 // abort before showScreen("screen-settings") ever ran.
 let settingsReturnScreen = "screen-home";
 let settingsReturnOverlay = null; // "modal" | "admire" | null
-const settingsBackButton = document.querySelector("#screen-settings .btn-back");
+const settingsBackButtons = [...document.querySelectorAll("#screen-settings .btn-back")];   // top-left one + bottom one
+const setSettingsBackLabel = text => settingsBackButtons.forEach(b => { b.textContent = text; });
 
 
 function openSettings(returnScreen, returnOverlay = null) {
   settingsReturnScreen = returnScreen;
   settingsReturnOverlay = returnOverlay;
-  if (settingsBackButton) {
-    settingsBackButton.textContent = returnScreen === "screen-game" ? "Back to Game" : "Back to Home";
-  }
+  setSettingsBackLabel(returnScreen === "screen-game" ? "Back to Game" : "Back to Home");
   showScreen("screen-settings");
 }
 
@@ -2148,7 +2297,76 @@ setTimeout(() => {
   // outline over a highlighted county's border. Re-appending the element puts it on top.
   const toFront = el => { if (el.parentNode) el.parentNode.appendChild(el); };
 
-  function drawMap(county, pin) {
+  // ---- Hover names (Learn phase only) ----
+  // While you study a county, hovering (or tapping) any other county on the map highlights ALL of it and
+  // names it, so you can see what land belongs to what (island chains, the Alaska panhandle...). It is
+  // deliberately not available in the quiz phases, where a name would give the answer away.
+  const studyTip = document.createElement("div");
+  studyTip.className = "study-hover-tip hidden";
+  studyTip.setAttribute("aria-hidden", "true");
+  document.body.appendChild(studyTip);
+  const hideStudyTip = () => studyTip.classList.add("hidden");
+
+  function enableHoverNames(svg, stateKey) {
+    const NS = "http://www.w3.org/2000/svg";
+    const layer = document.createElementNS(NS, "g");
+    layer.setAttribute("class", "study-hover-layer");
+    layer.setAttribute("pointer-events", "none");
+    svg.appendChild(layer);   // last child = drawn on top, so no neighbour can cover the highlighted border
+    const names = new Map((stateData[stateKey]?.counties || []).map(c => [c.id, c]));
+    let current = "", touchTimer = 0;
+    const clear = () => { current = ""; layer.replaceChildren(); hideStudyTip(); };
+    const show = e => {
+      const el = e.target.closest && e.target.closest(".county");
+      const cid = el && svg.contains(el) ? el.dataset.cid : "";
+      const county = cid && names.get(cid);
+      if (!county) { clear(); return; }
+      if (cid !== current) {
+        current = cid;
+        // A copy of the county on top (not the real element), so moving it never disturbs the hover itself.
+        layer.replaceChildren(...[...svg.querySelectorAll(".county")].filter(x => x.dataset.cid === cid).map(x => {
+          const c = x.cloneNode(true);
+          ["id", "tabindex", "role", "aria-label"].forEach(a => c.removeAttribute(a));
+          c.querySelectorAll("[id]").forEach(n => n.removeAttribute("id"));
+          c.setAttribute("class", "study-hover-clone");
+          return c;
+        }));
+        studyTip.textContent = getDisplayName(county);
+      }
+      studyTip.classList.remove("hidden");
+      const w = studyTip.offsetWidth, h = studyTip.offsetHeight, pad = 14;
+      let x = e.clientX + pad, y = e.clientY + pad + 4;
+      if (x + w > window.innerWidth - 8) x = e.clientX - w - pad;
+      if (y + h > window.innerHeight - 8) y = e.clientY - h - pad;
+      studyTip.style.left = Math.max(8, x) + "px";
+      studyTip.style.top = Math.max(8, y) + "px";
+      // A finger lifts straight away, so on touch the label stays for a moment instead of following the pointer.
+      if (e.pointerType === "touch") { clearTimeout(touchTimer); touchTimer = setTimeout(clear, 2500); }
+    };
+    svg.addEventListener("pointermove", show);
+    svg.addEventListener("pointerdown", show);
+    svg.addEventListener("pointerleave", e => { if (e.pointerType !== "touch") clear(); });
+  }
+
+  // The prompt line ("Click Aleutians East on the map.") stays on ONE line: it can use the whole card
+  // width, and if a long name still doesn't fit, the text is shrunk (never below ~60%) rather than
+  // wrapped. A wrapped prompt made the card taller, which moved the Next button between questions.
+  function fitStudyName() {
+    const n = $("study-name");
+    n.style.fontSize = "";
+    n.style.whiteSpace = "";
+    const avail = n.clientWidth, need = n.scrollWidth;
+    if (!n.textContent || avail <= 0 || need <= avail) return;
+    const base = parseFloat(getComputedStyle(n).fontSize);
+    const size = Math.max(base * (avail / need) * 0.97, base * 0.6);
+    n.style.fontSize = size + "px";
+    if (n.scrollWidth > n.clientWidth) n.style.whiteSpace = "normal";   // last resort on a tiny screen
+  }
+  window.addEventListener("resize", () => { if ($("study-run") && !$("study-run").classList.contains("hidden")) fitStudyName(); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitStudyName);
+
+  function drawMap(county, pin, hover) {
+    hideStudyTip();
     const holder = $("study-map");
     const src = document.getElementById(stateData[county.stateKey]?.svgId);
     holder.innerHTML = "";
@@ -2159,14 +2377,20 @@ setTimeout(() => {
     // would fall back to the thick default. Read the real width off the original and reuse it.
     const srcCounty = src.querySelector(".county");
     const outlineW = srcCounty ? getComputedStyle(srcCounty).strokeWidth : "";
-    if (outlineW) svg.querySelectorAll(".county").forEach(el => { el.style.strokeWidth = outlineW; });
+    // The game leaves inline styles on the real counties (typing modes set pointer-events:none, found
+    // counties get colours, ...). A clone inherits them, and an inline pointer-events:none beats the
+    // stylesheet rule that makes Pin counties clickable, so Pin worked on a fresh page but not after a
+    // game. Start every cloned county from a clean slate, keeping only the outline width.
+    svg.querySelectorAll(".county").forEach(el => {
+      el.removeAttribute("style");
+      if (outlineW) el.style.strokeWidth = outlineW;
+    });
     const targets = [];
     svg.querySelectorAll("[id]").forEach(el => { if (el.id === county.id) targets.push(el); });
     svg.querySelectorAll(`[data-county-id="${county.id}"]`).forEach(el => { if (!targets.includes(el)) targets.push(el); });
     svg.querySelectorAll(".county").forEach(el => { el.setAttribute("class", "county"); el.style.removeProperty("fill"); el.style.removeProperty("stroke"); });
-    if (pin) {
-      svg.querySelectorAll(".county").forEach(el => { el.dataset.cid = el.dataset.countyId || el.id; });
-    } else targets.forEach(el => { el.classList.add("locator-target"); toFront(el); });
+    if (pin || hover) svg.querySelectorAll(".county").forEach(el => { el.dataset.cid = el.dataset.countyId || el.id; });
+    if (!pin) targets.forEach(el => { el.classList.add("locator-target"); toFront(el); });
     // Strip ids so the clone can never be picked up by getElementById in the game code.
     svg.removeAttribute("id");
     svg.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
@@ -2177,7 +2401,7 @@ setTimeout(() => {
       svg.querySelectorAll("[tabindex]").forEach(el => el.removeAttribute("tabindex"));
       svg.querySelectorAll("[role]").forEach(el => el.removeAttribute("role"));
     }
-    svg.setAttribute("class", "locator-map" + (pin ? " pin-mode" : ""));
+    svg.setAttribute("class", "locator-map" + (pin ? " pin-mode" : "") + (hover ? " study-hover" : ""));
     ["width", "height", "style"].forEach(a => svg.removeAttribute(a));
     svg.setAttribute("aria-label", pin ? `Map of ${stateData[county.stateKey].name}` : `Map of ${stateData[county.stateKey].name} with a county highlighted`);
     holder.appendChild(svg);
@@ -2189,6 +2413,7 @@ setTimeout(() => {
       });
       return;
     }
+    if (hover) enableHoverNames(svg, county.stateKey);
     addRing(svg, targets);
   }
 
@@ -2248,7 +2473,7 @@ setTimeout(() => {
     const list = learn ? batch : typing ? typeSet : pinning ? pinSet : quizSet;
     const c = list[i];
     $("study-progress").textContent = `${learn ? "Study" : typing ? "Type" : pinning ? "Pin" : "Quiz"}: ${i + 1} of ${list.length} (counties ${start + 1}-${start + batch.length} of ${counties.length})`;
-    drawMap(c, pinning);
+    drawMap(c, pinning, learn);
     $("study-name").textContent = learn ? getDisplayName(c) : typing ? "Type the name of the highlighted county." : pinning ? `Click ${getDisplayName(c)} on the map.` : "Which county is highlighted?";
     $("study-feedback").textContent = "";
     const ch = $("study-choices");
@@ -2259,7 +2484,7 @@ setTimeout(() => {
       const inp = $("study-input");
       inp.value = "";
       inp.disabled = false;
-      $("study-submit").classList.remove("hidden");
+      $("study-submit").classList.remove("hidden", "study-pending");
       buildChars();
       inp.focus({ preventScroll: true });
     } else if (!learn && !pinning) {
@@ -2279,8 +2504,14 @@ setTimeout(() => {
       });
     }
     $("study-prev").classList.toggle("hidden", !learn || i === 0);
-    $("study-next").classList.toggle("hidden", !learn);
+    // Next is always in the layout (just invisible until you've answered), so its row isn't added at
+    // the moment you answer, which used to push the whole card around.
+    $("study-next").classList.remove("hidden");
+    $("study-next").classList.toggle("study-pending", !learn);
     $("study-next").textContent = learn ? (lastIn(list) ? afterLabel("learn") : "Next") : "Next";
+    replayBackBtn.classList.toggle("hidden", !replayFrom);
+    fitStudyName();
+    requestAnimationFrame(fitStudyName);   // again once the screen is actually showing
   }
 
   function answer(btn, ok, c, chosen) {
@@ -2293,7 +2524,7 @@ setTimeout(() => {
     setStudyLearned(c.id, PHASE_ROW.quiz, ok);
     $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getDisplayName(c)}.`;
     $("study-next").textContent = lastIn(quizSet) ? afterLabel("quiz") : "Next";
-    $("study-next").classList.remove("hidden");
+    $("study-next").classList.remove("hidden", "study-pending");
   }
 
   // Same matching rules as the game's Type modes (including the
@@ -2307,10 +2538,10 @@ setTimeout(() => {
     roundLog.type.push({ c, ok, typed: inp.value.trim() });
     setStudyLearned(c.id, PHASE_ROW.type, ok);
     inp.disabled = true;
-    $("study-submit").classList.add("hidden");
+    $("study-submit").classList.add("study-pending");   // invisible but still taking up its row
     $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getDisplayName(c)}.`;
     $("study-next").textContent = lastIn(typeSet) ? afterLabel("type") : "Next";
-    $("study-next").classList.remove("hidden");
+    $("study-next").classList.remove("hidden", "study-pending");
     $("study-next").focus(); // so Enter carries straight on
   }
 
@@ -2328,7 +2559,7 @@ setTimeout(() => {
     if (!ok) addRing(svg, targets);
     $("study-feedback").textContent = ok ? "Correct!" : `Not quite. That one is ${el.dataset.cid ? (findCounty(el.dataset.cid) || {}).name || "another county" : "another county"}; ${getDisplayName(c)} is highlighted.`;
     $("study-next").textContent = lastIn(pinSet) ? afterLabel("pin") : "Next";
-    $("study-next").classList.remove("hidden");
+    $("study-next").classList.remove("hidden", "study-pending");
     $("study-next").focus();
   }
   const findCounty = id => { for (const s of Object.values(stateData)) { const f = s.counties.find(x => x.id === id); if (f) return f; } return null; };
@@ -2373,7 +2604,65 @@ setTimeout(() => {
     const b = el("button", cls || "btn-secondary", label);
     b.type = "button"; b.addEventListener("click", fn); $("study-choices").appendChild(b); return b;
   };
+
+  // "Back to results": while a replay started from the results page is running, this puts the finished
+  // round's results back exactly as they were (with its Next-counties button), so an accidental "Pin
+  // again" isn't a one-way door. replayFrom holds that finished round while the replay runs.
+  let replayFrom = null;
+  const snapshotRound = () => ({ quiz: roundLog.quiz.slice(), type: roundLog.type.slice(), pin: roundLog.pin.slice(), score, typeScore, pinScore, start, batch: batch.slice() });
+  const replay = fn => () => { replayFrom = snapshotRound(); fn(); };
+  const replayBackBtn = el("button", "study-replay-back hidden", "Back to results");
+  replayBackBtn.type = "button";
+  replayBackBtn.addEventListener("click", () => {
+    if (!replayFrom) return;
+    const r = replayFrom;
+    roundLog.quiz = r.quiz; roundLog.type = r.type; roundLog.pin = r.pin;
+    score = r.score; typeScore = r.typeScore; pinScore = r.pinScore;
+    start = r.start; batch = r.batch;   // so "Next N counties" / "again" work on the right batch afterwards
+    showSummary();
+  });
+  document.querySelector("#study-run .study-nav").after(replayBackBtn);
+
+  // "Back to home" while a batch is in progress (the study cards or any practice phase, but not the
+  // results page) asks first, so an accidental click isn't a one-way door. "No" just stays put.
+  const inSession = () => !$("study-run").classList.contains("hidden") && sumEl.classList.contains("hidden");
+  const resumeModal = el("div", "modal hidden");
+  resumeModal.id = "modal-study-resume";
+  resumeModal.setAttribute("role", "dialog");
+  resumeModal.setAttribute("aria-modal", "true");
+  resumeModal.setAttribute("aria-labelledby", "study-resume-title");
+  resumeModal.innerHTML =
+    '<div class="modal-content">' +
+      '<h2 id="study-resume-title">Leave session?</h2>' +
+      '<p>You\u2019re in the middle of a learning session. Are you sure you want to leave?</p>' +
+      '<div class="modal-actions">' +
+        '<button type="button" class="btn-secondary" data-leave="yes">Yes</button>' +
+        '<button type="button" class="btn-primary" data-leave="no">No</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(resumeModal);
+  const closeResume = () => resumeModal.classList.add("hidden");
+  resumeModal.addEventListener("click", e => {
+    if (e.target === resumeModal) closeResume();          // dimmed backdrop = stay in the session
+    const b = e.target.closest("[data-leave]");
+    if (!b) return;
+    closeResume();
+    if (b.dataset.leave === "yes") showScreen("screen-home");
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && !resumeModal.classList.contains("hidden")) closeResume();
+  });
+  // Capture phase on the screen, so this runs before the generic .btn-back "go to screen" handler.
+  $("screen-study").addEventListener("click", e => {
+    if (!e.target.closest(".study-back-run") || !inSession()) return;
+    e.stopPropagation();
+    resumeModal.classList.remove("hidden");
+    resumeModal.querySelector('[data-leave="no"]').focus();   // default to staying
+  }, true);
+
   function clearRun() {
+    hideStudyTip();
+    replayBackBtn.classList.add("hidden");
     $("study-map").innerHTML = "";
     $("study-type").classList.add("hidden");
     $("study-feedback").textContent = "";
@@ -2405,6 +2694,7 @@ setTimeout(() => {
   // Type and Pin). One section per mode: the big score, then a sideways-scrolling row of snapshots
   // showing what you picked and the right answer. Replay / next buttons sit underneath.
   function showSummary() {
+    replayFrom = null;
     clearRun();
     $("study-progress").textContent = "Round complete";
     $("study-name").textContent = "";
@@ -2433,11 +2723,11 @@ setTimeout(() => {
       return sec;
     }));
     rings.forEach(m => addRing(m.svg, m.targets));
-    if (start + BATCH < counties.length) addBtn(`Next ${Math.min(BATCH, counties.length - start - BATCH)} counties`, () => { start += BATCH; beginBatch(); }, "btn-primary");
-    if (seq().includes("pin")) addBtn("Pin again", startPin);
-    if (seq().includes("quiz")) addBtn("Quiz again", startQuiz);
-    if (seq().includes("type")) addBtn("Type again", startType);
-    addBtn("Back to home", () => showScreen("screen-home"));
+    if (start + BATCH < counties.length) addBtn(`Next ${Math.min(BATCH, counties.length - start - BATCH)} counties`, () => { replayFrom = snapshotRound(); start += BATCH; beginBatch(true); }, "btn-primary");
+    if (seq().includes("pin")) addBtn("Pin again", replay(startPin));
+    if (seq().includes("quiz")) addBtn("Quiz again", replay(startQuiz));
+    if (seq().includes("type")) addBtn("Type again", replay(startType));
+    // (No "Back to home" button here: the "Back to home" link under the card already does that.)
   }
   function results() { showSummary(); }   // kept so older calls still land on the one combined page
 
@@ -2457,7 +2747,8 @@ setTimeout(() => {
   function startPin() { phase = "pin"; pinSet = practiceOrder(); i = 0; pinScore = 0; roundLog.pin = []; render(); }
   function startType() { phase = "type"; typeSet = practiceOrder(); i = 0; typeScore = 0; roundLog.type = []; render(); }
 
-  function beginBatch() {
+  function beginBatch(keepBackToResults) {
+    if (!keepBackToResults) replayFrom = null;   // "Next N counties" keeps it so the results can be brought back
     batch = counties.slice(start, start + BATCH);
     i = 0; phase = "learn";
     render();
@@ -2494,9 +2785,11 @@ setTimeout(() => {
   $("study-select-all").addEventListener("click", () => { studyStates().forEach(([k]) => selected.add(k)); renderPick(); });
   $("study-deselect-all").addEventListener("click", () => { selected.clear(); renderPick(); });
   $("study-skip-learned").addEventListener("change", updateStudyStart);
-  $("study-start").addEventListener("click", () => {
+  $("study-start").addEventListener("click", async () => {
     const pool = studyPool();
     if (!pool.length) { updateStudyStart(); return; }   // (the button is disabled in this case anyway)
+    try { await ensureStateMaps(pool.map(c => c.stateKey)); }
+    catch (err) { $("study-pick-msg").textContent = "Couldn't load the map data. Make sure the maps folder is next to index.html, then try again."; return; }
     counties = shuffle(pool);
     start = 0;
     $("study-pick").classList.add("hidden");
@@ -2559,7 +2852,7 @@ backButtons.forEach(btn => {
 
       settingsReturnScreen = "screen-home";
       settingsReturnOverlay = null;
-      if (settingsBackButton) settingsBackButton.textContent = "Back to Home";
+      setSettingsBackLabel("Back to Home");
     } else {
       showScreen(btn.dataset.target);
     }
@@ -2931,7 +3224,7 @@ function markCountyLearned(countyId, mode, viaRetryMissed) {
 // found by the game code, and drop the game's per-county styling.
 function miniMap(s, learned) {
   const src = document.getElementById(s.svgId);
-  if (!src) return null;
+  if (!src || !src.querySelector(".county")) return null;   // not loaded yet
   const svg = src.cloneNode(true);
   // The click-here callouts (Alaska, Hawaii, California) only exist once
   // the game has set them up, so leave them out: this overview then looks
@@ -2964,6 +3257,10 @@ function renderStatsPanel() {
     statsSections.innerHTML = "";
     return;
   }
+
+  // The Hide all button turns into "Show all" once every state's table is hidden (by it or one by one).
+  const hideAllBtn = statsPanel.querySelector("#btn-hide-all-stats");
+  if (hideAllBtn) hideAllBtn.textContent = activeStateKeys.every(isStatsHidden) ? "Show all" : "Hide all";
 
   // Play and Learn each have their own progress; the Play | Learn switch picks which one to show.
   const learnView = statsView === "learn";
@@ -3051,15 +3348,18 @@ function renderStatsPanel() {
     const mapModes = statsLearnMode === "all" ? STUDY_MODE_LIST : [statsLearnMode];
     const note = statsLearnMode === "all" ? "Green: learned in all three Learn modes" : `Green: learned in ${STUDY_MODE_LABELS[statsLearnMode]}`;
     statsSections.querySelectorAll("[data-minimap]").forEach(box => {
-      const s = stateData[box.dataset.minimap];
-      const learned = {};
-      s.counties.forEach(c => { if (mapModes.every(m => isStudyLearned(c.id, m))) learned[c.id] = true; });
-      const map = miniMap(s, learned);
-      if (!map) return;
-      const cap = document.createElement("p");
-      cap.className = "stats-minimap-note";
-      cap.textContent = note;
-      box.append(map, cap);
+      const key = box.dataset.minimap, s = stateData[key];
+      loadStateMap(key).then(() => {
+        if (!box.isConnected) return;               // the panel was redrawn while the map was loading
+        const learned = {};
+        s.counties.forEach(c => { if (mapModes.every(m => isStudyLearned(c.id, m))) learned[c.id] = true; });
+        const map = miniMap(s, learned);
+        if (!map) return;
+        const cap = document.createElement("p");
+        cap.className = "stats-minimap-note";
+        cap.textContent = note;
+        box.append(map, cap);
+      }).catch(() => { /* no minimap if the file can't be loaded */ });
     });
   }
 
@@ -3078,7 +3378,9 @@ if (statsPanel) {
     if (viewBtn) { statsView = viewBtn.dataset.statsView; renderStatsPanel(); return; }
     const hideAllBtn = e.target.closest("#btn-hide-all-stats");
     if (hideAllBtn) {
-      activeStateKeys.forEach(stateKey => { statsHiddenOverride[stateKey] = true; });
+      // Hide everything, unless everything is already hidden, in which case show everything.
+      const hide = !activeStateKeys.every(isStatsHidden);
+      activeStateKeys.forEach(stateKey => { statsHiddenOverride[stateKey] = hide; });
       renderStatsPanel();
       return;
     }
@@ -3330,6 +3632,8 @@ function updateMapGridColumns() {
 
 
 function switchVisibleSvgMap() {
+  // Start fetching any selected state's shapes in the background (they aren't in index.html any more).
+  prefetchStateMaps(activeStateKeys);
   // A zoomed map lives outside its normal spot in the page; put it back first.
   exitMapZoom();
   // The active state selection is what both of these depend on, and this
@@ -3579,22 +3883,43 @@ window.addEventListener("resize", () => {
 // --- Setup-screen search boxes ---
 // Both boxes ignore case and diacritics (so "hawaii" finds Hawaiʻi and
 // "coos" finds Coös) and only match names that CONTAIN the typed text.
-function normalizeForSearch(str) {
-  return foldDiacriticsForComparison(String(str))
-    .toLowerCase()
-    .replace(/[\u02bb\u2018\u2019`']/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+//
+// The ʻokina (U+02BB) is a letter, though, so it can be searched for too:
+//   - typing no apostrophe-like character ignores them all in the names, so "hawaii"
+//     still finds Hawaiʻi and "kauai" finds Kauaʻi;
+//   - typing a ʻokina matches only names that really contain one (so "ʻ" alone lists
+//     just Hawaiʻi and Kauaʻi, and "kauaʻi" works);
+//   - typing a plain or curly apostrophe (or backtick) matches any apostrophe-like
+//     character in the name, so "kaua'i" finds Kauaʻi and "george's" finds Prince George's.
+const APOS_LIKE = /[\u02bb\u2018\u2019`']/g;
+function searchMode(rawQuery) {
+  const q = String(rawQuery);
+  if (q.includes("\u02bb")) return "okina";
+  if (/[\u2018\u2019`']/.test(q)) return "apostrophe";
+  return "plain";
+}
+function normalizeForSearch(str, mode = "plain") {
+  let t = foldDiacriticsForComparison(String(str)).toLowerCase();
+  if (mode === "okina") t = t.replace(/[\u2018\u2019`']/g, "");        // keep only the real ʻokina
+  else if (mode === "apostrophe") t = t.replace(APOS_LIKE, "'");         // all apostrophe-likes count as one
+  else t = t.replace(APOS_LIKE, "");                                     // ignore them entirely
+  return t.replace(/\s+/g, " ").trim();
+}
+// True when `text` contains what was typed in a search box (an empty search matches everything).
+function searchMatches(text, rawQuery) {
+  if (!String(rawQuery).trim()) return true;
+  const mode = searchMode(rawQuery);
+  return normalizeForSearch(text, mode).includes(normalizeForSearch(rawQuery, mode));
 }
 
 function applyStateSearchFilter() {
   const input = document.getElementById("state-search");
   const empty = document.getElementById("state-search-empty");
-  const q = input ? normalizeForSearch(input.value) : "";
+  const q = input ? input.value : "";
   let shown = 0;
   document.querySelectorAll("#screen-setup .states-list .state-row").forEach(row => {
     const nameEl = row.querySelector(".state-name");
-    const match = !q || (nameEl && normalizeForSearch(nameEl.textContent).includes(q));
+    const match = !q.trim() || (nameEl && searchMatches(nameEl.textContent, q));
     row.classList.toggle("search-hidden", !match);
     if (match) shown++;
   });
@@ -3608,7 +3933,7 @@ function applyCountySearchFilter() {
   const input = document.getElementById("county-search");
   const empty = document.getElementById("county-search-empty");
   if (!checkboxContainer) return;
-  const q = input ? normalizeForSearch(input.value) : "";
+  const q = input ? input.value.trim() : "";
   let anyShown = false;
   let currentHeader = null;
   let headerHasMatch = false;
@@ -3623,7 +3948,7 @@ function applyCountySearchFilter() {
       currentHeader = el;
       headerHasMatch = false;
     } else if (el.classList.contains("checkbox-label")) {
-      const match = !q || normalizeForSearch(el.dataset.searchName || el.textContent).includes(q);
+      const match = !q || searchMatches(el.dataset.searchName || el.textContent, q);
       el.classList.toggle("search-hidden", !match);
       if (match) { headerHasMatch = true; anyShown = true; }
     }
@@ -3929,7 +4254,7 @@ function updateSetupPlayButton() {
 
 
 if (btnStartGame) {
-  btnStartGame.addEventListener("click", () => {
+  btnStartGame.addEventListener("click", async () => {
     const specificRadio = document.querySelector('input[name="specific-counties"]:checked');
     const isSpecificYes = specificRadio ? specificRadio.value === "yes" : false;
     const allActiveCounties = getActiveCountiesPool();
@@ -3945,6 +4270,10 @@ if (btnStartGame) {
 
     if (selectedCounties.length === 0) return;
 
+
+    // The county shapes load on demand: make sure every state in play has arrived before the game starts.
+    try { await ensureStateMaps(activeStateKeys); }
+    catch (err) { alert("Couldn't load the map data. Make sure the maps folder is next to index.html, then try again."); return; }
 
     // NOTE: showScreen() has to run BEFORE switchVisibleSvgMap(). The maps
     // live inside #screen-game, which is display:none until it gets the
@@ -5091,12 +5420,14 @@ if (btnAdmireHome) {
   learnBtns.forEach(b => b.addEventListener("click", () => choose("learn", b.dataset.homeLearn)));
 
   // Capture phase so this runs before the normal Play handler.
-  start.addEventListener("click", e => {
+  start.addEventListener("click", async e => {
     if (!chosen) { e.stopImmediatePropagation(); msg.textContent = "Pick a mode first."; return; }
     if (chosen.kind === "play") return;            // normal Play handler takes it from here
     e.stopImmediatePropagation();
     const yes = document.querySelector('input[name="specific-counties"]:checked');
     const excluded = new Set(yes && yes.value === "yes" ? [...document.querySelectorAll(".county-checkbox:checked")].map(cb => cb.value) : []);
+    try { await ensureStateMaps(activeStateKeys); }
+    catch (err) { msg.textContent = "Couldn't load the map data. Make sure the maps folder is next to index.html, then try again."; return; }
     const ok = window.startStudyFromHome(chosen.mode, activeStateKeys.slice(), skip.checked, excluded);
     if (!ok) msg.textContent = `You've already learned every county here ${chosen.mode === "all" ? "in all three Learn modes" : "in " + ({ pin: "Pin", mc: "Multiple-Choice", type: "Type" })[chosen.mode]}. Untick \u201CSkip counties I've already learned\u201D to review them.`;
   }, true);

@@ -1,0 +1,93 @@
+===== NEW STATE: Florida  (key "florida", svg id "svg-florida", 67 counties) =====
+Paste each piece where it says. Nothing else needs to change; the map shapes are in maps/svg-florida.js.
+Upload the whole maps/ folder with the site.
+
+----- 1) script.js: inside `const stateData = { ... }`, as a new entry (anywhere between two entries; order sets list order) -----
+  florida: {
+    name: "Florida",
+    svgId: "svg-florida",
+    counties: [
+      { id: "gulf", name: "Gulf", stateKey: "florida" },
+      { id: "polk-fl", name: "Polk", stateKey: "florida" },
+      { id: "madison-fl", name: "Madison", stateKey: "florida" },
+      { id: "dixie", name: "Dixie", stateKey: "florida" },
+      { id: "osceola", name: "Osceola", stateKey: "florida" },
+      { id: "levy", name: "Levy", stateKey: "florida" },
+      { id: "suwannee", name: "Suwannee", stateKey: "florida" },
+      { id: "franklin-fl", name: "Franklin", stateKey: "florida" },
+      { id: "bay", name: "Bay", stateKey: "florida" },
+      { id: "jackson-fl", name: "Jackson", stateKey: "florida" },
+      { id: "indian-river", name: "Indian River", stateKey: "florida" },
+      { id: "palm-beach", name: "Palm Beach", stateKey: "florida" },
+      { id: "duval-fl", name: "Duval", stateKey: "florida" },
+      { id: "gilchrist", name: "Gilchrist", stateKey: "florida" },
+      { id: "miami-dade", name: "Miami-Dade", stateKey: "florida" },
+      { id: "lafayette-fl", name: "Lafayette", stateKey: "florida" },
+      { id: "broward", name: "Broward", stateKey: "florida" },
+      { id: "lake-fl", name: "Lake", stateKey: "florida" },
+      { id: "desoto", name: "DeSoto", stateKey: "florida" },
+      { id: "glades", name: "Glades", stateKey: "florida" },
+      { id: "hendry", name: "Hendry", stateKey: "florida" },
+      { id: "collier", name: "Collier", stateKey: "florida" },
+      { id: "baker", name: "Baker", stateKey: "florida" },
+      { id: "pasco", name: "Pasco", stateKey: "florida" },
+      { id: "sumter-fl", name: "Sumter", stateKey: "florida" },
+      { id: "gadsden", name: "Gadsden", stateKey: "florida" },
+      { id: "monroe-fl", name: "Monroe", stateKey: "florida" },
+      { id: "okaloosa", name: "Okaloosa", stateKey: "florida" },
+      { id: "volusia", name: "Volusia", stateKey: "florida" },
+      { id: "st-lucie", name: "St. Lucie", stateKey: "florida" },
+      { id: "lee-fl", name: "Lee", stateKey: "florida" },
+      { id: "clay-fl", name: "Clay", stateKey: "florida" },
+      { id: "brevard", name: "Brevard", stateKey: "florida" },
+      { id: "taylor-fl", name: "Taylor", stateKey: "florida" },
+      { id: "union-fl", name: "Union", stateKey: "florida" },
+      { id: "hillsborough-fl", name: "Hillsborough", stateKey: "florida" },
+      { id: "charlotte", name: "Charlotte", stateKey: "florida" },
+      { id: "leon-fl", name: "Leon", stateKey: "florida" },
+      { id: "santa-rosa", name: "Santa Rosa", stateKey: "florida" },
+      { id: "sarasota", name: "Sarasota", stateKey: "florida" },
+      { id: "highlands", name: "Highlands", stateKey: "florida" },
+      { id: "citrus", name: "Citrus", stateKey: "florida" },
+      { id: "bradford", name: "Bradford", stateKey: "florida" },
+      { id: "hamilton-fl", name: "Hamilton", stateKey: "florida" },
+      { id: "liberty-fl", name: "Liberty", stateKey: "florida" },
+      { id: "manatee", name: "Manatee", stateKey: "florida" },
+      { id: "calhoun-fl", name: "Calhoun", stateKey: "florida" },
+      { id: "columbia-fl", name: "Columbia", stateKey: "florida" },
+      { id: "holmes-fl", name: "Holmes", stateKey: "florida" },
+      { id: "st-johns", name: "St. Johns", stateKey: "florida" },
+      { id: "martin-fl", name: "Martin", stateKey: "florida" },
+      { id: "jefferson-fl", name: "Jefferson", stateKey: "florida" },
+      { id: "seminole", name: "Seminole", stateKey: "florida" },
+      { id: "hardee", name: "Hardee", stateKey: "florida" },
+      { id: "flagler", name: "Flagler", stateKey: "florida" },
+      { id: "pinellas", name: "Pinellas", stateKey: "florida" },
+      { id: "marion-fl", name: "Marion", stateKey: "florida" },
+      { id: "nassau", name: "Nassau", stateKey: "florida" },
+      { id: "washington-fl", name: "Washington", stateKey: "florida" },
+      { id: "hernando", name: "Hernando", stateKey: "florida" },
+      { id: "wakulla", name: "Wakulla", stateKey: "florida" },
+      { id: "walton", name: "Walton", stateKey: "florida" },
+      { id: "putnam-fl", name: "Putnam", stateKey: "florida" },
+      { id: "alachua", name: "Alachua", stateKey: "florida" },
+      { id: "orange-fl", name: "Orange", stateKey: "florida" },
+      { id: "okeechobee", name: "Okeechobee", stateKey: "florida" },
+      { id: "escambia-fl", name: "Escambia", stateKey: "florida" }
+    ]
+  },
+
+----- 2) index.html: in the state list, among the other <div class="state-row" ...> blocks -----
+     <div class="state-row" id="state-florida" data-state="florida">
+       <span class="state-name">Florida</span>
+       <span class="state-count">67 counties</span>
+     </div>
+
+----- 3) index.html: among the other map boxes (next to the "... SVG Map" blocks) -----
+     <!-- Florida SVG Map -->
+     <div class="map-box hidden" data-state="florida">
+     <svg id="svg-florida" class="state-map hidden" viewBox="0 0 16000 15577" data-unit-scale="20" width="100%" xmlns="http://www.w3.org/2000/svg" aria-label="Map of Florida Counties"><!-- maps/svg-florida.svg: loaded on demand --></svg>
+     </div>
+
+----- 4) style.css: next to the other "body.scale-states-by-size #svg-..." lines (optional; 430px is a starting guess, tune to taste) -----
+body.scale-states-by-size #svg-florida { --w: 430px; }
