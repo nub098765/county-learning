@@ -3008,6 +3008,22 @@ setTimeout(() => {
   });
   $("study-submit").addEventListener("click", submitType);
   $("study-input").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitType(); } });
+
+  // Enter = Next, anywhere on the study card. (After you answer, Next is focused so Enter already worked,
+  // but only if the focus actually got there; on the "learn" cards, or after you click somewhere else, it
+  // didn't. Now it works regardless of where the focus is.) It leaves alone anything that handles Enter
+  // itself: the text box (Enter submits your answer), buttons and links, and the map's counties.
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Enter" || e.repeat || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    if (!$("screen-study").classList.contains("active") || $("study-run").classList.contains("hidden")) return;
+    if (!sumEl.classList.contains("hidden") || !resumeModal.classList.contains("hidden")) return;
+    const t = e.target;
+    if (t && t.closest && t.closest("button, a, input, select, textarea, [role='button']")) return;
+    const next = $("study-next");
+    if (next.classList.contains("hidden") || next.classList.contains("study-pending")) return;
+    e.preventDefault();
+    next.click();
+  });
 })();
 if (btnGotoSettings) {
   btnGotoSettings.addEventListener("click", () => openSettings("screen-home"));
