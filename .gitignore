@@ -1,0 +1,10 @@
+areawater/
+map-data/
+land-polygons-split-4326/
+land_polygons*
+land.gpkg
+tl_*_us_county*
+*.zip
+__pycache__/
+new-state-snippets/
+*.bak

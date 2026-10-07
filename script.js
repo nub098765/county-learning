@@ -182,7 +182,7 @@ const stateData = {
       { id: "monroe-fl", name: "Monroe", stateKey: "florida" },
       { id: "okaloosa", name: "Okaloosa", stateKey: "florida" },
       { id: "volusia", name: "Volusia", stateKey: "florida" },
-      { id: "st-lucie", name: "St. Lucie", stateKey: "florida" },
+      { id: "st-lucie", name: "Saint Lucie", stateKey: "florida" },
       { id: "lee-fl", name: "Lee", stateKey: "florida" },
       { id: "clay-fl", name: "Clay", stateKey: "florida" },
       { id: "brevard", name: "Brevard", stateKey: "florida" },
@@ -202,7 +202,7 @@ const stateData = {
       { id: "calhoun-fl", name: "Calhoun", stateKey: "florida" },
       { id: "columbia-fl", name: "Columbia", stateKey: "florida" },
       { id: "holmes-fl", name: "Holmes", stateKey: "florida" },
-      { id: "st-johns", name: "St. Johns", stateKey: "florida" },
+      { id: "st-johns", name: "Saint Johns", stateKey: "florida" },
       { id: "martin-fl", name: "Martin", stateKey: "florida" },
       { id: "jefferson-fl", name: "Jefferson", stateKey: "florida" },
       { id: "seminole", name: "Seminole", stateKey: "florida" },
@@ -759,6 +759,89 @@ const stateData = {
 };
 
 
+// --- States that arrive through maps/manifest.js --------------------------------------------------
+// split_maps.py writes maps/manifest.js: one entry per state that is NOT written out above (key, name,
+// svgId, viewBox, county ids + names). index.html loads it before this file. For each such state we add
+// what a hand-added state would need: its stateData entry, its row in the setup list, and its empty
+// map <svg> (the shapes themselves load on demand from maps/<svgId>.js, as for every other state).
+// So a freshly built state shows up on the US map without touching index.html, script.js or style.css.
+// A state that IS written out above (or already has its markup) is left exactly as it is.
+// Some states draw "click here" circles in the margin above / below / beside the map (Virginia's independent
+// cities, like San Francisco and Kalawao elsewhere). Those circles need room INSIDE the map's frame (its
+// viewBox), or they are cut off wherever the frame clips, most visibly in the zoomed view. split_maps.py only
+// knows the shapes, so the room is added here, once, when the state is registered. Units are viewBox units.
+// (Virginia: "0 0 16000 6963" becomes "0 -800 16160 8563"; a frame that already has the room is left alone.)
+const CALLOUT_ROOM = { virginia: { top: 800, bottom: 800, right: 160 } };
+function withCalloutRoom(key, viewBox) {
+  const room = CALLOUT_ROOM[key];
+  const v = String(viewBox).trim().split(/[\s,]+/).map(Number);
+  if (!room || v.length !== 4 || v.some(n => !isFinite(n)) || v[1] < 0) return viewBox;
+  const [x, y, w, h] = v;
+  return `${x} ${y - room.top} ${w + room.right} ${h + room.top + room.bottom}`;
+}
+
+(function registerManifestStates() {
+  const list = window.__stateManifest;
+  if (!Array.isArray(list) || !list.length) return;
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const wrapper = document.querySelector(".map-wrapper");
+  const rowsHolder = document.querySelector("#screen-setup .states-list");
+  list.forEach(m => {
+    if (!m || !m.key || !m.svgId || !Array.isArray(m.counties) || stateData[m.key]) return;
+    stateData[m.key] = {
+      name: m.name,
+      svgId: m.svgId,
+      counties: m.counties.map(([id, name]) => ({ id, name, stateKey: m.key }))
+    };
+    if (wrapper && !document.getElementById(m.svgId)) {
+      // Same default footprint a hand-added state starts with, nudged up for states with many counties
+      // (about 435px for Ohio's 88, capped at Texas's 580px). style.css can still override it per state.
+      const w = Math.round(Math.min(580, Math.max(330, 330 + 1.5 * (m.counties.length - 20))));
+      wrapper.insertAdjacentHTML("beforeend",
+        `<div class="map-box hidden" data-state="${esc(m.key)}">` +
+        `<svg id="${esc(m.svgId)}" class="state-map hidden" viewBox="${esc(withCalloutRoom(m.key, m.viewBox))}" data-unit-scale="${esc(m.scale || 20)}" ` +
+        `width="100%" xmlns="http://www.w3.org/2000/svg" aria-label="Map of ${esc(m.name)} Counties" style="--w:${w}px"></svg></div>`);
+    }
+    if (rowsHolder && !document.getElementById("state-" + m.key)) {
+      // index.html lists every not-yet-built state as a greyed-out "WORK IN PROGRESS" row: this state is
+      // built now, so that placeholder goes, and the real row slots in among the playable states (A-Z).
+      // (compared loosely, so "United States Virgin Islands" in the list matches "U.S. Virgin Islands")
+      const looseName = t => String(t).toLowerCase().replace(/united states/g, "us").replace(/[^a-z]/g, "");
+      rowsHolder.querySelectorAll(".state-row.disabled").forEach(r => {
+        if (looseName(r.querySelector(".state-name")?.textContent || "") === looseName(m.name)) r.remove();
+      });
+      const row = document.createElement("div");
+      row.className = "state-row";
+      row.id = "state-" + m.key;
+      row.dataset.state = m.key;
+      row.innerHTML = `<span class="state-name">${esc(m.name)}</span> <span class="state-count">${m.counties.length} counties</span>`;
+      const playable = [...rowsHolder.querySelectorAll(".state-row:not(.disabled)")];
+      const next = playable.find(r => (r.querySelector(".state-name")?.textContent || "").localeCompare(m.name) > 0);
+      if (next) rowsHolder.insertBefore(row, next);
+      else if (playable.length) playable[playable.length - 1].after(row);
+      else rowsHolder.appendChild(row);
+    }
+  });
+})();
+
+
+// A small state name in the corner of every map tile, so someone who doesn't know what shape they're looking at
+// can tell. Runs after the manifest states above exist, so they get one too. (Hidden in "Scale States by Size"
+// layout, where the tile box is display: contents and has nowhere to hold it; see style.css.)
+(function addMapStateLabels() {
+  document.querySelectorAll(".map-box[data-state]").forEach(box => {
+    const st = stateData[box.dataset.state];
+    if (!st || box.querySelector(".map-state-label")) return;
+    const label = document.createElement("span");
+    label.className = "map-state-label";
+    label.textContent = st.name;
+    label.setAttribute("aria-hidden", "true");   // the map already has an aria-label naming the state
+    box.classList.add("has-state-label");
+    box.prepend(label);
+  });
+})();
+
+
 // --- Game Configuration & State Variables ---
 let selectedMode = "pin"; // "pin" | "pin-hard" | "type" | "type-hard" | "type-strict"
 // Modes where the player types the county name instead of clicking the
@@ -849,6 +932,52 @@ let sfCalloutCreated = false;
 let skagwayCalloutCreated = false;
 let bristolBayCalloutCreated = false;
 
+// Virginia: 35 of its 38 independent cities get a callout (Chesapeake, Suffolk and Virginia Beach are big
+// enough to click directly). Each gets a "click here"
+// circle in the margin above or below the state, with an arrow to the real city (same idea as San
+// Francisco / Kalawao). Each row is [county id, offsetX, offsetY]: where the circle sits relative to the
+// city's center, in the 800-unit map scale (setupCountyCallout multiplies by the map's data-unit-scale).
+// The margins need room: the <svg id="svg-virginia"> tag's viewBox must be "0 -800 16160 8563"
+// (the old tight "0 0 16000 6963" would clip every circle).
+const VIRGINIA_CALLOUTS = [
+  ["norton-va", 0, 74],             // bottom
+  ["bristol-va", 0, 37],            // bottom
+  ["galax", -4, 38],                // bottom
+  ["radford", -16, 92],             // bottom
+  ["salem-va", -39, 112],           // bottom
+  ["covington-va", -24, 170],       // bottom
+  ["roanoke-va", -4, 110],          // bottom
+  ["martinsville", 11, 40],         // bottom
+  ["lexington-va", -7, 170],        // bottom
+  ["danville", 14, 29],             // bottom
+  ["buena-vista-va", 31, 164],      // bottom
+  ["lynchburg", 37, 125],           // bottom
+  ["emporia", -65, 43],             // bottom
+  ["richmond-va-county", -44, 142], // bottom (this id is Richmond CITY; "richmond-va" is the county)
+  ["colonial-heights", -31, 111],   // bottom
+  ["petersburg-va", -9, 104],       // bottom
+  ["hopewell", 5, 114],             // bottom
+  ["franklin-va", -7, 42],          // bottom
+  ["williamsburg-va", -5, 114],     // bottom
+  ["newport-news", -2, 91],         // bottom
+  ["hampton-va", 8, 88],            // bottom
+  ["poquoson", 30, 98],             // bottom
+  ["portsmouth", 52, 67],           // bottom
+  ["norfolk-va", 67, 70],           // bottom
+  ["staunton", -13, -179],          // top
+  ["waynesboro", -5, -190],         // top
+  ["harrisonburg", 16, -145],       // top
+  ["charlottesville", 2, -193],     // top
+  ["winchester", -2, -58],          // top
+  ["manassas", -43, -108],          // top
+  ["fredericksburg", -21, -160],    // top
+  ["manassas-park", 0, -104],       // top
+  ["fairfax", 9, -94],              // top
+  ["falls-church", 20, -90],        // top
+  ["alexandria", 36, -98],          // top
+];
+const virginiaCalloutsDone = {};   // county id -> true once its callout exists (each retries until the map is measurable)
+
 
 // Names that are ambiguous *within the counties currently being played*
 // (e.g. "Kent" exists in both Delaware and Rhode Island). Recomputed at
@@ -876,6 +1005,14 @@ function getDisplayName(county) {
     return `${county.name}, ${stateName}`;
   }
   return county.name;
+}
+
+
+// Just the county's own name, never "Kent, Rhode Island". Used everywhere except where the player has to
+// tell two same-named counties apart (the "Find:" / "Click ... on the map" prompts, answer choices, and the
+// end-of-game review), so tooltips, "Correct!" messages and the like stay short.
+function getPlainName(county) {
+  return county ? county.name : "";
 }
 
 
@@ -957,6 +1094,15 @@ function normalizeTypedName(str) {
   if (!gameSettings.requireDiacritics) {
     result = foldDiacriticsForComparison(result).replace(/\u02BB/g, "");
   }
+  // "St." / "St" / "Ste." / "Ste" count as "Saint" / "Sainte" (county names are all spelled out in full).
+  // With Require Diacritic Marks off that's always true; with it on, only while "...except for Saint" is on.
+  if (!gameSettings.requireDiacritics || gameSettings.acceptStAbbrev !== false) {
+    result = result
+      .replace(/\bste\b\.?\s*/g, "sainte ")
+      .replace(/\bst\b\.?\s*/g, "saint ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
   return result;
 }
 
@@ -1036,6 +1182,7 @@ let gameSettings = JSON.parse(localStorage.getItem("gameSettings")) || {
   useDividersForFewStates: true,
   statesPerRow: 2,
   requireDiacritics: false,
+  acceptStAbbrev: true,
   showStateInPrompt: true,
   revealAnswerAfterMistakes: true,
   bestKnownCount: 5
@@ -1095,6 +1242,9 @@ if (gameSettings.statesPerRow === undefined) gameSettings.statesPerRow = 2;
 // marks. Defaults to OFF — e.g. typing "Coos" for New Hampshire's Coös
 // County is accepted without the diaeresis unless this is turned on.
 if (gameSettings.requireDiacritics === undefined) gameSettings.requireDiacritics = false;
+// Backfills "...except for Saint": with Require Diacritic Marks on, "St." / "Ste." are still accepted for
+// "Saint" / "Sainte" unless this is turned off. (With Require Diacritic Marks off they are always accepted.)
+if (gameSettings.acceptStAbbrev === undefined) gameSettings.acceptStAbbrev = true;
 // Backfills the new setting for anyone with an existing saved
 // gameSettings blob from before the "Select your best-known" button's
 // count was configurable. Defaults to 5, the old hardcoded value.
@@ -1193,6 +1343,8 @@ const toggleScaleStatesBySize = document.getElementById("toggle-scale-states-by-
 const toggleDividersForFewStates = document.getElementById("toggle-dividers-for-few-states");
 const selectStatesPerRow = document.getElementById("select-states-per-row");
 const toggleRequireDiacritics = document.getElementById("toggle-require-diacritics");
+const toggleAcceptStAbbrev = document.getElementById("toggle-accept-st-abbrev");
+const settingAcceptStAbbrev = document.getElementById("setting-accept-st-abbrev");
 const toggleShowStateInPrompt = document.getElementById("toggle-show-state-in-prompt");
 const toggleRevealAnswerAfterMistakes = document.getElementById("toggle-reveal-answer");
 const btnResetProgress = document.getElementById("btn-reset-progress");
@@ -1242,34 +1394,66 @@ function stateMapLoaded(key) {
   return !svg || !!svg.querySelector(".county");
 }
 
+// Reads one map file (maps/<name>.js) through a <script> tag and returns the markup it hands over.
+function fetchMapText(name) {
+  return new Promise((resolve, reject) => {
+    const tag = document.createElement("script");
+    tag.src = `${STATE_MAP_DIR}${name}.js`;
+    tag.onload = () => { tag.remove(); resolve(); };
+    tag.onerror = () => { tag.remove(); reject(new Error(`couldn't load ${tag.src}`)); };
+    document.head.appendChild(tag);
+  }).then(() => {
+    const text = (window.__stateMaps || {})[name];
+    if (!text) throw new Error(`${name}.js loaded but had no map data`);
+    delete window.__stateMaps[name];
+    const open = text.indexOf("<svg");
+    const start = text.indexOf(">", open) + 1;
+    const end = text.lastIndexOf("</svg>");
+    if (open < 0 || end < start) throw new Error(`${name}: unexpected file format`);
+    return text.slice(start, end);
+  });
+}
+
+// Light maps: make_lod_maps.py writes maps/<svg id>.lo.js next to every full map: the same counties and ids,
+// simplified to within about 0.15px on screen, roughly 1/8 the size. A state loads its light file first
+// (much less to download and draw, which is what makes "Select all" fast) and falls back to the full file
+// if there is no light one. enterMapZoom() calls upgradeToFullDetail(), which swaps in the full outlines
+// for a map you blow up, so zoomed-in views stay sharp.
 function loadStateMap(key) {
   if (stateMapLoaded(key)) return Promise.resolve();
   if (stateMapLoads[key]) return stateMapLoads[key];
   const svg = document.getElementById(stateData[key].svgId);
   const mapId = stateData[key].svgId;
-  stateMapLoads[key] = new Promise((resolve, reject) => {
-    const tag = document.createElement("script");
-    tag.src = `${STATE_MAP_DIR}${mapId}.js`;
-    tag.onload = () => { tag.remove(); resolve(); };
-    tag.onerror = () => { tag.remove(); reject(new Error(`map ${key}: couldn't load ${tag.src}`)); };
-    document.head.appendChild(tag);
-  })
-    .then(() => {
-      const text = (window.__stateMaps || {})[mapId];
-      if (!text) throw new Error(`map ${key}: ${mapId}.js loaded but had no map data`);
-      delete window.__stateMaps[mapId];
-      const open = text.indexOf("<svg");
-      const start = text.indexOf(">", open) + 1;
-      const end = text.lastIndexOf("</svg>");
-      if (open < 0 || end < start) throw new Error(`map ${key}: unexpected file format`);
-      svg.insertAdjacentHTML("beforeend", text.slice(start, end));
+  stateMapLoads[key] = fetchMapText(mapId + ".lo")
+    .then(markup => ({ markup, detail: "lo" }), () => fetchMapText(mapId).then(markup => ({ markup, detail: "full" })))
+    .then(({ markup, detail }) => {
+      svg.dataset.detail = detail;
+      svg.insertAdjacentHTML("beforeend", markup);
       // countyPaths was grabbed at page load, when every map was still empty: refresh it, and wire
       // up the newly arrived counties exactly like the ones that used to be there from the start.
       countyPaths = document.querySelectorAll(".state-map .county");
       svg.querySelectorAll(".county").forEach(bindCountyInteractivity);
     })
-    .catch(err => { delete stateMapLoads[key]; throw err; });
+    .catch(err => { delete stateMapLoads[key]; throw new Error(`map ${key}: ${err.message}`); });
   return stateMapLoads[key];
+}
+
+const fullDetailLoads = new WeakMap();   // svg element -> Promise
+function upgradeToFullDetail(svg) {
+  if (!svg || svg.dataset.detail !== "lo") return Promise.resolve();
+  if (fullDetailLoads.has(svg)) return fullDetailLoads.get(svg);
+  const p = fetchMapText(svg.id).then(markup => {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = `<svg>${markup}</svg>`;
+    const byId = new Map([...svg.querySelectorAll(".county")].map(el => [el.id, el]));
+    tmp.querySelectorAll("path").forEach(full => {
+      const el = byId.get(full.id);
+      if (el) el.setAttribute("d", full.getAttribute("d"));   // only the outline changes; classes and handlers stay
+    });
+    svg.dataset.detail = "full";
+  }).catch(() => { fullDetailLoads.delete(svg); });          // can't get it: the light outlines are fine
+  fullDetailLoads.set(svg, p);
+  return p;
 }
 
 // Resolves once every listed state's counties are in the page (rejects if a file can't be fetched).
@@ -1407,6 +1591,7 @@ function exitMapZoom() {
 function enterMapZoom(svg) {
   // Only one map can be zoomed at a time — swap instead of stacking.
   if (zoomedMap === svg) return;
+  upgradeToFullDetail(svg);   // a blown-up map gets the full-detail outlines (see loadStateMap)
   if (zoomedMap) {
     if (zoomBannerWatch) { zoomBannerWatch.disconnect(); zoomBannerWatch = null; }
     releaseZoomedMap();
@@ -1954,6 +2139,8 @@ function applySettings() {
   if (toggleDividersForFewStates) toggleDividersForFewStates.checked = gameSettings.useDividersForFewStates;
   if (selectStatesPerRow) selectStatesPerRow.value = String(gameSettings.statesPerRow);
   if (toggleRequireDiacritics) toggleRequireDiacritics.checked = gameSettings.requireDiacritics;
+  if (toggleAcceptStAbbrev) toggleAcceptStAbbrev.checked = gameSettings.acceptStAbbrev;
+  syncStAbbrevSettingUI();
   if (toggleShowStateInPrompt) toggleShowStateInPrompt.checked = gameSettings.showStateInPrompt;
   if (toggleRevealAnswerAfterMistakes) toggleRevealAnswerAfterMistakes.checked = gameSettings.revealAnswerAfterMistakes;
   if (inputBestKnownCount) inputBestKnownCount.value = String(gameSettings.bestKnownCount);
@@ -2331,7 +2518,7 @@ setTimeout(() => {
           c.setAttribute("class", "study-hover-clone");
           return c;
         }));
-        studyTip.textContent = getDisplayName(county);
+        studyTip.textContent = getPlainName(county);
       }
       studyTip.classList.remove("hidden");
       const w = studyTip.offsetWidth, h = studyTip.offsetHeight, pad = 14;
@@ -2474,7 +2661,9 @@ setTimeout(() => {
     const c = list[i];
     $("study-progress").textContent = `${learn ? "Study" : typing ? "Type" : pinning ? "Pin" : "Quiz"}: ${i + 1} of ${list.length} (counties ${start + 1}-${start + batch.length} of ${counties.length})`;
     drawMap(c, pinning, learn);
-    $("study-name").textContent = learn ? getDisplayName(c) : typing ? "Type the name of the highlighted county." : pinning ? `Click ${getDisplayName(c)} on the map.` : "Which county is highlighted?";
+    const studyStateEl = $("study-state");   // small "which state is this" line above the map
+    if (studyStateEl) studyStateEl.textContent = stateData[c.stateKey]?.name || "";
+    $("study-name").textContent = learn ? getPlainName(c) : typing ? "Type the name of the highlighted county." : pinning ? `Click ${getPlainName(c)} on the map.` : "Which county is highlighted?";
     $("study-feedback").textContent = "";
     const ch = $("study-choices");
     ch.innerHTML = "";
@@ -2497,7 +2686,7 @@ setTimeout(() => {
         const b = document.createElement("button");
         b.type = "button";
         b.className = "btn-secondary";
-        b.textContent = getDisplayName(o);
+        b.textContent = getPlainName(o);
         b.dataset.correct = o === c ? "1" : "";
         b.addEventListener("click", () => answer(b, o === c, c, o));
         ch.appendChild(b);
@@ -2522,7 +2711,7 @@ setTimeout(() => {
     btn.classList.add(ok ? "study-correct" : "study-wrong");
     $("study-choices").querySelectorAll("button").forEach(b => { if (b.dataset.correct) b.classList.add("study-correct"); });
     setStudyLearned(c.id, PHASE_ROW.quiz, ok);
-    $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getDisplayName(c)}.`;
+    $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getPlainName(c)}.`;
     $("study-next").textContent = lastIn(quizSet) ? afterLabel("quiz") : "Next";
     $("study-next").classList.remove("hidden", "study-pending");
   }
@@ -2539,7 +2728,7 @@ setTimeout(() => {
     setStudyLearned(c.id, PHASE_ROW.type, ok);
     inp.disabled = true;
     $("study-submit").classList.add("study-pending");   // invisible but still taking up its row
-    $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getDisplayName(c)}.`;
+    $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getPlainName(c)}.`;
     $("study-next").textContent = lastIn(typeSet) ? afterLabel("type") : "Next";
     $("study-next").classList.remove("hidden", "study-pending");
     $("study-next").focus(); // so Enter carries straight on
@@ -2557,7 +2746,7 @@ setTimeout(() => {
     if (!ok) { el.classList.add("locator-wrong"); toFront(el); }
     targets.forEach(x => { x.classList.add("locator-target"); toFront(x); }); // correct county last, so it's on top
     if (!ok) addRing(svg, targets);
-    $("study-feedback").textContent = ok ? "Correct!" : `Not quite. That one is ${el.dataset.cid ? (findCounty(el.dataset.cid) || {}).name || "another county" : "another county"}; ${getDisplayName(c)} is highlighted.`;
+    $("study-feedback").textContent = ok ? "Correct!" : `Not quite. That one is ${el.dataset.cid ? (findCounty(el.dataset.cid) || {}).name || "another county" : "another county"}; ${getPlainName(c)} is highlighted.`;
     $("study-next").textContent = lastIn(pinSet) ? afterLabel("pin") : "Next";
     $("study-next").classList.remove("hidden", "study-pending");
     $("study-next").focus();
@@ -2590,13 +2779,13 @@ setTimeout(() => {
     ["width", "height", "style"].forEach(a => svg.removeAttribute(a));
     svg.setAttribute("class", "locator-map");
     svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", `Map of ${stateData[c.stateKey].name}, ${getDisplayName(c)} highlighted`);
+    svg.setAttribute("aria-label", `Map of ${stateData[c.stateKey].name}, ${getPlainName(c)} highlighted`);
     return { svg, targets };
   }
 
   const youLine = (p, e) => {
     if (p === "type") return `You typed: \u201C${e.typed}\u201D`;
-    const who = e.chosen ? getDisplayName(e.chosen) : "another county";
+    const who = e.chosen ? getPlainName(e.chosen) : "another county";
     return `${p === "pin" ? "You clicked" : "You chose"}: ${who}`;
   };
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
@@ -2714,8 +2903,8 @@ setTimeout(() => {
         const m = roundMap(e.c, p === "type" ? null : e.chosen);
         if (m) { holder.appendChild(m.svg); rings.push(m); }
         const cap = el("div", "rs-cap");
-        if (e.ok) cap.append(el("div", "rs-right", `\u2713 ${getDisplayName(e.c)}`));
-        else cap.append(el("div", "rs-you", `\u2717 ${youLine(p, e)}`), el("div", "rs-answer", `Answer: ${getDisplayName(e.c)}`));
+        if (e.ok) cap.append(el("div", "rs-right", `\u2713 ${getPlainName(e.c)}`));
+        else cap.append(el("div", "rs-you", `\u2717 ${youLine(p, e)}`), el("div", "rs-answer", `Answer: ${getPlainName(e.c)}`));
         card.append(holder, cap);
         return card;
       });
@@ -3018,7 +3207,21 @@ if (toggleRequireDiacritics) {
   toggleRequireDiacritics.addEventListener("change", (e) => {
     gameSettings.requireDiacritics = e.target.checked;
     localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+    syncStAbbrevSettingUI();
     refreshSpecialCharsBar();
+  });
+}
+
+// "...except for Saint": only does anything while Require Diacritic Marks is on (with it off, St. / Ste.
+// are always accepted), so it's greyed out and unclickable otherwise.
+function syncStAbbrevSettingUI() {
+  if (toggleAcceptStAbbrev) toggleAcceptStAbbrev.disabled = !gameSettings.requireDiacritics;
+  if (settingAcceptStAbbrev) settingAcceptStAbbrev.classList.toggle("is-inactive", !gameSettings.requireDiacritics);
+}
+if (toggleAcceptStAbbrev) {
+  toggleAcceptStAbbrev.addEventListener("change", (e) => {
+    gameSettings.acceptStAbbrev = e.target.checked;
+    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
   });
 }
 
@@ -3248,8 +3451,24 @@ function miniMap(s, learned) {
   return svg;
 }
 
+const nameCollator = new Intl.Collator();
+const sortedCountiesCache = {};
+function sortedCountiesOf(stateKey) {
+  const list = stateData[stateKey].counties;
+  const hit = sortedCountiesCache[stateKey];
+  if (hit && hit.n === list.length) return hit.sorted;
+  const sorted = [...list].sort((a, b) => nameCollator.compare(a.name, b.name));
+  sortedCountiesCache[stateKey] = { n: list.length, sorted };
+  return sorted;
+}
+
 function renderStatsPanel() {
   if (!statsPanel || !statsSections) return;
+  // The panel lives on the home screen. Rebuilding its tables (a row per county, for every selected state)
+  // while you're playing is wasted work and gets slow with many states, so skip it unless home is showing;
+  // the observer near the bottom of this file redraws it as soon as you go back home.
+  const homeScreen = document.getElementById("screen-home");
+  if (homeScreen && !homeScreen.classList.contains("active")) return;
 
   if (activeStateKeys.length === 0) {
     statsPanel.classList.add("hidden");
@@ -3274,7 +3493,7 @@ function renderStatsPanel() {
     const state = stateData[stateKey];
     if (!state) return "";
 
-    const sortedCounties = [...state.counties].sort((a, b) => a.name.localeCompare(b.name));
+    const sortedCounties = sortedCountiesOf(stateKey);
     const total = sortedCounties.length;
     const hidden = isStatsHidden(stateKey);
 
@@ -3417,7 +3636,26 @@ if (statsPanel) {
 // tiny the way Kalawao/SF/Skagway/Bristol Bay's are, so deriving the
 // circle's size from its own bounding box would make the "click here"
 // circle enormous instead of a small stand-in.
-function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPadding, stopShort, radiusOverride) {
+// `styleKey` (optional, defaults to `key`) names the CSS classes and the shared arrowhead, so many callouts
+// (e.g. Virginia's) can share one look while each keeps its own unique element id from `key`.
+// The outermost edge of a shape along a ray: how far from (cx, cy), in direction (vx, vy), the last point still
+// inside the shape is (or null if (cx, cy) isn't inside it). Used to end Virginia's arrows exactly at the edge of
+// the city that faces its circle: the cities are tiny, and the old "stop a bit short of the center" put the
+// arrowhead on top of the city and hid it. The whole range is scanned (not just up to the first gap), so a city
+// with a notch or a detached piece still ends up with its arrowhead outside it.
+function distanceToShapeEdge(path, cx, cy, vx, vy, maxLen) {
+  if (typeof path.isPointInFill !== "function") return null;
+  const inside = (t) => path.isPointInFill(new DOMPoint(cx + vx * t, cy + vy * t));
+  if (!inside(0)) return null;
+  const step = 4;
+  let lo = 0;
+  for (let t = step; t <= maxLen; t += step) if (inside(t)) lo = t;
+  let hi = lo + step;
+  for (let i = 0; i < 8; i++) { const mid = (lo + hi) / 2; if (inside(mid)) lo = mid; else hi = mid; }
+  return lo;
+}
+
+function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPadding, stopShort, radiusOverride, styleKey = key) {
   const countyPath = document.getElementById(countyId);
   if (!countyPath || !targetSvg) return false;
 
@@ -3432,17 +3670,24 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
   try {
     bbox = countyPath.getBBox();
     // Counties with far-off islands (e.g. San Francisco's Farallones) would
-    // pull the callout off target, so measure just the largest piece
-    // (apply_maps.py writes each county's biggest outline first).
+    // pull the callout off target, so measure just the largest piece. Most
+    // maps list a county's biggest outline first, but not all do (Virginia's
+    // doesn't), so every piece is measured and the biggest one wins.
     const dAttr = countyPath.getAttribute && countyPath.getAttribute("d");
     if (dAttr && dAttr.indexOf("M", 1) > 0) {
       const tmp = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      tmp.setAttribute("d", dAttr.slice(0, dAttr.indexOf("M", 1)));
       tmp.style.visibility = "hidden";
       targetSvg.appendChild(tmp);
-      const mainBox = tmp.getBBox();
+      let best = null;
+      (dAttr.match(/M[^M]*/g) || []).forEach(piece => {
+        tmp.setAttribute("d", piece);
+        const b = tmp.getBBox();
+        if (!best || b.width * b.height > best.width * best.height) {
+          best = { x: b.x, y: b.y, width: b.width, height: b.height };
+        }
+      });
       targetSvg.removeChild(tmp);
-      if (mainBox.width || mainBox.height) bbox = mainBox;
+      if (best && (best.width || best.height)) bbox = best;
     }
   } catch (e) {
     return false; // Bail quietly if the browser can't compute it yet.
@@ -3466,8 +3711,13 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
   const dist = Math.sqrt(dx * dx + dy * dy) || 1;
   const ux = dx / dist;
   const uy = dy / dist;
-  const tipX = cx - ux * stopShort;
-  const tipY = cy - uy * stopShort;
+  let tipX = cx - ux * stopShort;
+  let tipY = cy - uy * stopShort;
+  if (styleKey === "va") {
+    // End the arrow right at the city's edge, on the side facing its circle.
+    const edge = distanceToShapeEdge(countyPath, cx, cy, -ux, -uy, Math.min(dist, 20 * us));
+    if (edge !== null) { tipX = cx - ux * edge; tipY = cy - uy * edge; }
+  }
 
   // Start the shaft at the circle's EDGE, not its center — the circle's
   // radius is large enough relative to the total distance to the real
@@ -3489,7 +3739,7 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
     defs = document.createElementNS(svgNS, "defs");
     targetSvg.insertBefore(defs, targetSvg.firstChild);
   }
-  const arrowheadId = `${key}-arrowhead`;
+  const arrowheadId = `${styleKey}-arrowhead`;
   if (!document.getElementById(arrowheadId)) {
     const marker = document.createElementNS(svgNS, "marker");
     marker.setAttribute("id", arrowheadId);
@@ -3502,15 +3752,18 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
     arrowHead.setAttribute("d", "M0,0 L8,4 L0,8 Z");
     if (us !== 1) {
       // Keep the arrowhead the same on-screen size in the bigger coordinate system.
-      const m = 12 * us;
+      // Virginia's cities are smaller than a normal arrowhead, so its heads are smaller, and the point of the
+      // head sits exactly on the end of the line (refX = m) instead of poking past it.
+      const isVa = styleKey === "va";
+      const m = (isVa ? 8 : 12) * us;
       marker.setAttribute("markerUnits", "userSpaceOnUse");
       marker.setAttribute("markerWidth", m);
       marker.setAttribute("markerHeight", m);
-      marker.setAttribute("refX", 9.75 * us);
-      marker.setAttribute("refY", 6 * us);
+      marker.setAttribute("refX", isVa ? m : 9.75 * us);
+      marker.setAttribute("refY", m / 2);
       arrowHead.setAttribute("d", `M0,0 L${m},${m / 2} L0,${m} Z`);
     }
-    arrowHead.setAttribute("class", `${key}-arrowhead-fill`);
+    arrowHead.setAttribute("class", `${styleKey}-arrowhead-fill`);
     marker.appendChild(arrowHead);
     defs.appendChild(marker);
   }
@@ -3520,7 +3773,7 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
   line.setAttribute("y1", startY);
   line.setAttribute("x2", tipX);
   line.setAttribute("y2", tipY);
-  line.setAttribute("class", `${key}-callout-line`);
+  line.setAttribute("class", `${styleKey}-callout-line`);
   line.setAttribute("marker-end", `url(#${arrowheadId})`);
   line.setAttribute("pointer-events", "none");
   targetGroup.appendChild(line);
@@ -3531,7 +3784,7 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
   circle.setAttribute("cy", calloutY);
   circle.setAttribute("r", calloutRadius);
   circle.setAttribute("id", `${key}-callout`);
-  circle.setAttribute("class", `county ${key}-callout`);
+  circle.setAttribute("class", `county ${styleKey}-callout`);
   circle.setAttribute("data-county-id", countyId);
   circle.setAttribute("data-name", countyName);
   circle.setAttribute("tabindex", "0");
@@ -3711,6 +3964,14 @@ function switchVisibleSvgMap() {
         // Open water south-west of the borough in Bristol Bay.
         bristolBayCalloutCreated = setupCountyCallout(targetSvg, "bristol-bay", "bristol-bay", -85, 15, 4, 8, 14);
       }
+      if (key === "virginia") {
+        // One circle + arrow per independent city (see VIRGINIA_CALLOUTS). Same retry rule as the callouts above.
+        VIRGINIA_CALLOUTS.forEach(([id, ox, oy]) => {
+          if (!virginiaCalloutsDone[id]) {
+            virginiaCalloutsDone[id] = setupCountyCallout(targetSvg, id, `va-${id}`, ox, oy, 0, 3, 9, "va");
+          }
+        });
+      }
     }
   });
 
@@ -3821,8 +4082,14 @@ window.addEventListener("resize", () => {
 
 
 // --- State & County Setup Logic ---
+  // One checkbox row per county in every selected state: about 3,100 rows (and ~19,000 elements) with all
+  // 50 states selected. They only matter once you answer "Yes" to excluding counties, so while that list is
+  // hidden we just remember that it's out of date and build it when it is shown (see the radio handler).
+  let checkboxesDirty = false;
   function renderCountyCheckboxes() {
   if (!checkboxContainer) return;
+  if (checkboxContainer.classList.contains("hidden")) { checkboxesDirty = true; return; }
+  checkboxesDirty = false;
 
 
   // Remove both the county labels AND any state-header dividers from
@@ -3997,7 +4264,7 @@ function openLocator(countyId) {
   if (!sourceSvg) return;
 
   const stateName = stateData[county.stateKey]?.name || county.stateKey;
-  if (locatorSubtitle) locatorSubtitle.textContent = `${getDisplayName(county)} — ${stateName}`;
+  if (locatorSubtitle) locatorSubtitle.textContent = `${getPlainName(county)} — ${stateName}`;
 
   const svg = sourceSvg.cloneNode(true);
 
@@ -4114,9 +4381,12 @@ function getLowestMistakeCountyIds(limit) {
 
 radioSpecific.forEach(radio => {
   radio.addEventListener("change", (e) => {
-    const countyCheckboxes = document.querySelectorAll(".county-checkbox");
     if (e.target.value === "yes") {
       if (checkboxContainer) checkboxContainer.classList.remove("hidden");
+      if (checkboxesDirty) renderCountyCheckboxes();   // built now, because it was skipped while hidden
+    }
+    const countyCheckboxes = document.querySelectorAll(".county-checkbox");
+    if (e.target.value === "yes") {
 
 
       // Start with nothing selected — the user can check counties
@@ -4305,6 +4575,7 @@ if (btnToggleCountyList) {
     if (!countyListPanel) return;
     const nowHidden = countyListPanel.classList.toggle("hidden");
     btnToggleCountyList.textContent = nowHidden ? "Show List" : "Hide List";
+    if (!nowHidden) renderCountyListPanel();
   });
 }
 
@@ -4405,7 +4676,7 @@ function forfeitCurrentTarget() {
   });
 
   if (feedbackEl) {
-    feedbackEl.textContent = `Forfeited. That was ${getDisplayName(forfeited)}.`;
+    feedbackEl.textContent = `Forfeited. That was ${getPlainName(forfeited)}.`;
     feedbackEl.className = "feedback-message error";
   }
 
@@ -4501,6 +4772,9 @@ function updateProgressCounter() {
 // rather than diffing.
 function renderCountyListPanel() {
   if (!countyListItems) return;
+  // It's a table with a row for every county in the game, rebuilt after every answer. Nobody sees it while
+  // the panel is hidden (the Show List button draws it when you open it), so don't build it then.
+  if (countyListPanel && countyListPanel.classList.contains("hidden")) return;
   const tbody = countyListItems.querySelector("tbody") || countyListItems;
   const remainingIds = new Set(targetPool.map(c => c.id));
 
@@ -4691,8 +4965,11 @@ function handleCountyClick(pathEl) {
   // back to its own id, unchanged from before.
   const clickedId = pathEl.dataset.countyId || pathEl.id;
   const clickedCounty = findCountyById(clickedId);
+  // "Oops! That's X." names what you clicked, with no state. The one exception: a wrong click on a county
+  // that has the same name as the target (the other Washington), where the state is the only thing that
+  // makes the message make sense.
   const clickedName = clickedCounty
-    ? getDisplayName(clickedCounty)
+    ? (currentTarget && clickedCounty.name === currentTarget.name ? getDisplayName(clickedCounty) : getPlainName(clickedCounty))
     : (pathEl.getAttribute("data-name") || pathEl.id);
 
 
@@ -4711,7 +4988,7 @@ function handleCountyClick(pathEl) {
 
 
     if (feedbackEl) {
-      feedbackEl.textContent = `Correct! That's ${getDisplayName(currentTarget)}.`;
+      feedbackEl.textContent = `Correct! That's ${getPlainName(currentTarget)}.`;
       feedbackEl.className = "feedback-message success";
     }
 
@@ -4790,7 +5067,7 @@ function acceptTypedMatches(matchedCounties) {
     if (SINGLE_TARGET_TYPE_MODES.has(selectedMode)) {
       // There's exactly one specific target here, so naming it is useful
       // confirmation.
-      feedbackEl.textContent = `Correct! That's ${getDisplayName(matchedCounties[0])}.`;
+      feedbackEl.textContent = `Correct! That's ${getPlainName(matchedCounties[0])}.`;
     } else {
       // List: the player typed the name themselves, so repeating it
       // back as "Correct! That's Kent!" is redundant — just confirm the
@@ -5155,7 +5432,7 @@ function bindCountyInteractivity(path) {
     if (!el.classList.contains("given-up-missed")) return;
     const id = el.dataset.countyId || el.id;
     const county = findCountyById(id);
-    const name = county ? getDisplayName(county) : (el.getAttribute("data-name") || "");
+    const name = county ? getPlainName(county) : (el.getAttribute("data-name") || "");
     showHoverTooltip(name, e.clientX, e.clientY);
   });
 

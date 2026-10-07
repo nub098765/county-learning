@@ -1551,6 +1551,10 @@ body.scale-states-by-size .app-container.wide-map #svg-alaska {
   are also set in JS, with !important inline, from that measured space and
   the state's aspect ratio — so no per-state or per-layout size rule can
   override them any more. Only the look is defined here. */
+/* Don't center with justify-content here. When the zoomed map is wider than the screen, flex centering
+   spills half of the extra width off the LEFT edge, where a scroll box can't reach it (the scrollbar just
+   stops, with map still to the left). .state-map.zoomed has margin: 0 auto, which centers it whenever
+   there's room and falls back to left-aligned (fully scrollable) when there isn't. */
 .zoom-scroller {
  position: fixed;
  left: 0;
@@ -1560,7 +1564,7 @@ body.scale-states-by-size .app-container.wide-map #svg-alaska {
  overflow: auto;
  overscroll-behavior: contain;
  display: flex;
- justify-content: center;
+ justify-content: flex-start; /* NOT center: see below */
  align-items: flex-start;
  padding-bottom: 8px;
 }
@@ -1784,6 +1788,50 @@ body.dark-mode .sf-callout {
  stroke: #e0954a;
 }
 body.high-contrast .sf-callout {
+ stroke: #ff8800;
+}
+
+/* Virginia callouts: same look as San Francisco's */
+/* San Francisco is the same story as Kalawao above: its real shape is
+  tiny and boxed in by Marin, San Mateo, and Alameda, so it gets the
+  same "click here" circle-and-line treatment out in the open Pacific
+  just west of the city. Same colors as Kalawao's callout so the two
+  read as the same kind of UI element wherever they show up.
+  NOTE: stroke-width here is much smaller than Kalawao's 3px — the
+  arrowhead marker's actual size is markerWidth × stroke-width (in the
+  SVG's own coordinate units), and California's map uses a viewBox only
+  about 1/70th the size of Hawaii's, so reusing 3px would draw an
+  arrowhead many times larger than San Francisco's own real shape. */
+.va-callout-line {
+ stroke: #b5651d;
+ stroke-width: 1.5px;
+ fill: none;
+ vector-effect: non-scaling-stroke;
+}
+body.dark-mode .va-callout-line {
+ stroke: #e0954a;
+}
+body.high-contrast .va-callout-line {
+ stroke: #ff8800;
+}
+
+.va-arrowhead-fill {
+ fill: #b5651d;
+}
+body.dark-mode .va-arrowhead-fill {
+ fill: #e0954a;
+}
+body.high-contrast .va-arrowhead-fill {
+ fill: #ff8800;
+}
+
+.va-callout {
+ stroke: #b5651d;
+}
+body.dark-mode .va-callout {
+ stroke: #e0954a;
+}
+body.high-contrast .va-callout {
  stroke: #ff8800;
 }
 
@@ -3661,3 +3709,91 @@ body.maps-loading #btn-start-game { opacity: 0.6; pointer-events: none; }
 .settings-back-top:hover { background: #eeeadb; }
 body.dark-mode .settings-back-top { background: #242420; border-color: #444; color: #fdeca6; }
 body.dark-mode .settings-back-top:hover { background: #33332c; }
+
+/* Speed: with many states selected, the home screen's progress tables hold a row for every county.
+   content-visibility:auto lets the browser skip laying out and painting the tables that are scrolled
+   out of view (it still draws them as you scroll to them). The size is only a guess used until a
+   table has been drawn once; after that the browser remembers its real height. */
+.stats-table-wrap {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 30rem;
+}
+
+/* State name: a small, quiet label so it's clear which state a map is. In study mode it sits under the
+   progress line; in play mode it's in the corner of each map tile. */
+.study-state {
+  text-align: center;   /* the heading and progress line above it are centered too */
+  margin: 0 0 0.35rem 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8579;
+}
+.study-state:empty { display: none; }
+body.dark-mode .study-state { color: #9a968a; }
+body.high-contrast .study-state { color: #555; }
+body.dark-mode.high-contrast .study-state { color: #ddd; }
+
+.map-box.has-state-label {
+  padding-top: 1.7rem;   /* room for the label so it never sits on top of the map */
+}
+.map-state-label {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.75rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8579;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+body.dark-mode .map-state-label { color: #9a968a; }
+body.high-contrast .map-state-label { color: #555; }
+body.dark-mode.high-contrast .map-state-label { color: #ddd; }
+/* "Scale States by Size" removes the tile box (display: contents), so there's nowhere to put it, same as
+   the magnifier button above. */
+body.scale-states-by-size .map-state-label { display: none; }
+
+/* A setting that hangs off the one above it ("...except for Saint" under Require Diacritic Marks): indented,
+   with a small elbow line joining it to its parent. Greyed out and unclickable while the parent is off. */
+.setting-item.setting-sub {
+  position: relative;
+  margin-left: 1.6rem;
+  padding-top: 0.5rem;
+}
+.setting-item.setting-sub::before {
+  content: "";
+  position: absolute;
+  left: -1.05rem;
+  top: -0.6rem;
+  width: 0.8rem;
+  height: 1.55rem;
+  border-left: 2px solid #c9c4b8;
+  border-bottom: 2px solid #c9c4b8;
+  border-bottom-left-radius: 6px;
+}
+body.dark-mode .setting-item.setting-sub::before { border-color: #55524a; }
+.setting-item.setting-sub.is-inactive .setting-text,
+.setting-item.setting-sub.is-inactive input {
+  opacity: 0.45;
+}
+.setting-item.setting-sub.is-inactive input { cursor: not-allowed; }
+
+/* No divider line between a setting and the one hanging off it; the elbow connector takes its place. */
+.setting-item:has(+ .setting-sub) {
+  border-bottom: none;
+}
+
+/* ...and none under the hanging setting either. */
+.setting-item.setting-sub {
+  border-bottom: none;
+}
+
+/* A table-of-contents entry for a setting that hangs off the one above it is indented under it. */
+.toc-items li.toc-sub { margin-left: 0.8rem; }

@@ -8,13 +8,18 @@ WHAT IT MAKES
                       fetch() so it also works when index.html is opened by double-clicking.
   maps/<svg id>.svg   the same markup as a plain SVG file (handy for looking at a map; not loaded by the site)
 
-  For a state that is NOT in script.js yet (e.g. Florida) it also writes
-  new-state-snippets/<key>.txt : the 4 pieces to paste in (stateData entry, picker row, map box, CSS width).
+  maps/manifest.js    list of every state that is NOT hard-coded in script.js (county ids + names, viewBox).
+                      index.html loads it before script.js, and script.js uses it to add the state's stateData
+                      entry, setup-list row and map box by itself. So a new state needs NO site edits:
+                      run this, upload the maps/ folder, and the state lights up on the US map.
+                      (Ids already in the manifest never change when you rebuild a state.)
+                      Add --snippets to also get the old paste-it-yourself new-state-snippets/<key>.txt.
 
 RUN  (from the folder that has script.js and index.html; the json comes from build_maps_hires.py)
   python split_maps.py                        # every state in map-data/counties-hires.json
   python split_maps.py --states 12            # just Florida  (FIPS codes, comma separated)
   python split_maps.py --json path/to/counties-hires.json
+  python split_maps.py --snippets             # also write new-state-snippets/ (not needed any more)
   python split_maps.py --update-index         # also fix the viewBox of the empty <svg> shells in index.html
                                               # (a backup index.html.bak is saved first)
 
@@ -39,7 +44,9 @@ FIPS = {"01": "Alabama", "02": "Alaska", "04": "Arizona", "05": "Arkansas", "06"
         "36": "New York", "37": "North Carolina", "38": "North Dakota", "39": "Ohio", "40": "Oklahoma",
         "41": "Oregon", "42": "Pennsylvania", "44": "Rhode Island", "45": "South Carolina",
         "46": "South Dakota", "47": "Tennessee", "48": "Texas", "49": "Utah", "50": "Vermont", "51": "Virginia",
-        "53": "Washington", "54": "West Virginia", "55": "Wisconsin", "56": "Wyoming"}
+        "53": "Washington", "54": "West Virginia", "55": "Wisconsin", "56": "Wyoming",
+        # territories (the names match the shapes on the US map picker in index.html)
+        "60": "American Samoa", "69": "Northern Mariana Islands", "72": "Puerto Rico", "78": "U.S. Virgin Islands"}
 POSTAL = {"Alabama": "al", "Alaska": "ak", "Arizona": "az", "Arkansas": "ar", "California": "ca", "Colorado": "co",
           "Connecticut": "ct", "Delaware": "de", "District of Columbia": "dc", "Florida": "fl", "Georgia": "ga",
           "Hawaii": "hi", "Idaho": "id", "Illinois": "il", "Indiana": "in", "Iowa": "ia", "Kansas": "ks",
@@ -49,7 +56,20 @@ POSTAL = {"Alabama": "al", "Alaska": "ak", "Arizona": "az", "Arkansas": "ar", "C
           "New York": "ny", "North Carolina": "nc", "North Dakota": "nd", "Ohio": "oh", "Oklahoma": "ok",
           "Oregon": "or", "Pennsylvania": "pa", "Rhode Island": "ri", "South Carolina": "sc",
           "South Dakota": "sd", "Tennessee": "tn", "Texas": "tx", "Utah": "ut", "Vermont": "vt",
-          "Virginia": "va", "Washington": "wa", "West Virginia": "wv", "Wisconsin": "wi", "Wyoming": "wy"}
+          "Virginia": "va", "Washington": "wa", "West Virginia": "wv", "Wisconsin": "wi", "Wyoming": "wy",
+          "American Samoa": "as", "Northern Mariana Islands": "mp", "Puerto Rico": "pr", "U.S. Virgin Islands": "vi"}
+
+
+# County spellings that are fixed by hand: state FIPS -> {the Census spelling: how the site should spell it}.
+# (Matched ignoring case and spaces, so "Le Flore", "LeFlore" and "LE FLORE" all hit the same entry.)
+# Applies to every state the site learns from maps/manifest.js; states written out in script.js keep the
+# spellings they already have there.
+NAME_FIXES = {
+    "21": {"LaRue": "Larue"},        # Kentucky
+    "40": {"Le Flore": "LeFlore"},   # Oklahoma
+    "22": {"De Soto": "DeSoto"},     # Louisiana
+    "17": {"De Witt": "DeWitt"},     # Illinois
+}
 
 
 def strip_accents(s):
@@ -79,6 +99,19 @@ def parse_state_data(js):
     return out
 
 
+def load_manifest(path):
+    """{key: entry} from maps/manifest.js, or {} if it doesn't exist (or can't be read)."""
+    if not os.path.exists(path):
+        return {}
+    try:
+        txt = open(path, encoding="utf-8").read()
+        lst = json.loads(txt[txt.index("["):txt.rindex("]") + 1])
+        return {m["key"]: m for m in lst}
+    except Exception as e:
+        print(f"!! couldn't read {path} ({e}); starting a fresh manifest")
+        return {}
+
+
 def esc(s):
     return html.escape(s, quote=True)
 
@@ -100,6 +133,7 @@ def main():
     ap.add_argument("--script", default="script.js")
     ap.add_argument("--index", default="index.html")
     ap.add_argument("--out", default="maps")
+    ap.add_argument("--snippets", action="store_true", help="also write new-state-snippets/<key>.txt (manual paste-in pieces)")
     ap.add_argument("--update-index", action="store_true", help="fix viewBox of the <svg> shells in index.html")
     a = ap.parse_args()
 
@@ -114,6 +148,12 @@ def main():
     js = open(a.script, encoding="utf-8").read()
     idx = open(a.index, encoding="utf-8").read()
     states = parse_state_data(js)
+    in_script = set(states)
+    mpath = os.path.join(a.out, "manifest.js")
+    manifest = load_manifest(mpath)
+    for k, m in manifest.items():            # states the site learned from the manifest keep their ids too
+        if k not in states:
+            states[k] = {"name": m["name"], "svgId": m["svgId"], "counties": [tuple(c) for c in m["counties"]]}
     by_name = {s["name"]: (k, s) for k, s in states.items()}
     taken = {cid for s in states.values() for cid, _ in s["counties"]} | set(re.findall(r'\bid="([^"]+)"', idx))
     want = a.states.split(",") if a.states else list(data)
@@ -128,8 +168,19 @@ def main():
             problems.append(f"{fips}: unknown FIPS"); print(f"!! {fips}: unknown state code, skipped"); continue
         name, st = FIPS[fips], data[fips]
         counties = st["counties"]
+        fixes = {re.sub(r"[^a-z]", "", k.lower()): v for k, v in NAME_FIXES.get(fips, {}).items()}
+        if fixes:
+            fixed = []
+            for c in counties:
+                new = fixes.get(re.sub(r"[^a-z]", "", c["name"].lower()))
+                if new and new != c["name"]:
+                    lsad = c["namelsad"]
+                    c = {**c, "name": new,
+                         "namelsad": new + lsad[len(c["name"]):] if lsad.startswith(c["name"]) else lsad}
+                    print(f"   spelling: {new}")
+                fixed.append(c)
+            counties = fixed
         is_new = name not in by_name
-
         if not is_new:
             key, sd = by_name[name]
             svg_id = sd["svgId"]
@@ -137,18 +188,28 @@ def main():
             got = {norm(c["name"]) for c in counties}
             missing, extra = sorted(set(known) - got), sorted(got - set(known))
             if missing or extra:
-                msg = (f"{name}: counties don't line up with script.js "
-                       f"(in script.js but not in the json: {[known[k][1] for k in missing]}; "
-                       f"in the json but not in script.js: {extra}) - skipped")
-                problems.append(msg); print("!! " + msg); continue
+                if key in manifest and key not in in_script:
+                    print(f"   note: {name}'s county list changed since the manifest was written "
+                          f"(missing {[known[k][1] for k in missing]}, new {extra}); giving it fresh ids")
+                    for cid, _ in sd["counties"]:
+                        taken.discard(cid)
+                    is_new = True
+                else:
+                    msg = (f"{name}: counties don't line up with script.js "
+                           f"(in script.js but not in the json: {[known[k][1] for k in missing]}; "
+                           f"in the json but not in script.js: {extra}) - skipped")
+                    problems.append(msg); print("!! " + msg); continue
+        if not is_new:
             rows = []
             for c in counties:
                 cid, disp = known[norm(c["name"])]
+                if key not in in_script:
+                    disp = c["name"]            # manifest states: always the current spelling (see NAME_FIXES)
                 suffix = c["namelsad"][len(c["name"]):] if c["namelsad"].startswith(c["name"]) else " County"
                 rows.append((cid, disp, disp + suffix, c["d"]))
         else:
-            key = name.lower().replace(" ", "_")
-            svg_id = "svg-" + name.lower().replace(" ", "-")
+            key = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+            svg_id = "svg-" + re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
             rows = []
             for c in counties:
                 cid = slug(c["name"])
@@ -161,7 +222,9 @@ def main():
             if any(not r[3] for r in rows):
                 print(f"   WARNING: no shape for {[r[1] for r in rows if not r[3]]}")
 
-        scale = fmt_scale(st.get("scale", 20))
+        # "scale" = the map's width / 800. build_maps_hires.py writes it (20 for its 16000-wide maps); an older file
+        # without it (like an 800-wide territories.json) gets it worked out from its viewBox instead of a blind 20.
+        scale = fmt_scale(st.get("scale") or float(st["viewBox"].split()[2]) / 800)
         vb = st["viewBox"]
         markup = (f'<svg id="{svg_id}" class="state-map" viewBox="{vb}" data-unit-scale="{scale}" width="100%" '
                   f'xmlns="http://www.w3.org/2000/svg" aria-label="Map of {esc(name)} Counties">\n'
@@ -173,7 +236,11 @@ def main():
         size = os.path.getsize(os.path.join(a.out, svg_id + ".js"))
         line = f"{'NEW ' if is_new else '    '}{name}: {len(rows)} counties -> {a.out}/{svg_id}.js ({size/1e6:.2f} MB)"
 
-        if not is_new:
+        if key not in in_script:
+            manifest[key] = {"key": key, "name": name, "svgId": svg_id, "viewBox": vb, "scale": float(scale),
+                             "counties": [[r[0], r[1]] for r in rows]}
+            line += "   (in manifest.js)"
+        if key in in_script:
             m = re.search(r'(<svg id="' + re.escape(svg_id) + r'"[^>]*?viewBox=")([^"]+)(")', idx)
             if not m:
                 line += "   !! no <svg id=\"%s\"> shell found in index.html" % svg_id
@@ -187,7 +254,7 @@ def main():
                 line += "   (shell viewBox matches)"
         print(line)
 
-        if is_new:
+        if is_new and a.snippets:
             os.makedirs("new-state-snippets", exist_ok=True)
             entries = ",\n".join(f'      {{ id: "{cid}", name: "{disp}", stateKey: "{key}" }}' for cid, disp, _, _ in rows)
             txt = f"""===== NEW STATE: {name}  (key "{key}", svg id "{svg_id}", {len(rows)} counties) =====
@@ -222,6 +289,11 @@ body.scale-states-by-size #{svg_id} {{ --w: 430px; }}
                 f.write(txt)
             print(f"      -> new-state-snippets/{key}.txt  (4 pieces to paste in)")
 
+    if manifest:
+        ordered = sorted(manifest.values(), key=lambda m: m["name"])
+        with open(mpath, "w", encoding="utf-8") as f:
+            f.write("window.__stateManifest = " + json.dumps(ordered, separators=(",", ":")) + ";\n")
+        print(f"\n{mpath}: {len(ordered)} state(s) the site picks up automatically: {', '.join(m['name'] for m in ordered)}")
     if a.update_index and idx_new != idx:
         if not os.path.exists(a.index + ".bak"):
             open(a.index + ".bak", "w", encoding="utf-8").write(idx)
