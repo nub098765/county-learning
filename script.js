@@ -4816,6 +4816,54 @@ function renderCountyListPanel() {
   }
 }
 
+// --- "(State)" in the prompt: click it to jump to that state's map ---
+// With dozens of states on screen it's hard to find the one a county is in, so with more than one state in
+// play the "(Texas)" in the prompt is a link: it scrolls that state's map into view and pulses an outline
+// around it for a moment. (With a single state there's nothing to find, so it stays plain text.)
+function statePromptHTML(stateName) {
+  if (!stateName) return "";
+  const key = activeStateKeys.length > 1 ? Object.keys(stateData).find(k => stateData[k].name === stateName) : null;
+  return key
+    ? `<span class="target-state target-state-link" role="button" tabindex="0" data-state-key="${key}" title="Show ${stateName} on the map">(${stateName})</span>`
+    : `<span class="target-state">(${stateName})</span>`;
+}
+
+function jumpToStateMap(key) {
+  const data = stateData[key];
+  const svg = data && document.getElementById(data.svgId);
+  if (!svg || !svg.getClientRects().length) return;               // not on screen (e.g. hidden)
+  const box = svg.closest(".map-box");
+  // "Scale States by Size" removes the tile box (display: contents), so then the map itself gets the pulse.
+  const target = box && getComputedStyle(box).display !== "contents" ? box : svg;
+  const calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // The prompt box sticks to the top of the screen, so aim for the space BELOW it: centre the map there, or if
+  // the map is taller than that space, line its top up just under the prompt so its label stays visible.
+  let barBottom = 0;
+  for (let e = targetPrompt; e && e !== document.body; e = e.parentElement) {
+    const pos = getComputedStyle(e).position;
+    if (pos === "sticky" || pos === "fixed") { barBottom = e.getBoundingClientRect().bottom; break; }
+  }
+  const gap = 12, rect = target.getBoundingClientRect(), room = window.innerHeight - barBottom - gap * 2;
+  const y = window.scrollY + rect.top - barBottom - gap - (rect.height < room ? (room - rect.height) / 2 : 0);
+  window.scrollTo({ top: Math.max(0, y), behavior: calm ? "auto" : "smooth" });
+  target.classList.remove("map-jump-flash");
+  void target.getBoundingClientRect();                            // restart the animation if clicked twice
+  target.classList.add("map-jump-flash");
+  setTimeout(() => target.classList.remove("map-jump-flash"), 1900);
+}
+
+if (targetPrompt) {
+  targetPrompt.addEventListener("click", e => {
+    const link = e.target.closest(".target-state-link");
+    if (link) jumpToStateMap(link.dataset.stateKey);
+  });
+  targetPrompt.addEventListener("keydown", e => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const link = e.target.closest(".target-state-link");
+    if (link) { e.preventDefault(); jumpToStateMap(link.dataset.stateKey); }
+  });
+}
+
 // Renders (or re-renders) the #target-prompt text for whatever
 // currentTarget/selectedMode currently are.
 //
@@ -4844,7 +4892,7 @@ function refreshTargetPrompt(forceReveal) {
       targetPrompt.innerHTML = `
         <span class="find-label">It's:</span>
         <span class="target-name">${name}</span>
-        ${stateName ? `<span class="target-state">(${stateName})</span>` : ""}
+        ${statePromptHTML(stateName)}
       `;
     } else {
       // "Show State in Prompt" — auto-on. With several states in play
@@ -4854,7 +4902,7 @@ function refreshTargetPrompt(forceReveal) {
       const stateName = gameSettings.showStateInPrompt ? getStateNameForCounty(currentTarget) : "";
       targetPrompt.innerHTML = `
         <span class="find-label">${selectedMode === "mc" ? "Which county is highlighted?" : "Type the highlighted county"}</span>
-        ${stateName ? `<span class="target-state">(${stateName})</span>` : ""}
+        ${statePromptHTML(stateName)}
       `;
     }
     return;
@@ -4870,7 +4918,7 @@ function refreshTargetPrompt(forceReveal) {
   targetPrompt.innerHTML = `
     <span class="find-label">Find:</span>
     <span class="target-name">${name}</span>
-    ${stateName ? `<span class="target-state">(${stateName})</span>` : ""}
+    ${statePromptHTML(stateName)}
   `;
 }
 
