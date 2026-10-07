@@ -4887,11 +4887,15 @@ function renderMcOptions() {
   const ordered = [...mcShuffle(others.filter(c => c.stateKey === target.stateKey)), ...mcShuffle(others.filter(c => c.stateKey !== target.stateKey))];
   const seen = new Set([target.name]), picks = [];
   for (const c of ordered) { if (picks.length >= 3) break; if (seen.has(c.name)) continue; seen.add(c.name); picks.push(c); }
-  mcOptions.replaceChildren(...mcShuffle([target, ...picks]).map((c, i) => {
+  const choices = mcShuffle([target, ...picks]);
+  // The four choices always have different names (see `seen` above), so ", State" is never needed to tell
+  // them apart. When they're all from one state it's just clutter; only show it if they come from several.
+  const oneState = choices.every(c => c.stateKey === target.stateKey);
+  mcOptions.replaceChildren(...choices.map((c, i) => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "mc-option";
     const key = document.createElement("kbd"); key.textContent = String(i + 1);
-    b.append(key, document.createTextNode(getDisplayName(c)));
+    b.append(key, document.createTextNode(oneState ? getPlainName(c) : getDisplayName(c)));
     b.addEventListener("click", () => {
       if (!isGameActive || !currentTarget || b.disabled) return;
       if (c.id === currentTarget.id) acceptTypedMatches([currentTarget]);
