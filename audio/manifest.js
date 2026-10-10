@@ -1,1 +1,1 @@
-window.__audioManifest = {"ext":"mp3","shared":[],"state":{}};
+window.__audioManifest = {"ext":"mp3","shared":["hoonah-angoon"],"state":{}};
