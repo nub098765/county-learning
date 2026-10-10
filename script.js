@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-// --- Data Registry for States and Counties ---
 const stateData = {
   arizona: {
     name: "Arizona",
@@ -90,15 +89,6 @@ const stateData = {
       { id: "tallapoosa", name: "Tallapoosa", stateKey: "alabama" },
       { id: "tuscaloosa", name: "Tuscaloosa", stateKey: "alabama" },
       { id: "walker", name: "Walker", stateKey: "alabama" },
-      // FIX: was "washington", which collided with Rhode Island's
-      // Washington county (both used the same SVG id). Since HTML ids
-      // must be unique, getElementById("washington") always resolved to
-      // whichever one appeared first in the document, so this county's
-      // guesses/reveals were being applied to the wrong physical shape
-      // (or vice versa) — e.g. Rhode Island's Washington never actually
-      // turning red on Give Up. Suffixed to match the same pattern
-      // already used for Kent ("kent-ri") and Washington in Texas/
-      // Wisconsin ("washington-tx"/"washington-wi").
       { id: "washington-al", name: "Washington", stateKey: "alabama" },
       { id: "wilcox", name: "Wilcox", stateKey: "alabama" },
       { id: "winston", name: "Winston", stateKey: "alabama" }
@@ -142,10 +132,10 @@ const stateData = {
   },
   delaware: {
     name: "Delaware",
-    svgId: "map-delaware", // FIX #2: was "svg-delaware", didn't match the <svg id="map-delaware"> in index.html
+    svgId: "map-delaware",
     counties: [
       { id: "new-castle", name: "New Castle", stateKey: "delaware" },
-      { id: "kent", name: "Kent", stateKey: "delaware" }, // FIX #3: was "kent-de", didn't match <path id="kent"> in the SVG
+      { id: "kent", name: "Kent", stateKey: "delaware" },
       { id: "sussex", name: "Sussex", stateKey: "delaware" }
     ]
   },
@@ -759,18 +749,6 @@ const stateData = {
 };
 
 
-// --- States that arrive through maps/manifest.js --------------------------------------------------
-// split_maps.py writes maps/manifest.js: one entry per state that is NOT written out above (key, name,
-// svgId, viewBox, county ids + names). index.html loads it before this file. For each such state we add
-// what a hand-added state would need: its stateData entry, its row in the setup list, and its empty
-// map <svg> (the shapes themselves load on demand from maps/<svgId>.js, as for every other state).
-// So a freshly built state shows up on the US map without touching index.html, script.js or style.css.
-// A state that IS written out above (or already has its markup) is left exactly as it is.
-// Some states draw "click here" circles in the margin above / below / beside the map (Virginia's independent
-// cities, like San Francisco and Kalawao elsewhere). Those circles need room INSIDE the map's frame (its
-// viewBox), or they are cut off wherever the frame clips, most visibly in the zoomed view. split_maps.py only
-// knows the shapes, so the room is added here, once, when the state is registered. Units are viewBox units.
-// (Virginia: "0 0 16000 6963" becomes "0 -800 16160 8563"; a frame that already has the room is left alone.)
 const CALLOUT_ROOM = { virginia: { top: 800, bottom: 800, right: 160 } };
 function withCalloutRoom(key, viewBox) {
   const room = CALLOUT_ROOM[key];
@@ -794,8 +772,6 @@ function withCalloutRoom(key, viewBox) {
       counties: m.counties.map(([id, name]) => ({ id, name, stateKey: m.key }))
     };
     if (wrapper && !document.getElementById(m.svgId)) {
-      // Same default footprint a hand-added state starts with, nudged up for states with many counties
-      // (about 435px for Ohio's 88, capped at Texas's 580px). style.css can still override it per state.
       const w = Math.round(Math.min(580, Math.max(330, 330 + 1.5 * (m.counties.length - 20))));
       wrapper.insertAdjacentHTML("beforeend",
         `<div class="map-box hidden" data-state="${esc(m.key)}">` +
@@ -803,9 +779,6 @@ function withCalloutRoom(key, viewBox) {
         `width="100%" xmlns="http://www.w3.org/2000/svg" aria-label="Map of ${esc(m.name)} Counties" style="--w:${w}px"></svg></div>`);
     }
     if (rowsHolder && !document.getElementById("state-" + m.key)) {
-      // index.html lists every not-yet-built state as a greyed-out "WORK IN PROGRESS" row: this state is
-      // built now, so that placeholder goes, and the real row slots in among the playable states (A-Z).
-      // (compared loosely, so "United States Virgin Islands" in the list matches "U.S. Virgin Islands")
       const looseName = t => String(t).toLowerCase().replace(/united states/g, "us").replace(/[^a-z]/g, "");
       rowsHolder.querySelectorAll(".state-row.disabled").forEach(r => {
         if (looseName(r.querySelector(".state-name")?.textContent || "") === looseName(m.name)) r.remove();
@@ -825,9 +798,6 @@ function withCalloutRoom(key, viewBox) {
 })();
 
 
-// A small state name in the corner of every map tile, so someone who doesn't know what shape they're looking at
-// can tell. Runs after the manifest states above exist, so they get one too. (Hidden in "Scale States by Size"
-// layout, where the tile box is display: contents and has nowhere to hold it; see style.css.)
 (function addMapStateLabels() {
   document.querySelectorAll(".map-box[data-state]").forEach(box => {
     const st = stateData[box.dataset.state];
@@ -835,49 +805,18 @@ function withCalloutRoom(key, viewBox) {
     const label = document.createElement("span");
     label.className = "map-state-label";
     label.textContent = st.name;
-    label.setAttribute("aria-hidden", "true");   // the map already has an aria-label naming the state
+    label.setAttribute("aria-hidden", "true");
     box.classList.add("has-state-label");
     box.prepend(label);
   });
 })();
 
 
-// --- Game Configuration & State Variables ---
-let selectedMode = "pin"; // "pin" | "pin-hard" | "type" | "type-hard" | "type-strict"
-// Modes where the player types the county name instead of clicking the
-// map — checked in a few places (input box visibility, disabling
-// click-to-solve, resetting classes between games) so it's kept as one
-// Set rather than repeating the string comparisons everywhere.
-// "mc" (Multiple-Choice) is grouped in here too: like the typing modes it is answered by name, not by
-// clicking the map, and has one highlighted target. It just shows answer buttons instead of the text box.
+let selectedMode = "pin";
 const TYPE_MODES = new Set(["type", "type-hard", "type-strict", "mc"]);
-// Typing modes where only the single highlighted county counts as a
-// match — as opposed to "type" (List), where typing any remaining
-// county's name resolves it. Both "type-hard" (Type) and "type-strict"
-// (Verbatim) work this way; they differ in submission behavior (see
-// the Instant Check listener) and in how unforgivingly they treat a
-// wrong guess.
 const SINGLE_TARGET_TYPE_MODES = new Set(["type-hard", "type-strict", "mc"]);
-// How many wrong guesses on the same target it takes before the
-// "Reveal Answer After Mistakes" setting kicks in — naming it outright
-// in Type/Verbatim (see registerWrongTypedGuess() and
-// refreshTargetPrompt()), or pulsing it blue on the map in Pin/Flash
-// (see handleCountyClick()).
 const REVEAL_ANSWER_AFTER_MISTAKES = 3;
-// All five modes, in the order they should appear as stats-panel columns.
 const MODE_LIST = ["pin", "pin-hard", "mc", "type", "type-hard", "type-strict"];
-// NOTE: the "type" / "type-hard" mode ids are unchanged from before so
-// saved progress/localStorage keeps working — only the display labels
-// swapped: "type" (free, any-order typing) is now shown as "List",
-// and "type-hard" (single highlighted target) is now shown as "Type".
-// "type-strict" is a brand-new mode, separate from "type-hard": same
-// single-target typing, but it always requires pressing Enter (no
-// Instant Check) and treats a wrong guess as a real miss.
-// Later renamed for clarity: "pin-hard" displays as "Flash" (it already
-// flashes the found county instead of filling it in), and "type-strict"
-// displays as "Verbatim" (it demands an exact, deliberate Enter-submitted
-// guess). The underlying ids ("pin-hard", "type-strict") are untouched —
-// same reason as above, so saved progress keeps working.
 const MODE_LABELS = {
   pin: "Pin",
   "pin-hard": "Flash",
@@ -894,99 +833,62 @@ let scoreRight = 0;
 let scoreWrong = 0;
 let isGameActive = false;
 let missedCounties = new Set();
-// How many targets were forfeited this round via "Forfeit This One" —
-// they leave the pool without being found, so the progress counter has
-// to subtract them or it would count them as found.
 let forfeitedCount = 0;
-// True for the duration of a game round started via "Retry Missed" — see
-// initGame()'s isRetryMissedRun param and markCountyLearned() below.
 let currentRunIsRetryMissed = false;
 let currentAttemptMistakes = 0;
-// Total counties in play for the current game, fixed at initGame() time,
-// so the "found/total" progress counter has a stable denominator even as
-// targetPool shrinks.
 let totalTargetsCount = 0;
-// The full set of counties in play for the current game, fixed at
-// initGame() time — used to render the optional List Mode sidebar
-// (targetPool itself shrinks as counties are found, so it can't double
-// as the "everything in this game" list on its own).
 let originalTargetList = [];
 
-// Whether the Kalawao "click here" callout (circle + line, added because
-// the real Kalawao shape is tiny on the Hawaii map) has been built yet.
-// It's created lazily the first time the Hawaii map is actually shown,
-// since SVG getBBox() needs the element to be rendered (not display:none)
-// to return real numbers.
 let kalawaoCalloutCreated = false;
 
-// Same idea as kalawaoCalloutCreated, but for the San Francisco "click
-// here" callout on the California map — San Francisco's real shape is
-// tiny (and boxed in by Marin, San Mateo, and Alameda) so it's just as
-// hard to click at normal zoom as Kalawao is.
 let sfCalloutCreated = false;
 
-// Same idea again, but for Alaska — Skagway and Bristol Bay are both
-// real boroughs whose shapes are about as tiny as Kalawao's/San
-// Francisco's relative to their map, so they get the same "click here"
-// circle-and-line treatment.
 let skagwayCalloutCreated = false;
 let bristolBayCalloutCreated = false;
 
-// Virginia: 35 of its 38 independent cities get a callout (Chesapeake, Suffolk and Virginia Beach are big
-// enough to click directly). Each gets a "click here"
-// circle in the margin above or below the state, with an arrow to the real city (same idea as San
-// Francisco / Kalawao). Each row is [county id, offsetX, offsetY]: where the circle sits relative to the
-// city's center, in the 800-unit map scale (setupCountyCallout multiplies by the map's data-unit-scale).
-// The margins need room: the <svg id="svg-virginia"> tag's viewBox must be "0 -800 16160 8563"
-// (the old tight "0 0 16000 6963" would clip every circle).
 const VIRGINIA_CALLOUTS = [
-  ["norton-va", 0, 74],             // bottom
-  ["bristol-va", 0, 37],            // bottom
-  ["galax", -4, 38],                // bottom
-  ["radford", -16, 92],             // bottom
-  ["salem-va", -39, 112],           // bottom
-  ["covington-va", -24, 170],       // bottom
-  ["roanoke-va", -4, 110],          // bottom
-  ["martinsville", 11, 40],         // bottom
-  ["lexington-va", -7, 170],        // bottom
-  ["danville", 14, 29],             // bottom
-  ["buena-vista-va", 31, 164],      // bottom
-  ["lynchburg", 37, 125],           // bottom
-  ["emporia", -65, 43],             // bottom
-  ["richmond-va-county", -44, 142], // bottom (this id is Richmond CITY; "richmond-va" is the county)
-  ["colonial-heights", -31, 111],   // bottom
-  ["petersburg-va", -9, 104],       // bottom
-  ["hopewell", 5, 114],             // bottom
-  ["franklin-va", -7, 42],          // bottom
-  ["williamsburg-va", -5, 114],     // bottom
-  ["newport-news", -2, 91],         // bottom
-  ["hampton-va", 8, 88],            // bottom
-  ["poquoson", 30, 98],             // bottom
-  ["portsmouth", 52, 67],           // bottom
-  ["norfolk-va", 67, 70],           // bottom
-  ["staunton", -13, -179],          // top
-  ["waynesboro", -5, -190],         // top
-  ["harrisonburg", 16, -145],       // top
-  ["charlottesville", 2, -193],     // top
-  ["winchester", -2, -58],          // top
-  ["manassas", -43, -108],          // top
-  ["fredericksburg", -21, -160],    // top
-  ["manassas-park", 0, -104],       // top
-  ["fairfax", 9, -94],              // top
-  ["falls-church", 20, -90],        // top
-  ["alexandria", 36, -98],          // top
+  ["norton-va", 0, 74],
+  ["bristol-va", 0, 37],
+  ["galax", -4, 38],
+  ["radford", -16, 92],
+  ["salem-va", -39, 112],
+  ["covington-va", -24, 170],
+  ["roanoke-va", -4, 110],
+  ["martinsville", 11, 40],
+  ["lexington-va", -7, 170],
+  ["danville", 14, 29],
+  ["buena-vista-va", 31, 164],
+  ["lynchburg", 37, 125],
+  ["emporia", -65, 43],
+  ["richmond-va-county", -44, 142],
+  ["colonial-heights", -31, 111],
+  ["petersburg-va", -9, 104],
+  ["hopewell", 5, 114],
+  ["franklin-va", -7, 42],
+  ["williamsburg-va", -5, 114],
+  ["newport-news", -2, 91],
+  ["hampton-va", 8, 88],
+  ["poquoson", 30, 98],
+  ["portsmouth", 52, 67],
+  ["norfolk-va", 67, 70],
+  ["staunton", -13, -179],
+  ["waynesboro", -5, -190],
+  ["harrisonburg", 16, -145],
+  ["charlottesville", 2, -193],
+  ["winchester", -2, -58],
+  ["manassas", -43, -108],
+  ["fredericksburg", -21, -160],
+  ["manassas-park", 0, -104],
+  ["fairfax", 9, -94],
+  ["falls-church", 20, -90],
+  ["alexandria", 36, -98],
 ];
-const virginiaCalloutsDone = {};   // county id -> true once its callout exists (each retries until the map is measurable)
+const virginiaCalloutsDone = {};
 
 
-// Names that are ambiguous *within the counties currently being played*
-// (e.g. "Kent" exists in both Delaware and Rhode Island). Recomputed at
-// the start of every game/retry/replay via computeAmbiguousNames().
 let ambiguousCountyNames = new Set();
 
 
-// Given a list of counties, returns the set of county names that appear
-// more than once in that list.
 function computeAmbiguousNames(counties) {
   const nameCounts = {};
   counties.forEach(c => {
@@ -996,8 +898,6 @@ function computeAmbiguousNames(counties) {
 }
 
 
-// Returns "Kent" normally, or "Kent, Rhode Island" if that name is
-// ambiguous in the current context.
 function getDisplayName(county) {
   if (!county) return "";
   if (ambiguousCountyNames.has(county.name)) {
@@ -1008,17 +908,120 @@ function getDisplayName(county) {
 }
 
 
-// Just the county's own name, never "Kent, Rhode Island". Used everywhere except where the player has to
-// tell two same-named counties apart (the "Find:" / "Click ... on the map" prompts, answer choices, and the
-// end-of-game review), so tooltips, "Correct!" messages and the like stay short.
 function getPlainName(county) {
   return county ? county.name : "";
 }
 
+const AUDIO_PUBLIC = false;
+const AUDIO_DIR = "audio/";
+(function readAudioSwitch() {
+  try {
+    const q = new URLSearchParams(location.search).get("audio");
+    if (q === "1") localStorage.setItem("audioBeta", "1");
+    else if (q === "0") localStorage.removeItem("audioBeta");
+  } catch (e) {  }
+})();
+function audioBetaOn() { try { return localStorage.getItem("audioBeta") === "1"; } catch (e) { return false; } }
+function audioFeatureOn() { return AUDIO_PUBLIC || audioBetaOn(); }
 
-// Same disambiguation logic as getDisplayName, but split into parts so
-// the county name and the state qualifier can be styled differently
-// (used by the "Find:" prompt).
+function audioSlug(name) {
+  return String(name).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/['\u2019\u02BB]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+let audioShared = null, audioByState = {}, audioExt = "mp3";
+function indexAudioManifest() {
+  const m = window.__audioManifest;
+  if (!m) return;
+  audioExt = m.ext || "mp3";
+  audioShared = new Set(m.shared || []);
+  audioByState = {};
+  for (const [k, v] of Object.entries(m.state || {})) audioByState[k] = new Set(v);
+}
+(function loadAudioManifest() {
+  if (!audioFeatureOn()) return;
+  if (window.__audioManifest) { indexAudioManifest(); return; }
+  const tag = document.createElement("script");
+  tag.src = AUDIO_DIR + "manifest.js";
+  tag.onload = () => { indexAudioManifest(); tag.remove(); };
+  tag.onerror = () => tag.remove();
+  document.head.appendChild(tag);
+})();
+
+function audioSrcFor(county) {
+  if (!audioShared || !county) return null;
+  const slug = audioSlug(county.name);
+  if (audioByState[county.stateKey] && audioByState[county.stateKey].has(slug)) return `${AUDIO_DIR}${county.stateKey}/${slug}.${audioExt}`;
+  if (audioShared.has(slug)) return `${AUDIO_DIR}${slug}.${audioExt}`;
+  return null;
+}
+function speakerKind(county) {
+  if (!audioFeatureOn() || !county) return null;
+  if (audioSrcFor(county)) return "recording";
+  if (audioBetaOn() && window.speechSynthesis) return "test";
+  return null;
+}
+const SPEAKER_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9v6h4l5 4V5L7 9H3z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+function createSpeakerButton(county) {
+  const kind = speakerKind(county);
+  if (!kind) return null;
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "speak-btn" + (kind === "test" ? " speak-test" : "");
+  b.dataset.speakName = county.name;
+  b.dataset.speakState = county.stateKey || "";
+  b.setAttribute("aria-label", `Hear ${county.name}`);
+  b.title = kind === "test" ? `Hear ${county.name} (test voice, not the real recording)` : `Hear ${county.name}`;
+  b.innerHTML = SPEAKER_ICON;
+  return b;
+}
+function speakerHTML(county) {
+  const b = createSpeakerButton(county);
+  return b ? b.outerHTML : "";
+}
+function appendSpeaker(el, county) {
+  const b = el && createSpeakerButton(county);
+  if (b) el.append(" ", b);
+}
+
+let audioPlayer = null, audioBusyBtn = null;
+function stopCountyAudio() {
+  if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  if (audioBusyBtn) { audioBusyBtn.classList.remove("speaking"); audioBusyBtn = null; }
+}
+function playCountyAudio(btn) {
+  const county = { name: btn.dataset.speakName, stateKey: btn.dataset.speakState };
+  stopCountyAudio();
+  audioBusyBtn = btn;
+  const done = () => { if (audioBusyBtn === btn) { btn.classList.remove("speaking"); audioBusyBtn = null; } };
+  const failed = () => { done(); btn.classList.add("speak-failed"); setTimeout(() => btn.classList.remove("speak-failed"), 1500); };
+  const src = audioSrcFor(county);
+  btn.classList.add("speaking");
+  if (src) {
+    const a = new Audio(src);
+    audioPlayer = a;
+    a.addEventListener("ended", done);
+    a.addEventListener("error", failed);
+    const p = a.play();
+    if (p && p.catch) p.catch(failed);
+  } else if (audioBetaOn() && window.speechSynthesis) {
+    const u = new SpeechSynthesisUtterance(county.name);
+    u.lang = "en-US"; u.rate = 0.9;
+    u.onend = done; u.onerror = done;
+    window.speechSynthesis.speak(u);
+  } else {
+    failed();
+  }
+}
+document.addEventListener("mousedown", e => { if (e.target.closest && e.target.closest(".speak-btn")) e.preventDefault(); });
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest(".speak-btn");
+  if (b) { e.preventDefault(); playCountyAudio(b); }
+});
+
+
+
 function getDisplayParts(county) {
   if (!county) return { name: "", state: null };
   if (ambiguousCountyNames.has(county.name)) {
@@ -1028,62 +1031,17 @@ function getDisplayParts(county) {
   return { name: county.name, state: null };
 }
 
-// Unlike getDisplayParts()'s "state", which only surfaces a state name
-// when it's needed to disambiguate two identically-named counties, this
-// always returns the county's actual state name. Used by the "Show
-// State in Prompt" setting and the mistake-reveal hint below — both are
-// about helping the player locate a flashing highlight on a big
-// multi-state map, not about telling two "Bristol"s apart, so they need
-// the state every time, not just on a name clash.
 function getStateNameForCounty(county) {
   if (!county) return "";
   return stateData[county.stateKey]?.name || county.stateKey || "";
 }
 
 
-// Strips diacritic marks (e.g. ö → o) from a string for comparison
-// purposes — used by normalizeTypedName() below whenever the "Require
-// Diacritic Marks" setting is off. Unicode NFD decomposition splits an
-// accented letter into its plain base letter plus a separate combining
-// mark (U+0300–U+036F), so dropping that range folds the accent away
-// without needing to hardcode every possible accented letter.
 function foldDiacriticsForComparison(str) {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 
-// Normalizes a typed guess for comparison: lowercase, trims, collapses
-// repeated whitespace, and folds ordinary apostrophe-like characters
-// (straight, curly, backtick, acute accent) down to one plain apostrophe,
-// so a name like "Prince George's" works however the apostrophe is typed.
-// The Hawaiian ʻokina (U+02BB) is NOT one of those: a plain ' is never
-// accepted in place of it. The ʻokina is treated as a diacritic mark, so
-// it's only required when "Require Diacritic Marks" is on (then it has to
-// be the real ʻokina, typed with the button). With the setting off it's
-// dropped from both sides, so "Kauai" and "Kauaʻi" are both accepted,
-// but "Kaua'i" is still wrong.
-//
-// Diacritic marks (the diaeresis in New Hampshire's Coös County, for
-// instance) are handled separately from apostrophes, via the "Require
-// Diacritic Marks" setting: with it off (the default), this also strips
-// those marks so "Coos" is accepted; with it on, they're left alone and
-// have to be typed exactly. Both the typed guess and each county's
-// stored name go through this same function before being compared (see
-// findAllPoolMatchesByName/getTypedGuessMatches below), so the setting
-// applies evenly to both sides no matter which way it's set.
-//
-// NOTE for whoever adds Oregon's own (non-diaeresis) Coos County later:
-// this doesn't need special-casing for that. With the setting off, a
-// typed "coos" already resolves every matching county in the active
-// pool regardless of state (see findAllPoolMatchesByName's comment) —
-// the same mechanism that already lets two same-named "Kent" counties
-// both resolve from one guess. With the setting on, "Coos" and "Coös"
-// stay distinct and each only matches its own county. The one gap: 
-// computeAmbiguousNames() (for the "Kent, Rhode Island" state-qualifier
-// display) compares raw county.name strings, not normalized ones, so it
-// won't treat "Coös" and "Coos" as the same name for disambiguation
-// display purposes even with the setting off — worth revisiting once
-// Oregon's Coos actually exists in stateData.
 function normalizeTypedName(str) {
   let result = str
     .normalize("NFC")
@@ -1094,8 +1052,6 @@ function normalizeTypedName(str) {
   if (!gameSettings.requireDiacritics) {
     result = foldDiacriticsForComparison(result).replace(/\u02BB/g, "");
   }
-  // "St." / "St" / "Ste." / "Ste" count as "Saint" / "Sainte" (county names are all spelled out in full).
-  // With Require Diacritic Marks off that's always true; with it on, only while "...except for Saint" is on.
   if (!gameSettings.requireDiacritics || gameSettings.acceptStAbbrev !== false) {
     result = result
       .replace(/\bste\b\.?\s*/g, "sainte ")
@@ -1107,23 +1063,11 @@ function normalizeTypedName(str) {
 }
 
 
-// "Type" mode match: EVERY county still left in the pool whose name
-// matches, regardless of which state it's in. If two different
-// counties in play happen to share a bare name (e.g. two "Kent"s from
-// two active states), typing "Kent" resolves both of them at once —
-// requiring the state too was deliberately left out (see the mode's
-// design) so players aren't stuck typing "Washington, Rhode Island" for
-// the dozens of Washington counties nationwide.
 function findAllPoolMatchesByName(normalized) {
   return targetPool.filter(c => normalizeTypedName(c.name) === normalized);
 }
 
 
-// Returns every county the current typed guess should resolve, as an
-// array (empty if it doesn't match anything). Single-target modes
-// ("Type" / type-hard and "Verbatim" / type-strict) can only ever
-// resolve the one highlighted county; "List" can resolve several
-// counties at once if their bare names are identical.
 function getTypedGuessMatches(normalized) {
   if (SINGLE_TARGET_TYPE_MODES.has(selectedMode)) {
     return (currentTarget && normalizeTypedName(currentTarget.name) === normalized)
@@ -1134,8 +1078,6 @@ function getTypedGuessMatches(normalized) {
 }
 
 
-// Looks up a county object by its path id across ALL states (not just the
-// active ones), so feedback text is always correct even mid-game.
 function findCountyById(id) {
   for (const key in stateData) {
     const found = stateData[key].counties.find(c => c.id === id);
@@ -1145,11 +1087,6 @@ function findCountyById(id) {
 }
 
 
-// Returns every clickable DOM element that represents a given county id:
-// the real map shape itself, plus any stand-in "callout" click targets
-// (like the Kalawao circle) that were tagged with data-county-id pointing
-// at it. Used so that a correct/wrong guess updates every representation
-// of that county in sync, no matter which one was actually clicked.
 function getCountyElements(id) {
   const elements = [];
   const mainEl = document.getElementById(id);
@@ -1161,15 +1098,20 @@ function getCountyElements(id) {
 }
 
 
-// --- Persistent Data Storage ---
-// Per-county, per-mode "learned" flags — e.g. countyProgress["kent"].pin
-// is true once Kent has been correctly guessed at least once in Pin
-// mode. Drives the per-state stats panel (see below); replaces the old
-// single whole-state "completed" flag so progress can be shown mode by
-// mode instead of one all-or-nothing badge.
-let countyProgress = JSON.parse(localStorage.getItem("countyProgress")) || {};
-let countyMistakes = JSON.parse(localStorage.getItem("countyMistakes")) || {};
-let gameSettings = JSON.parse(localStorage.getItem("gameSettings")) || {
+function readStoredJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    const value = JSON.parse(raw);
+    return value && typeof value === "object" ? value : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+let countyProgress = readStoredJson("countyProgress", {});
+let countyMistakes = readStoredJson("countyMistakes", {});
+let gameSettings = readStoredJson("gameSettings", {
   darkMode: false,
   highContrast: false,
   soundVolume: 50,
@@ -1186,87 +1128,28 @@ let gameSettings = JSON.parse(localStorage.getItem("gameSettings")) || {
   showStateInPrompt: true,
   revealAnswerAfterMistakes: true,
   bestKnownCount: 5
-};
-// Backfills the new setting for anyone with an existing saved
-// gameSettings blob from before Type mode existed.
+});
 if (gameSettings.instantTypeCheck === undefined) gameSettings.instantTypeCheck = true;
-// Backfills the new setting for anyone with an existing saved
-// gameSettings blob from before per-state progress tables could be
-// collapsed. Defaults to ON (collapsed by default).
 if (gameSettings.hideStatsByDefault === undefined) gameSettings.hideStatsByDefault = true;
-// Backfills the new setting for anyone with an existing saved
-// gameSettings blob from before the List Mode checklist could be
-// grouped by state. Defaults to ON.
 if (gameSettings.listByState === undefined) gameSettings.listByState = true;
-// Backfills the new setting for anyone with an existing saved
-// gameSettings blob from before states could be sorted alphabetically.
-// Defaults to ON — alphabetical reads as the more natural/expected
-// default order; anyone who wants click order back can turn this off.
 if (gameSettings.sortStatesAlphabetically === undefined) gameSettings.sortStatesAlphabetically = true;
-// Backfills the new setting for anyone with an existing saved
-// gameSettings blob from before prompts could show the target's
-// state. Defaults to ON (auto-turned-on, per request) — with several
-// states in play at once, even a named target (Pin/Flash) or a
-// flashing highlight (Type/Verbatim) can be genuinely hard to place
-// (e.g. a small county like Rockwall, TX or Bristol, RI), so naming
-// the state up front is the safer default across all four modes.
 if (gameSettings.showStateInPrompt === undefined) gameSettings.showStateInPrompt = true;
-// Backfills the new setting for anyone with an existing saved
-// gameSettings blob from before enough wrong guesses on the same
-// county could earn a hint. Defaults to ON — this only kicks in after
-// several wrong guesses, so it's a safety net rather than a shortcut.
-// Pin/Flash already name the target up front, so their "reveal" is
-// pulsing the real county blue on the map instead (see
-// handleCountyClick); Type/Verbatim reveal by naming it in the prompt
-// (see refreshTargetPrompt). Doesn't apply to List ("type"), which is
-// free-recall with no single right answer to reveal.
 if (gameSettings.revealAnswerAfterMistakes === undefined) gameSettings.revealAnswerAfterMistakes = true;
-// Backfills the new setting for anyone with an existing saved
-// gameSettings blob from before the in-game maps could switch between
-// uniform boxes and the original size-by-complexity layout. Defaults to
-// OFF, i.e. every state now shows in the same-size box by default —
-// the original variable-sized-with-dividers layout is opt-in.
 if (gameSettings.scaleStatesBySize === undefined) gameSettings.scaleStatesBySize = false;
-// Backfills the new setting for anyone with an existing saved
-// gameSettings blob from before this offshoot of Scale States by Size
-// existed. Defaults to ON — 3-or-fewer-state games automatically get the
-// divided layout even with the main setting off, since a couple of boxes
-// in a uniform grid looks sparse.
 if (gameSettings.useDividersForFewStates === undefined) gameSettings.useDividersForFewStates = true;
-// Backfills the new setting for anyone with an existing saved
-// gameSettings blob from before the uniform grid's column count was
-// configurable. Defaults to 2, matching the bigger default boxes.
 if (gameSettings.statesPerRow === undefined) gameSettings.statesPerRow = 2;
-// Backfills the new setting for anyone with an existing saved
-// gameSettings blob from before typed answers could require diacritic
-// marks. Defaults to OFF — e.g. typing "Coos" for New Hampshire's Coös
-// County is accepted without the diaeresis unless this is turned on.
 if (gameSettings.requireDiacritics === undefined) gameSettings.requireDiacritics = false;
-// Backfills "...except for Saint": with Require Diacritic Marks on, "St." / "Ste." are still accepted for
-// "Saint" / "Sainte" unless this is turned off. (With Require Diacritic Marks off they are always accepted.)
 if (gameSettings.acceptStAbbrev === undefined) gameSettings.acceptStAbbrev = true;
-// Backfills the new setting for anyone with an existing saved
-// gameSettings blob from before the "Select your best-known" button's
-// count was configurable. Defaults to 5, the old hardcoded value.
 if (!Number.isInteger(gameSettings.bestKnownCount) || gameSettings.bestKnownCount < 1) gameSettings.bestKnownCount = 5;
 
 
-// Per-state "collapsed" choice for the setup screen's progress tables.
-// Keyed by stateKey; only holds an entry once the player has explicitly
-// clicked that state's Hide/Show button (or Hide All) — until then,
-// isStatsHidden() falls back to gameSettings.hideStatsByDefault, so
-// flipping that setting immediately affects any state the player hasn't
-// manually overridden yet.
 let statsHiddenOverride = {};
 
-// Learn-mode progress, kept per mode: studyLearnedByMode = { countyId: { pin: true, mc: true, type: true } }.
-// "All" has no row of its own: it just runs the Multiple-Choice, Type and Pin phases, and each phase
-// updates its own row. (The old shared "studyLearned" key is no longer read; Reset Progress clears both.)
 const STUDY_KEY = "studyLearnedByMode";
 const STUDY_MODE_LIST = ["pin", "mc", "type"];
 const STUDY_MODE_LABELS = { pin: "Pin", mc: "Multiple-Choice", type: "Type" };
-let statsLearnMode = "all";   // which Learn mode the progress minimaps reflect (set when you pick one on the home page)
-let statsView = "play";   // which progress tables the home screen shows: "play" or "learn"
+let statsLearnMode = "all";
+let statsView = "play";
 function loadStudyLearned() { try { return JSON.parse(localStorage.getItem(STUDY_KEY)) || {}; } catch (e) { return {}; } }
 function isStudyLearned(id, mode) { const r = loadStudyLearned()[id]; return !!(r && r[mode]); }
 function setStudyLearned(id, mode, yes) {
@@ -1284,14 +1167,6 @@ function isStatsHidden(stateKey) {
 }
 
 
-// Returns the state keys that should currently be selected, in the order
-// they should be displayed/grouped by (county checkboxes, progress
-// tables, etc). By default this is just activeStateKeys as-is — i.e. the
-// order the player clicked the states in on the setup screen. When
-// gameSettings.sortStatesAlphabetically is on, a sorted copy is returned
-// instead, so every grouped-by-state list on the setup screen shows
-// states A-Z regardless of click order. Always returns a new array —
-// callers are free to sort/mutate it without touching activeStateKeys.
 function getOrderedStateKeys() {
   if (!gameSettings.sortStatesAlphabetically) return [...activeStateKeys];
   return [...activeStateKeys].sort((a, b) => {
@@ -1302,7 +1177,6 @@ function getOrderedStateKeys() {
 }
 
 
-// --- Navigation & Screen DOM Elements ---
 const screens = document.querySelectorAll(".screen");
 const btnGotoModes = document.getElementById("btn-goto-modes");
 const btnGotoSettings = document.getElementById("btn-goto-settings");
@@ -1310,7 +1184,6 @@ const backButtons = document.querySelectorAll(".btn-back");
 const modeButtons = document.querySelectorAll(".btn-mode[data-mode]");
 
 
-// --- Setup Screen DOM Elements ---
 const countyPanel = document.getElementById("county-options-panel");
 const statsPanel = document.getElementById("state-stats-panel");
 const statsSections = document.getElementById("state-stats-sections");
@@ -1324,13 +1197,8 @@ const btnSelectSuggested = document.getElementById("btn-select-suggested");
 const btnDeselectAll = document.getElementById("btn-deselect-all");
 const btnSelectAllStates = document.getElementById("btn-select-all-states");
 const btnDeselectAllStates = document.getElementById("btn-deselect-all-states");
-// FIX #1: there is no #state-list container in index.html — the state rows
-// (#state-delaware, #state-rhode_island, ...) are already
-// hardcoded in the markup. renderStateListUI() now wires up the existing rows
-// instead of trying to rebuild a container that was never there.
 
 
-// --- Settings DOM Elements ---
 const toggleDark = document.getElementById("toggle-dark");
 const toggleContrast = document.getElementById("toggle-contrast");
 const sliderSound = document.getElementById("slider-sound");
@@ -1351,7 +1219,6 @@ const btnResetProgress = document.getElementById("btn-reset-progress");
 const inputBestKnownCount = document.getElementById("input-best-known-count");
 
 
-// --- Game Screen DOM Elements ---
 const progressCounter = document.getElementById("progress-counter");
 const targetPrompt = document.getElementById("target-prompt");
 const feedbackEl = document.getElementById("feedback");
@@ -1367,26 +1234,12 @@ const btnToggleCountyList = document.getElementById("btn-toggle-county-list");
 const countyListPanel = document.getElementById("county-list-panel");
 const countyListItems = document.getElementById("county-list-items");
 const hoverTooltip = document.getElementById("county-hover-tooltip");
-// NOTE: countyPaths is a `let` (not `const`) because the Kalawao callout
-// circle is added to the DOM after this first query runs — once it's
-// built we re-run querySelectorAll(".county") so the callout gets the
-// same reset-between-games and win-state handling as every other county.
 let countyPaths = document.querySelectorAll(".county");
 const svgMaps = document.querySelectorAll(".state-map");
 
 
-// ---- State maps load on demand --------------------------------------------------------------
-// The county shapes used to sit inside index.html (about 6 MB of it). They now live in
-// maps/<svg id>.svg, one file per state (made by split_maps.py). The empty <svg id="svg-alaska" ...>
-// elements stay in the page, so layout, viewBox, data-unit-scale and getElementById keep working;
-// loadStateMap() pours the shapes in the first time a state is needed:
-//   - prefetchStateMaps() starts fetching as soon as a state is selected (see switchVisibleSvgMap),
-//   - ensureStateMaps() is awaited before anything that needs the counties (a game, a Study session).
-// Each map is a small maps/<svg id>.js file that hands its markup to window.__stateMaps, and it is loaded
-// with a <script> tag rather than fetch(): browsers block fetch() on a double-clicked file:// page, but
-// script tags work there too, so the site runs from a plain folder, a local server, or Vercel alike.
 const STATE_MAP_DIR = "maps/";
-const stateMapLoads = {};          // state key -> Promise, so each file is only fetched once
+const stateMapLoads = {};
 let mapsLoadingCount = 0;
 
 function stateMapLoaded(key) {
@@ -1394,7 +1247,6 @@ function stateMapLoaded(key) {
   return !svg || !!svg.querySelector(".county");
 }
 
-// Reads one map file (maps/<name>.js) through a <script> tag and returns the markup it hands over.
 function fetchMapText(name) {
   return new Promise((resolve, reject) => {
     const tag = document.createElement("script");
@@ -1414,11 +1266,6 @@ function fetchMapText(name) {
   });
 }
 
-// Light maps: make_lod_maps.py writes maps/<svg id>.lo.js next to every full map: the same counties and ids,
-// simplified to within about 0.15px on screen, roughly 1/8 the size. A state loads its light file first
-// (much less to download and draw, which is what makes "Select all" fast) and falls back to the full file
-// if there is no light one. enterMapZoom() calls upgradeToFullDetail(), which swaps in the full outlines
-// for a map you blow up, so zoomed-in views stay sharp.
 function loadStateMap(key) {
   if (stateMapLoaded(key)) return Promise.resolve();
   if (stateMapLoads[key]) return stateMapLoads[key];
@@ -1429,8 +1276,6 @@ function loadStateMap(key) {
     .then(({ markup, detail }) => {
       svg.dataset.detail = detail;
       svg.insertAdjacentHTML("beforeend", markup);
-      // countyPaths was grabbed at page load, when every map was still empty: refresh it, and wire
-      // up the newly arrived counties exactly like the ones that used to be there from the start.
       countyPaths = document.querySelectorAll(".state-map .county");
       svg.querySelectorAll(".county").forEach(bindCountyInteractivity);
     })
@@ -1438,7 +1283,7 @@ function loadStateMap(key) {
   return stateMapLoads[key];
 }
 
-const fullDetailLoads = new WeakMap();   // svg element -> Promise
+const fullDetailLoads = new WeakMap();
 function upgradeToFullDetail(svg) {
   if (!svg || svg.dataset.detail !== "lo") return Promise.resolve();
   if (fullDetailLoads.has(svg)) return fullDetailLoads.get(svg);
@@ -1448,15 +1293,14 @@ function upgradeToFullDetail(svg) {
     const byId = new Map([...svg.querySelectorAll(".county")].map(el => [el.id, el]));
     tmp.querySelectorAll("path").forEach(full => {
       const el = byId.get(full.id);
-      if (el) el.setAttribute("d", full.getAttribute("d"));   // only the outline changes; classes and handlers stay
+      if (el) el.setAttribute("d", full.getAttribute("d"));
     });
     svg.dataset.detail = "full";
-  }).catch(() => { fullDetailLoads.delete(svg); });          // can't get it: the light outlines are fine
+  }).catch(() => { fullDetailLoads.delete(svg); });
   fullDetailLoads.set(svg, p);
   return p;
 }
 
-// Resolves once every listed state's counties are in the page (rejects if a file can't be fetched).
 function ensureStateMaps(keys) {
   const pending = [...new Set(keys)].filter(k => stateData[k] && !stateMapLoaded(k));
   if (!pending.length) return Promise.resolve();
@@ -1467,9 +1311,6 @@ function ensureStateMaps(keys) {
   });
 }
 
-// Fire-and-forget version used while you're still picking states. When a map arrives, run
-// switchVisibleSvgMap() again (once, however many arrive together) so anything that needed the
-// counties to exist, like the click-here callouts, gets set up.
 let svgRefreshQueued = false;
 function queueSvgRefresh() {
   if (svgRefreshQueued) return;
@@ -1479,44 +1320,18 @@ function queueSvgRefresh() {
 function prefetchStateMaps(keys) {
   keys.forEach(key => {
     if (!stateData[key] || stateMapLoaded(key)) return;
-    loadStateMap(key).then(queueSvgRefresh).catch(() => { /* tried again at Play / Study time */ });
+    loadStateMap(key).then(queueSvgRefresh).catch(() => {  });
   });
 }
 
 
-// --- Right-click / long-press-to-zoom on state maps ---
-// Small counties (Kalawao, San Francisco, etc.) are hard to click
-// precisely at the map's normal on-screen size, so right-clicking (or, on
-// touch devices, long-pressing) any state map blows it up to a large,
-// centered overlay — like a lightbox — so individual counties are easier
-// to see and click. Doing the same gesture again, clicking the dimmed
-// backdrop, or pressing Escape restores the normal layout. The backdrop
-// element is created once here (rather than living in index.html) since
-// it's purely a JS-driven UI, not meaningful markup.
 const zoomBackdrop = document.createElement("div");
 zoomBackdrop.className = "zoom-backdrop";
 document.body.appendChild(zoomBackdrop);
 let zoomedMap = null;
-// Manual deep zoom inside the lightbox (+/-, Ctrl/Cmd+scroll, pinch). Nothing ever changes it automatically.
 let zoomLevel = 1;
 const ZOOM_MAX = 20;
 
-// ---- How the zoomed map is sized and placed ----
-// The zoomed map is moved (in place, via a placeholder) into a fixed,
-// scrollable layer that starts just below the target banner. It's sized
-// from the REAL space available — the banner's actual bottom edge and the
-// map's own aspect ratio — instead of a fixed guess that assumed every
-// state is square and reserved a big chunk of the screen for the banner.
-// That guess is why zoom shrank maps on short screens (a Chromebook).
-//
-// Two guarantees:
-//  * The map is as big as fits below the banner without scrolling, and
-//  * it's never less than ZOOM_MIN_FACTOR times its normal size. If that
-//    is taller than the screen, the layer scrolls (the banner stays
-//    pinned), so zooming in always actually zooms in.
-// Sizes are set inline with !important so no per-state / per-layout size
-// rule can override them (several used to win in solo play, which made
-// zoom do nothing at all for some states).
 const ZOOM_MIN_FACTOR = 1.3;
 const ZOOM_GOOD_ENOUGH = 1.15;
 const zoomScroller = document.createElement("div");
@@ -1543,12 +1358,7 @@ function layoutZoom() {
   const ratio = vb && vb.width && vb.height ? vb.width / vb.height : 1;
   const availH = Math.max(window.innerHeight - top - 8, 160);
   const maxW = window.innerWidth - 16;
-  const fitW = (availH - pad) * ratio + padX;           // biggest that fits without scrolling
-  // zoomNormalWidth is the width the map itself is DRAWN at normally (not
-  // its box: a tall state sitting in a square box is drawn narrower than
-  // the box). If the biggest no-scroll size is already a clear step up
-  // from that, use it; otherwise insist on ZOOM_MIN_FACTOR and let the
-  // layer scroll — the map was already about screen-sized.
+  const fitW = (availH - pad) * ratio + padX;
   const clearStepUp = zoomNormalWidth * ZOOM_GOOD_ENOUGH + padX;
   const wantW = fitW >= clearStepUp ? fitW : Math.max(fitW, zoomNormalWidth * ZOOM_MIN_FACTOR + padX);
   const w = Math.round(Math.max(Math.min(wantW, maxW), 120));
@@ -1566,7 +1376,6 @@ function releaseZoomedMap() {
   const svg = zoomedMap;
   svg.classList.remove("zoomed");
   ["box-sizing", "width", "max-width", "height", "max-height", "flex"].forEach(k => svg.style.removeProperty(k));
-  // Put the map back exactly where it was in the page.
   if (zoomPlaceholder && zoomPlaceholder.parentNode) {
     zoomPlaceholder.parentNode.insertBefore(svg, zoomPlaceholder);
     zoomPlaceholder.remove();
@@ -1584,19 +1393,16 @@ function exitMapZoom() {
   zoomLevel = 1;
   zoomControls.remove();
   zoomBackdrop.classList.remove("active");
-  // See enterMapZoom below for what this class does.
   document.body.classList.remove("map-zoomed");
 }
 
 function enterMapZoom(svg) {
-  // Only one map can be zoomed at a time — swap instead of stacking.
   if (zoomedMap === svg) return;
-  upgradeToFullDetail(svg);   // a blown-up map gets the full-detail outlines (see loadStateMap)
+  upgradeToFullDetail(svg);
   if (zoomedMap) {
     if (zoomBannerWatch) { zoomBannerWatch.disconnect(); zoomBannerWatch = null; }
     releaseZoomedMap();
   }
-  // Measure the map at its normal size BEFORE it's moved out of the page.
   {
     const r = svg.getBoundingClientRect();
     const cs = getComputedStyle(svg);
@@ -1604,7 +1410,6 @@ function enterMapZoom(svg) {
     const py = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
     const vb = svg.viewBox && svg.viewBox.baseVal;
     const ratio = vb && vb.width && vb.height ? vb.width / vb.height : 1;
-    // The drawing is letterboxed to fit its box: width- or height-limited.
     zoomNormalWidth = Math.max(Math.min(r.width - px, (r.height - py) * ratio), 40);
   }
   zoomPlaceholder = document.createComment("zoomed map");
@@ -1617,18 +1422,10 @@ function enterMapZoom(svg) {
   zoomLevel = 1;
   zoomScroller.scrollLeft = 0;
   zoomBackdrop.classList.add("active");
-  // The zoom backdrop and the enlarged map both sit at a z-index well
-  // above .prompt-box's normal one, so without this the target banner
-  // gets dimmed behind the backdrop (or covered outright by the
-  // enlarged map) right when you need it most — while zoomed in and
-  // hunting for a specific county. This class lets style.css lift
-  // .prompt-box above both of them for as long as any map is zoomed.
   document.body.classList.add("map-zoomed");
   layoutZoom();
   document.body.appendChild(zoomControls);
   updateZoomControls();
-  // The banner changes height while you play (a "Wrong!" line appears, Type
-  // mode adds its input box), so keep the map clear of it.
   const banner = visibleBanner();
   if (banner && window.ResizeObserver) {
     zoomBannerWatch = new ResizeObserver(layoutZoom);
@@ -1645,12 +1442,6 @@ function toggleMapZoom(svg) {
   }
 }
 
-// ---- Manual deep zoom controls (zoom in past "fit to screen" to see fine coastline) ----
-// Zoom only ever changes when the player asks: the + / - buttons, Ctrl/Cmd + scroll
-// (which is also what a trackpad pinch sends), two-finger pinch on touch, or the
-// + / - / 0 keys. Panning is the layer's normal scrolling (wheel, trackpad, one-finger
-// drag, scrollbars), plus middle-mouse drag or holding Space and dragging. A plain
-// left-click drag never pans because left-clicks are guesses.
 const zoomControls = document.createElement("div");
 zoomControls.className = "zoom-controls";
 zoomControls.innerHTML =
@@ -1669,7 +1460,6 @@ function updateZoomControls() {
   zoomScroller.classList.toggle("zoom-deep", zoomLevel > 1.001);
 }
 
-// Change the zoom level while keeping the point under (ax, ay), in screen pixels, put.
 function setZoomLevel(next, ax, ay) {
   if (!zoomedMap) return;
   next = Math.min(ZOOM_MAX, Math.max(1, next));
@@ -1695,14 +1485,12 @@ zoomControls.addEventListener("click", (e) => {
   else setZoomLevel(1);
 });
 
-// Ctrl/Cmd + scroll wheel (also a trackpad pinch in Chrome/Edge/Firefox).
 zoomScroller.addEventListener("wheel", (e) => {
   if (!zoomedMap || !(e.ctrlKey || e.metaKey)) return;
   e.preventDefault();
   setZoomLevel(zoomLevel * Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0025)), e.clientX, e.clientY);
 }, { passive: false });
 
-// Keyboard: + / - / 0 while a map is zoomed (ignored while typing in a field).
 let zoomSpaceDown = false;
 document.addEventListener("keydown", (e) => {
   if (!zoomedMap || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -1716,7 +1504,6 @@ document.addEventListener("keydown", (e) => {
 document.addEventListener("keyup", (e) => { if (e.key === " ") zoomSpaceDown = false; });
 window.addEventListener("blur", () => { zoomSpaceDown = false; });
 
-// Pan by dragging: middle mouse button, or Space + left button. These never become guesses.
 let zoomPan = null;
 ["pointerdown", "mousedown"].forEach(type => zoomScroller.addEventListener(type, (e) => {
   if (!zoomedMap || e.pointerType === "touch") return;
@@ -1738,13 +1525,12 @@ window.addEventListener("pointerup", () => {
   if (!zoomPan) return;
   zoomPan = null;
   zoomScroller.classList.remove("zoom-panning");
-  suppressClickUntil = Date.now() + 300;   // the release must not count as a guess
+  suppressClickUntil = Date.now() + 300;
 });
 zoomScroller.addEventListener("click", (e) => {
   if (Date.now() < suppressClickUntil && (zoomSpaceDown || e.button === 1)) { e.stopImmediatePropagation(); e.preventDefault(); }
 }, true);
 
-// Two-finger pinch on touch screens. One-finger drags still scroll natively.
 const zoomTouches = new Map();
 let pinchStart = null;
 zoomScroller.addEventListener("pointerdown", (e) => {
@@ -1769,26 +1555,10 @@ zoomScroller.addEventListener("pointermove", (e) => {
   if (zoomTouches.size < 2) pinchStart = null;
 }));
 
-// How long a touch has to be held before it counts as a long press,
-// matching roughly what iOS/Android treat as a "long" press themselves.
 const LONG_PRESS_MS = 500;
-// After our own touchstart timer above has already toggled the zoom for a
-// touch, Android still goes on to fire its own native "contextmenu" event
-// for that same long press a moment later. Without this guard, the
-// contextmenu listener below would see that event and toggle the zoom
-// straight back off again — so any contextmenu arriving shortly after our
-// timer already fired for the same gesture is ignored.
 const LONG_PRESS_GUARD_MS = 800;
 let touchLongPressFiredAt = 0;
 
-// ---- Zoom gestures must never count as guesses ----
-// Zooming a map (right-click, Mac Ctrl+click, a touchpad two-finger tap, or a touch long-press) starts
-// with the same press a guess would, so the county handlers below have to tell them apart:
-//  * Mouse-type presses only count if they're the primary button (a right-click is button 2).
-//  * On a Mac, Ctrl+click IS a right-click, so Ctrl-presses are ignored there.
-//  * Touch can't tell a tap from the start of a long press when the finger lands, so a Speedrun touch
-//    guess waits until the finger lifts, and is dropped if that touch turned into a long-press zoom.
-//  * The click the browser sends when a long-press finger lifts is swallowed for a moment.
 const IS_MAC = /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || "");
 let touchGestureWasLongPress = false;
 let suppressClickUntil = 0;
@@ -1797,10 +1567,6 @@ function isZoomGestureStart(e) {
 }
 
 svgMaps.forEach(svg => {
-  // Small, discoverable alternative to the right-click/long-press zoom
-  // gesture below — it's not obvious that gesture even exists. Sits in
-  // the corner of the map's own box (see .map-magnify-btn in style.css,
-  // which also hides it automatically in "Scale States by Size" mode).
   const magnifyBox = svg.closest(".map-box");
   if (magnifyBox) {
     const magnifyBtn = document.createElement("button");
@@ -1815,18 +1581,6 @@ svgMaps.forEach(svg => {
     magnifyBox.appendChild(magnifyBtn);
   }
 
-  // --- Touch: manual long-press detection ---
-  // iOS Safari has no native long-press event for a plain, non-link,
-  // non-image element like this SVG — left alone, a long press on it
-  // does nothing of ours at all, and the touch just falls through to the
-  // browser's own default long-press handling (text selection / the
-  // "callout" menu), which is what was landing on whatever nearby text
-  // happened to be selectable (e.g. the "i" info button) instead of
-  // zooming the map. Timing the press ourselves and calling
-  // preventDefault() on the triggering touchstart (see below) sidesteps
-  // both problems: it works the same on iOS and Android, and it stops
-  // the browser's own long-press gesture from ever getting a chance to
-  // start.
   let pressTimer = null;
   let moved = false;
 
@@ -1843,23 +1597,16 @@ svgMaps.forEach(svg => {
   }, { passive: true });
 
   const cancelPressTimer = () => clearTimeout(pressTimer);
-  // A finger sliding around (panning, or just an imprecise tap) shouldn't
-  // count as holding still for a long press.
   svg.addEventListener("touchmove", () => {
     moved = true;
     cancelPressTimer();
   }, { passive: true });
   svg.addEventListener("touchend", () => {
     cancelPressTimer();
-    // This touch was a long-press zoom: the click the browser fires as the finger lifts isn't a guess.
     if (touchGestureWasLongPress) suppressClickUntil = Date.now() + 600;
   });
   svg.addEventListener("touchcancel", cancelPressTimer);
 
-  // --- Mouse: right-click (desktop), or Android's native long-press ---
-  // Android automatically fires a synthetic "contextmenu" event on
-  // long-press for most elements, which is what already made this work
-  // there even before the manual touch handling above existed.
   svg.addEventListener("contextmenu", (e) => {
     e.preventDefault();
     if (Date.now() - touchLongPressFiredAt < LONG_PRESS_GUARD_MS) return;
@@ -1874,10 +1621,6 @@ document.addEventListener("keydown", (e) => {
 });
 
 
-// --- "How to Play" info button/modal (bottom-right of the play area) ---
-// Content is no longer one static wall of text: the title, the intro
-// paragraph, and the little "you'll see / you'll do" example all get
-// swapped in based on selectedMode right when the modal opens.
 const btnGameInfo = document.getElementById("btn-game-info");
 const modalInfo = document.getElementById("modal-info");
 const btnModalInfoClose = document.getElementById("btn-modal-info-close");
@@ -1930,10 +1673,6 @@ const INFO_MODE_CONFIG = {
   },
 };
 
-// Drives the looping typed-word demo used by List/Type/Verbatim. Not a
-// CSS animation like the click demo, since the word (and, for
-// Verbatim, an extra "press Enter" beat) has to be spelled out one
-// character at a time.
 let infoTypeTimer = null;
 function stopInfoTypeDemo() {
   if (infoTypeTimer) {
@@ -1955,8 +1694,6 @@ function runInfoTypeDemo(word, demo) {
       infoTypeTimer = setTimeout(typeNext, 140);
       return;
     }
-    // Word fully typed. Verbatim needs an extra "press Enter" beat
-    // before it counts; the other typing modes check instantly.
     if (demo === "type-strict") {
       infoTypeTimer = setTimeout(() => {
         if (infoDemoEnter) infoDemoEnter.classList.add("show");
@@ -1995,10 +1732,6 @@ function openInfoModalForMode(mode) {
     infoDemoTarget.classList.toggle("hidden", cfg.demo === "list");
   }
 
-  // Click-based modes (Pin/Flash) animate purely via CSS on an infinite
-  // loop, restarting naturally each time the modal goes from
-  // display:none back to visible. Typing-based modes (List/Type/
-  // Verbatim) need the JS-driven loop above instead.
   if (cfg.demo === "type-hard" || cfg.demo === "type-strict" || cfg.demo === "list") {
     runInfoTypeDemo(cfg.word, cfg.demo);
   } else {
@@ -2020,9 +1753,6 @@ if (btnGameInfo && modalInfo) {
 if (btnModalInfoClose && modalInfo) {
   btnModalInfoClose.addEventListener("click", closeInfoModal);
 }
-// Clicking the dimmed backdrop closes it too, same as the other modals —
-// .modal already stretches to fill the viewport, so a click anywhere
-// outside .modal-content is a click on the modal itself.
 if (modalInfo) {
   modalInfo.addEventListener("click", (e) => {
     if (e.target === modalInfo) closeInfoModal();
@@ -2035,20 +1765,9 @@ document.addEventListener("keydown", (e) => {
 });
 
 
-// Which screen (and, if relevant, which finished-game overlay) the
-// Settings "Back" button should return to. Defaults to Home, but is set
-// to "screen-game" whenever Settings is opened from mid-game (the header
-// button, the summary modal, or the Admire bar) so adjusting a toggle
-// doesn't quietly abandon the running game. settingsReturnOverlay tracks
-// whether the summary modal or the Admire bar needs to be re-shown once
-// Settings closes, since those are hidden (not screens) and would
-// otherwise vanish for good — leaving the player stuck with no way to
-// start a new game. FIX: settingsBackButton previously wasn't declared
-// anywhere, which made every openSettings() call throw and silently
-// abort before showScreen("screen-settings") ever ran.
 let settingsReturnScreen = "screen-home";
-let settingsReturnOverlay = null; // "modal" | "admire" | null
-const settingsBackButtons = [...document.querySelectorAll("#screen-settings .btn-back")];   // top-left one + bottom one
+let settingsReturnOverlay = null;
+const settingsBackButtons = [...document.querySelectorAll("#screen-settings .btn-back")];
 const setSettingsBackLabel = text => settingsBackButtons.forEach(b => { b.textContent = text; });
 
 
@@ -2060,22 +1779,15 @@ function openSettings(returnScreen, returnOverlay = null) {
 }
 
 
-// --- Modal Summary DOM Elements ---
 const modalSummary = document.getElementById("modal-summary");
 const summaryPercentage = document.getElementById("summary-percentage");
 const summaryGradeTitle = document.getElementById("summary-grade-title");
 const summaryMessage = document.getElementById("summary-message");
 const summaryMissedSection = document.getElementById("summary-missed-section");
 const summaryMissedList = document.getElementById("summary-missed-list");
-// FIX: was document.querySelector(".modal-actions"), which grabs the
-// FIRST .modal-actions in the whole document — that's modal-info's (the
-// "How to Play" popup), not this one. showSummaryModal() was building
-// its buttons into the wrong modal, leaving the actual summary popup's
-// buttons dead with no click handlers at all.
 const modalActions = document.getElementById("modal-summary-actions");
 
 
-// --- Bottom Admire Bar DOM Elements ---
 const admireBar = document.getElementById("admire-bar");
 const admirePercentage = document.getElementById("admire-percentage");
 const admireText = document.getElementById("admire-text");
@@ -2085,10 +1797,9 @@ const btnAdmireSettings = document.getElementById("btn-admire-settings");
 const btnAdmireHome = document.getElementById("btn-admire-home");
 
 
-// --- Audio Synthesis Helper (No external assets required) ---
 function playSound(type) {
   if (!gameSettings.soundVolume || gameSettings.soundVolume <= 0) return;
-  const vol = gameSettings.soundVolume / 100; // 0–1 scale applied to gain
+  const vol = gameSettings.soundVolume / 100;
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
@@ -2101,16 +1812,16 @@ function playSound(type) {
 
     if (type === "correct") {
       osc.type = "sine";
-      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1); // A5
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
       gain.gain.setValueAtTime(0.1 * vol, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
       osc.start();
       osc.stop(ctx.currentTime + 0.3);
     } else if (type === "wrong") {
       osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(220, ctx.currentTime); // A3
-      osc.frequency.setValueAtTime(164.81, ctx.currentTime + 0.1); // E3
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      osc.frequency.setValueAtTime(164.81, ctx.currentTime + 0.1);
       gain.gain.setValueAtTime(0.12 * vol, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
       osc.start();
@@ -2122,7 +1833,6 @@ function playSound(type) {
 }
 
 
-// --- Theme Initialization & Preference Sync ---
 const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)");
 
 
@@ -2157,7 +1867,11 @@ function applySettings() {
 function initTheme() {
   const savedDark = localStorage.getItem("darkMode");
   if (savedDark !== null) {
-    gameSettings.darkMode = JSON.parse(savedDark);
+    try {
+      gameSettings.darkMode = !!JSON.parse(savedDark);
+    } catch (e) {
+      gameSettings.darkMode = systemPrefersDark.matches;
+    }
   } else {
     gameSettings.darkMode = systemPrefersDark.matches;
   }
@@ -2179,7 +1893,6 @@ if (systemPrefersDark) {
 }
 
 
-// --- Screen Navigation ---
 const appContainer = document.querySelector(".app-container");
 function showScreen(screenId) {
   screens.forEach(s => s.classList.remove("active"));
@@ -2188,64 +1901,34 @@ function showScreen(screenId) {
     activeScreen.classList.add("active");
     activeScreen.focus();
   }
-  // Leaving the game screen (or restarting within it) should never leave
-  // a map stuck zoomed-in with its backdrop still covering everything.
   exitMapZoom();
-  // The county-list sidebar now lives outside .app-container as its own
-  // card, so it's no longer a descendant of screen-game and doesn't get
-  // hidden automatically when another screen becomes active — force it
-  // closed any time we're not on the game screen.
   if (countyListPanel && screenId !== "screen-game") {
     countyListPanel.classList.add("hidden");
   }
-  // Give the app-container extra horizontal room on the game screen
-  // whenever a map is showing, so it can grow to fit however much room
-  // the map(s) actually need instead of staying capped at the normal
-  // narrow card width. Only applies on screen-game itself — every other
-  // screen (setup, settings, etc.) keeps the normal narrow card width.
   if (appContainer) {
     appContainer.classList.toggle(
       "wide-map",
       screenId === "screen-game" && activeStateKeys.length >= 1
     );
-    // Solo play — exactly one state selected, so nothing else it needs to
-    // stay visually even with. Drives the big generic size bump in
-    // style.css (see .app-container.solo-map), which applies the same way
-    // no matter which single state is in play.
     appContainer.classList.toggle(
       "solo-map",
       screenId === "screen-game" && activeStateKeys.length === 1
     );
-    // Same pattern as the two toggles above, but for the settings
-    // screen's own two-column layout (see .settings-layout in style.css) —
-    // it needs more horizontal room than the normal narrow card to fit
-    // the table-of-contents sidebar beside the settings list.
     appContainer.classList.toggle("wide-settings", screenId === "screen-settings");
-    // The state-picker map (setup + Study's state list) gets a wide card; the
-    // rest of those screens stays in a normal-width column (see .wide-picker in
-    // style.css). Study narrows it again once a session starts.
     appContainer.classList.toggle("wide-picker", screenId === "screen-home" || screenId === "screen-setup" || screenId === "screen-study");
-    appContainer.classList.remove("wide-study"); // only set while a Study session is running
+    appContainer.classList.remove("wide-study");
   }
 }
 
 
 if (btnGotoModes) btnGotoModes.addEventListener("click", () => showScreen("screen-modes"));
 
-// --- US map state picker --------------------------------------------------
-// Shared by the setup screen and Study. The map lives once in
-// <template id="us-map-template"> and is cloned into each screen. A state is
-// clickable when it exists in stateData AND its county map is on the page;
-// everything else (including the territories) is greyed out and inert, so new
-// states light up automatically once they're built.
 function initUsMap(holder, { isSelected, toggle }) {
   const tpl = document.getElementById("us-map-template");
   if (!tpl || !holder) return { sync() {} };
   holder.replaceChildren(tpl.content.cloneNode(true));
   const keyByName = {};
   Object.entries(stateData).forEach(([k, s]) => { keyByName[s.name.toLowerCase()] = k; });
-  // Not-to-scale insets (Alaska, Hawaii, anything added later): each .us-box adopts the state drawn
-  // inside it (found by where the state's shape sits), so clicking anywhere in the box selects that state.
   const centerOf = d => {
     const n = (d.match(/-?\d+\.?\d*/g) || []).map(Number); let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (let i = 0; i + 1 < n.length; i += 2) { x0 = Math.min(x0, n[i]); x1 = Math.max(x1, n[i]); y0 = Math.min(y0, n[i + 1]); y1 = Math.max(y1, n[i + 1]); }
@@ -2272,7 +1955,7 @@ function initUsMap(holder, { isSelected, toggle }) {
     }
   });
   const svg = holder.querySelector("svg");
-  holder.querySelectorAll(".us-box[data-key]").forEach(box => {   // hovering a box lights up its state
+  holder.querySelectorAll(".us-box[data-key]").forEach(box => {
     const path = holder.querySelector(`path.us-st[data-key="${box.dataset.key}"]`);
     box.addEventListener("mouseenter", () => path && path.classList.add("hover"));
     box.addEventListener("mouseleave", () => path && path.classList.remove("hover"));
@@ -2295,7 +1978,6 @@ function initUsMap(holder, { isSelected, toggle }) {
   };
 }
 
-// "Selected: ..." summary under a map. entries: [{ name, text, n }]
 function renderPicked(el, entries) {
   if (!el) return;
   el.replaceChildren();
@@ -2318,9 +2000,6 @@ function renderPicked(el, entries) {
   el.append(head, chips);
 }
 
-// Setup screen: the map clicks the (now hidden) state rows, so all the existing
-// selection, stats-panel and Play-button logic keeps working untouched; a
-// MutationObserver mirrors the rows' "selected" state back onto the map.
 setTimeout(() => {
   const holder = document.getElementById("setup-map");
   const picked = document.getElementById("setup-picked");
@@ -2337,7 +2016,6 @@ setTimeout(() => {
       return { name: stateData[k].name, text: cnt ? cnt.textContent : `${n} counties`, n };
     }).sort((a, b) => a.name.localeCompare(b.name));
     renderPicked(picked, entries);
-    // With nothing chosen, CSS centres the Back button across the whole screen.
     document.getElementById("screen-setup").classList.toggle("no-selection", activeStateKeys.length === 0);
   };
   const list = document.querySelector("#screen-setup .states-list");
@@ -2346,35 +2024,24 @@ setTimeout(() => {
 }, 0);
 
 
-// --- Learn > Study ---------------------------------------------------
-// Pick one or more states from a list (like the game setup screen), then
-// walk through their counties five at a time: each is shown highlighted
-// on its map with its name, then the group is quizzed. A county counts as
-// "learned" once you TYPE it correctly in a Study round (a wrong answer
-// unlearns it). That's stored separately from countyProgress/countyMistakes, under
-// localStorage "studyLearned" (cleared by Reset Progress).
 (function initStudy() {
   const $ = id => document.getElementById(id);
   const BATCH = 5, KEY = "studyLearned";
   const selected = new Set();
   let counties = [], start = 0, batch = [], quizSet = [], typeSet = [], pinSet = [], i = 0, phase = "learn", score = 0, typeScore = 0, pinScore = 0, answered = false;
   let studyMode = "all";
-  let homeExcluded = new Set(); // counties the home screen's "exclude" list took out
-  // What you picked in each phase of the current round, for the summary screens.
+  let homeExcluded = new Set();
   const roundLog = { quiz: [], type: [], pin: [] };
   const PHASE_TITLE = { quiz: "Multiple-Choice", type: "Type", pin: "Pin" };
   const sumEl = document.createElement("div");
   sumEl.id = "study-summary";
   sumEl.className = "study-summary hidden";
   $("study-map").after(sumEl);
-  // "All" runs the modes in the same order the Learn column lists them on the home page.
   const MODE_SEQ = { all: ["pin", "quiz", "type"], mc: ["quiz"], type: ["type"], pin: ["pin"] };
   const MODE_NAME = { all: "All", mc: "Multiple-Choice", type: "Type", pin: "Pin" };
   const seq = () => MODE_SEQ[studyMode];
-  const nextPhaseAfter = p => seq()[seq().indexOf(p) + 1] || null; // p === "learn" -> first
+  const nextPhaseAfter = p => seq()[seq().indexOf(p) + 1] || null;
   const firstPhase = () => seq()[0];
-  // Label for the button that ends a phase: "Start Pin" after the study cards, "Continue to Type"
-  // between the phases of All, and "See results" after the last one.
   const afterLabel = p => {
     const n = p === "learn" ? firstPhase() : nextPhaseAfter(p);
     if (!n) return "See results";
@@ -2382,20 +2049,17 @@ setTimeout(() => {
   };
 
   const shuffle = a => { a = a.slice(); for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; };
-  // Counties already learned IN THE CURRENT MODE (for "Skip counties I've already learned"). For All that
-  // means learned in all three rows (Pin, Multiple-Choice and Type).
   const loadLearned = () => {
     const all = loadStudyLearned(), need = studyMode === "all" ? STUDY_MODE_LIST : [studyMode], out = {};
     Object.keys(all).forEach(id => { if (need.every(m => all[id] && all[id][m])) out[id] = true; });
     return out;
   };
-  const PHASE_ROW = { quiz: "mc", type: "type", pin: "pin" };   // which progress row each phase feeds
+  const PHASE_ROW = { quiz: "mc", type: "type", pin: "pin" };
   const studyStates = () => Object.entries(stateData)
     .filter(([, s]) => document.getElementById(s.svgId))
     .sort((a, b) => a[1].name.localeCompare(b[1].name));
 
 
-  // ----- state map + learned panel -----
   let pickMap = null;
   function renderPick() {
     if (!pickMap) pickMap = initUsMap($("study-pick-map"), {
@@ -2412,10 +2076,6 @@ setTimeout(() => {
       text: `${s.counties.length} ${k === "alaska" ? "boroughs & census areas" : "counties"}`,
       n: s.counties.length
     })).sort((a, b) => a.name.localeCompare(b.name)));
-    // One card per chosen state: a small map with the counties you've
-    // learned filled in, plus (optionally) a dropdown with the full county
-    // list. Which dropdowns are open is remembered across re-renders, so
-    // picking another state doesn't snap them all shut.
     const openLists = (renderPick.openLists = renderPick.openLists || new Set());
     chosen.forEach(([key, s]) => {
       const done = s.counties.filter(c => learned[c.id]).length;
@@ -2454,7 +2114,6 @@ setTimeout(() => {
     updateStudyStart();
   }
 
-  // The counties a Study session would cover, honouring "Skip counties I've already learned".
   function studyPool() {
     const learned = loadLearned();
     const skip = $("study-skip-learned").checked;
@@ -2463,9 +2122,6 @@ setTimeout(() => {
     return pool;
   }
 
-  // The Study button is always visible (same green button as Play). It's greyed out
-  // when there's nothing to study: no state picked, or every county in the picks is
-  // already learned while "Skip counties I've already learned" is on.
   function updateStudyStart() {
     const btn = $("study-start"), msg = $("study-pick-msg");
     let reason = "", note = "";
@@ -2479,15 +2135,8 @@ setTimeout(() => {
     msg.textContent = note;
   }
 
-  // ----- map -----
-  // SVG paints in document order, so a neighbour that comes later in the file would paint its
-  // outline over a highlighted county's border. Re-appending the element puts it on top.
   const toFront = el => { if (el.parentNode) el.parentNode.appendChild(el); };
 
-  // ---- Hover names (Learn phase only) ----
-  // While you study a county, hovering (or tapping) any other county on the map highlights ALL of it and
-  // names it, so you can see what land belongs to what (island chains, the Alaska panhandle...). It is
-  // deliberately not available in the quiz phases, where a name would give the answer away.
   const studyTip = document.createElement("div");
   studyTip.className = "study-hover-tip hidden";
   studyTip.setAttribute("aria-hidden", "true");
@@ -2499,7 +2148,7 @@ setTimeout(() => {
     const layer = document.createElementNS(NS, "g");
     layer.setAttribute("class", "study-hover-layer");
     layer.setAttribute("pointer-events", "none");
-    svg.appendChild(layer);   // last child = drawn on top, so no neighbour can cover the highlighted border
+    svg.appendChild(layer);
     const names = new Map((stateData[stateKey]?.counties || []).map(c => [c.id, c]));
     let current = "", touchTimer = 0;
     const clear = () => { current = ""; layer.replaceChildren(); hideStudyTip(); };
@@ -2510,7 +2159,6 @@ setTimeout(() => {
       if (!county) { clear(); return; }
       if (cid !== current) {
         current = cid;
-        // A copy of the county on top (not the real element), so moving it never disturbs the hover itself.
         layer.replaceChildren(...[...svg.querySelectorAll(".county")].filter(x => x.dataset.cid === cid).map(x => {
           const c = x.cloneNode(true);
           ["id", "tabindex", "role", "aria-label"].forEach(a => c.removeAttribute(a));
@@ -2527,7 +2175,6 @@ setTimeout(() => {
       if (y + h > window.innerHeight - 8) y = e.clientY - h - pad;
       studyTip.style.left = Math.max(8, x) + "px";
       studyTip.style.top = Math.max(8, y) + "px";
-      // A finger lifts straight away, so on touch the label stays for a moment instead of following the pointer.
       if (e.pointerType === "touch") { clearTimeout(touchTimer); touchTimer = setTimeout(clear, 2500); }
     };
     svg.addEventListener("pointermove", show);
@@ -2535,9 +2182,6 @@ setTimeout(() => {
     svg.addEventListener("pointerleave", e => { if (e.pointerType !== "touch") clear(); });
   }
 
-  // The prompt line ("Click Aleutians East on the map.") stays on ONE line: it can use the whole card
-  // width, and if a long name still doesn't fit, the text is shrunk (never below ~60%) rather than
-  // wrapped. A wrapped prompt made the card taller, which moved the Next button between questions.
   function fitStudyName() {
     const n = $("study-name");
     n.style.fontSize = "";
@@ -2547,7 +2191,7 @@ setTimeout(() => {
     const base = parseFloat(getComputedStyle(n).fontSize);
     const size = Math.max(base * (avail / need) * 0.97, base * 0.6);
     n.style.fontSize = size + "px";
-    if (n.scrollWidth > n.clientWidth) n.style.whiteSpace = "normal";   // last resort on a tiny screen
+    if (n.scrollWidth > n.clientWidth) n.style.whiteSpace = "normal";
   }
   window.addEventListener("resize", () => { if ($("study-run") && !$("study-run").classList.contains("hidden")) fitStudyName(); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitStudyName);
@@ -2559,15 +2203,8 @@ setTimeout(() => {
     holder.innerHTML = "";
     if (!src) return;
     const svg = src.cloneNode(true);
-    // The game sets outline widths per state with rules like "#svg-alaska .county" (Alaska's is
-    // thinner). The clone has its ids stripped, so those rules stop matching and every state
-    // would fall back to the thick default. Read the real width off the original and reuse it.
     const srcCounty = src.querySelector(".county");
     const outlineW = srcCounty ? getComputedStyle(srcCounty).strokeWidth : "";
-    // The game leaves inline styles on the real counties (typing modes set pointer-events:none, found
-    // counties get colours, ...). A clone inherits them, and an inline pointer-events:none beats the
-    // stylesheet rule that makes Pin counties clickable, so Pin worked on a fresh page but not after a
-    // game. Start every cloned county from a clean slate, keeping only the outline width.
     svg.querySelectorAll(".county").forEach(el => {
       el.removeAttribute("style");
       if (outlineW) el.style.strokeWidth = outlineW;
@@ -2578,11 +2215,9 @@ setTimeout(() => {
     svg.querySelectorAll(".county").forEach(el => { el.setAttribute("class", "county"); el.style.removeProperty("fill"); el.style.removeProperty("stroke"); });
     if (pin || hover) svg.querySelectorAll(".county").forEach(el => { el.dataset.cid = el.dataset.countyId || el.id; });
     if (!pin) targets.forEach(el => { el.classList.add("locator-target"); toFront(el); });
-    // Strip ids so the clone can never be picked up by getElementById in the game code.
     svg.removeAttribute("id");
     svg.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
     if (pin) {
-      // Keep counties focusable, but drop their names so labels never give the answer away.
       svg.querySelectorAll(".county").forEach(el => { el.setAttribute("tabindex", "0"); el.setAttribute("role", "button"); el.setAttribute("aria-label", "County"); });
     } else {
       svg.querySelectorAll("[tabindex]").forEach(el => el.removeAttribute("tabindex"));
@@ -2604,7 +2239,6 @@ setTimeout(() => {
     addRing(svg, targets);
   }
 
-  // Circle tiny counties so they aren't missed.
   function addRing(svg, targets) {
     requestAnimationFrame(() => {
       try {
@@ -2622,16 +2256,13 @@ setTimeout(() => {
         ring.setAttribute("cy", (a.y + b.y) / 2);
         ring.setAttribute("r", Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y)) / 2 + vb * 0.02);
         svg.appendChild(ring);
-      } catch (err) { /* the highlight alone is fine */ }
+      } catch (err) {  }
     });
   }
 
-  // ----- study / quiz / type flow -----
   const OK = "\u02BB";
   const lastIn = list => i === list.length - 1;
 
-  // Special-character buttons for the typing step, shown only while
-  // "Require Diacritic Marks" is on (same as the game's own button bar).
   function buildChars() {
     const found = new Set();
     batch.forEach(c => { for (const ch of c.name.normalize("NFC").toLowerCase()) if (/[^\x00-\x7F]/.test(ch)) found.add(ch); });
@@ -2643,7 +2274,7 @@ setTimeout(() => {
       b.className = "special-char-btn";
       b.textContent = ch;
       b.title = ch === OK ? "ʻokina (Hawaiian glottal stop)" : ch;
-      b.addEventListener("mousedown", e => e.preventDefault()); // keep focus in the text box
+      b.addEventListener("mousedown", e => e.preventDefault());
       b.addEventListener("click", () => {
         const inp = $("study-input");
         const s = inp.selectionStart ?? inp.value.length, e = inp.selectionEnd ?? s;
@@ -2661,9 +2292,10 @@ setTimeout(() => {
     const c = list[i];
     $("study-progress").textContent = `${learn ? "Study" : typing ? "Type" : pinning ? "Pin" : "Quiz"}: ${i + 1} of ${list.length} (counties ${start + 1}-${start + batch.length} of ${counties.length})`;
     drawMap(c, pinning, learn);
-    const studyStateEl = $("study-state");   // small "which state is this" line above the map
+    const studyStateEl = $("study-state");
     if (studyStateEl) studyStateEl.textContent = stateData[c.stateKey]?.name || "";
     $("study-name").textContent = learn ? getPlainName(c) : typing ? "Type the name of the highlighted county." : pinning ? `Click ${getPlainName(c)} on the map.` : "Which county is highlighted?";
+    if (learn || pinning) appendSpeaker($("study-name"), c);
     $("study-feedback").textContent = "";
     const ch = $("study-choices");
     ch.innerHTML = "";
@@ -2677,12 +2309,8 @@ setTimeout(() => {
       buildChars();
       inp.focus({ preventScroll: true });
     } else if (!learn && !pinning) {
-      // Wrong choices come from the counties in this batch (the ones just
-      // studied), so every option is one you've seen. Counties from the rest
-      // of the session only fill in if the batch is too small (e.g. a last
-      // batch of 1-3 counties).
-      const others = [...shuffle(batch.filter(x => x !== c)), ...shuffle(counties.filter(x => !batch.includes(x)))];
-      shuffle([c, ...others.slice(0, 3)]).forEach(o => {
+      const picks = pickConfusable(c, counties, 3, null, new Set(batch));
+      shuffle([c, ...picks]).forEach(o => {
         const b = document.createElement("button");
         b.type = "button";
         b.className = "btn-secondary";
@@ -2693,14 +2321,12 @@ setTimeout(() => {
       });
     }
     $("study-prev").classList.toggle("hidden", !learn || i === 0);
-    // Next is always in the layout (just invisible until you've answered), so its row isn't added at
-    // the moment you answer, which used to push the whole card around.
     $("study-next").classList.remove("hidden");
     $("study-next").classList.toggle("study-pending", !learn);
     $("study-next").textContent = learn ? (lastIn(list) ? afterLabel("learn") : "Next") : "Next";
     replayBackBtn.classList.toggle("hidden", !replayFrom);
     fitStudyName();
-    requestAnimationFrame(fitStudyName);   // again once the screen is actually showing
+    requestAnimationFrame(fitStudyName);
   }
 
   function answer(btn, ok, c, chosen) {
@@ -2708,16 +2334,16 @@ setTimeout(() => {
     answered = true;
     if (ok) score++;
     roundLog.quiz.push({ c, ok, chosen });
+    if (!ok) recordConfusion(c.id, chosen && chosen.id);
     btn.classList.add(ok ? "study-correct" : "study-wrong");
     $("study-choices").querySelectorAll("button").forEach(b => { if (b.dataset.correct) b.classList.add("study-correct"); });
     setStudyLearned(c.id, PHASE_ROW.quiz, ok);
     $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getPlainName(c)}.`;
+    appendSpeaker($("study-feedback"), c);
     $("study-next").textContent = lastIn(quizSet) ? afterLabel("quiz") : "Next";
     $("study-next").classList.remove("hidden", "study-pending");
   }
 
-  // Same matching rules as the game's Type modes (including the
-  // "Require Diacritic Marks" setting and the ʻokina rule).
   function submitType() {
     const inp = $("study-input"), c = typeSet[i];
     if (answered || !inp.value.trim()) return;
@@ -2725,13 +2351,15 @@ setTimeout(() => {
     const ok = normalizeTypedName(inp.value) === normalizeTypedName(c.name);
     if (ok) typeScore++;
     roundLog.type.push({ c, ok, typed: inp.value.trim() });
+    if (!ok) recordConfusionByTypedName(c.id, inp.value, counties);
     setStudyLearned(c.id, PHASE_ROW.type, ok);
     inp.disabled = true;
-    $("study-submit").classList.add("study-pending");   // invisible but still taking up its row
+    $("study-submit").classList.add("study-pending");
     $("study-feedback").textContent = ok ? "Correct!" : `That one is ${getPlainName(c)}.`;
+    appendSpeaker($("study-feedback"), c);
     $("study-next").textContent = lastIn(typeSet) ? afterLabel("type") : "Next";
     $("study-next").classList.remove("hidden", "study-pending");
-    $("study-next").focus(); // so Enter carries straight on
+    $("study-next").focus();
   }
 
   function pinAnswer(svg, el, c) {
@@ -2740,11 +2368,12 @@ setTimeout(() => {
     const ok = el.dataset.cid === c.id;
     if (ok) pinScore++;
     roundLog.pin.push({ c, ok, chosen: ok ? c : findCounty(el.dataset.cid) });
+    if (!ok) recordConfusion(c.id, el.dataset.cid);
     setStudyLearned(c.id, PHASE_ROW.pin, ok);
     svg.classList.add("pin-done");
     const targets = [...svg.querySelectorAll(".county")].filter(x => x.dataset.cid === c.id);
     if (!ok) { el.classList.add("locator-wrong"); toFront(el); }
-    targets.forEach(x => { x.classList.add("locator-target"); toFront(x); }); // correct county last, so it's on top
+    targets.forEach(x => { x.classList.add("locator-target"); toFront(x); });
     if (!ok) addRing(svg, targets);
     $("study-feedback").textContent = ok ? "Correct!" : `Not quite. That one is ${el.dataset.cid ? (findCounty(el.dataset.cid) || {}).name || "another county" : "another county"}; ${getPlainName(c)} is highlighted.`;
     $("study-next").textContent = lastIn(pinSet) ? afterLabel("pin") : "Next";
@@ -2753,8 +2382,6 @@ setTimeout(() => {
   }
   const findCounty = id => { for (const s of Object.values(stateData)) { const f = s.counties.find(x => x.id === id); if (f) return f; } return null; };
 
-  // Small, non-interactive map for a summary card: the right county in orange and,
-  // if you picked a different county in the same state, that one in red.
   function roundMap(c, wrong) {
     const src = document.getElementById(stateData[c.stateKey]?.svgId);
     if (!src) return null;
@@ -2794,9 +2421,6 @@ setTimeout(() => {
     b.type = "button"; b.addEventListener("click", fn); $("study-choices").appendChild(b); return b;
   };
 
-  // "Back to results": while a replay started from the results page is running, this puts the finished
-  // round's results back exactly as they were (with its Next-counties button), so an accidental "Pin
-  // again" isn't a one-way door. replayFrom holds that finished round while the replay runs.
   let replayFrom = null;
   const snapshotRound = () => ({ quiz: roundLog.quiz.slice(), type: roundLog.type.slice(), pin: roundLog.pin.slice(), score, typeScore, pinScore, start, batch: batch.slice() });
   const replay = fn => () => { replayFrom = snapshotRound(); fn(); };
@@ -2807,13 +2431,11 @@ setTimeout(() => {
     const r = replayFrom;
     roundLog.quiz = r.quiz; roundLog.type = r.type; roundLog.pin = r.pin;
     score = r.score; typeScore = r.typeScore; pinScore = r.pinScore;
-    start = r.start; batch = r.batch;   // so "Next N counties" / "again" work on the right batch afterwards
+    start = r.start; batch = r.batch;
     showSummary();
   });
   document.querySelector("#study-run .study-nav").after(replayBackBtn);
 
-  // "Back to home" while a batch is in progress (the study cards or any practice phase, but not the
-  // results page) asks first, so an accidental click isn't a one-way door. "No" just stays put.
   const inSession = () => !$("study-run").classList.contains("hidden") && sumEl.classList.contains("hidden");
   const resumeModal = el("div", "modal hidden");
   resumeModal.id = "modal-study-resume";
@@ -2832,7 +2454,7 @@ setTimeout(() => {
   document.body.appendChild(resumeModal);
   const closeResume = () => resumeModal.classList.add("hidden");
   resumeModal.addEventListener("click", e => {
-    if (e.target === resumeModal) closeResume();          // dimmed backdrop = stay in the session
+    if (e.target === resumeModal) closeResume();
     const b = e.target.closest("[data-leave]");
     if (!b) return;
     closeResume();
@@ -2841,12 +2463,11 @@ setTimeout(() => {
   document.addEventListener("keydown", e => {
     if (e.key === "Escape" && !resumeModal.classList.contains("hidden")) closeResume();
   });
-  // Capture phase on the screen, so this runs before the generic .btn-back "go to screen" handler.
   $("screen-study").addEventListener("click", e => {
     if (!e.target.closest(".study-back-run") || !inSession()) return;
     e.stopPropagation();
     resumeModal.classList.remove("hidden");
-    resumeModal.querySelector('[data-leave="no"]').focus();   // default to staying
+    resumeModal.querySelector('[data-leave="no"]').focus();
   }, true);
 
   function clearRun() {
@@ -2860,7 +2481,6 @@ setTimeout(() => {
     $("study-choices").innerHTML = "";
   }
 
-  // One row of fixed-size cards you scroll/swipe sideways, with arrow buttons for mouse users.
   function buildTrack(cards) {
     const track = el("div", "rs-track");
     track.append(...cards);
@@ -2879,9 +2499,6 @@ setTimeout(() => {
     return wrap;
   }
 
-  // The end-of-round page (shown once, after the last phase; in All mode that's after Multiple-Choice,
-  // Type and Pin). One section per mode: the big score, then a sideways-scrolling row of snapshots
-  // showing what you picked and the right answer. Replay / next buttons sit underneath.
   function showSummary() {
     replayFrom = null;
     clearRun();
@@ -2916,14 +2533,9 @@ setTimeout(() => {
     if (seq().includes("pin")) addBtn("Pin again", replay(startPin));
     if (seq().includes("quiz")) addBtn("Quiz again", replay(startQuiz));
     if (seq().includes("type")) addBtn("Type again", replay(startType));
-    // (No "Back to home" button here: the "Back to home" link under the card already does that.)
   }
-  function results() { showSummary(); }   // kept so older calls still land on the one combined page
+  function results() { showSummary(); }
 
-  // Order for a practice phase (Multiple-Choice / Type / Pin, including the "again" replays): a fresh
-  // shuffle of the batch, except the county you saw LAST while learning never comes first. It's the one
-  // you've just seen, so leading with it would be a free point that tests nothing. (A batch of one has
-  // nothing to swap with, so it's left alone.)
   function practiceOrder() {
     const order = shuffle(batch), lastLearned = batch[batch.length - 1];
     if (order.length > 1 && order[0] === lastLearned) {
@@ -2937,14 +2549,13 @@ setTimeout(() => {
   function startType() { phase = "type"; typeSet = practiceOrder(); i = 0; typeScore = 0; roundLog.type = []; render(); }
 
   function beginBatch(keepBackToResults) {
-    if (!keepBackToResults) replayFrom = null;   // "Next N counties" keeps it so the results can be brought back
+    if (!keepBackToResults) replayFrom = null;
     batch = counties.slice(start, start + BATCH);
     i = 0; phase = "learn";
     render();
   }
   function startPhase(p) { ({ quiz: startQuiz, type: startType, pin: startPin })[p](); }
 
-  // Called by the home screen: study these states in this mode (returns false if there is nothing to study).
   window.startStudyFromHome = (mode, keys, skipLearned, excluded) => {
     studyMode = mode;
     selected.clear(); keys.forEach(k => selected.add(k));
@@ -2956,7 +2567,7 @@ setTimeout(() => {
     $("study-pick").classList.remove("hidden");
     $("study-run").classList.add("hidden");
     showScreen("screen-study");
-    updateStudyStart();          // enables the (hidden) Study button, then use its normal start
+    updateStudyStart();
     $("study-start").click();
     return true;
   };
@@ -2976,7 +2587,7 @@ setTimeout(() => {
   $("study-skip-learned").addEventListener("change", updateStudyStart);
   $("study-start").addEventListener("click", async () => {
     const pool = studyPool();
-    if (!pool.length) { updateStudyStart(); return; }   // (the button is disabled in this case anyway)
+    if (!pool.length) { updateStudyStart(); return; }
     try { await ensureStateMaps(pool.map(c => c.stateKey)); }
     catch (err) { $("study-pick-msg").textContent = "Couldn't load the map data. Make sure the maps folder is next to index.html, then try again."; return; }
     counties = shuffle(pool);
@@ -2985,8 +2596,6 @@ setTimeout(() => {
     $("study-run").classList.remove("hidden");
     const app = document.querySelector(".app-container");
     app.classList.remove("wide-picker");
-    // Size the card to the widest map in this session (wide maps like Alaska get a wide card,
-    // tall ones like Delaware stay narrow); see .wide-study in style.css.
     const aspect = Math.max(...[...new Set(counties.map(c => c.stateKey))].map(k => {
       const vb = document.getElementById(stateData[k].svgId)?.viewBox?.baseVal;
       return vb && vb.height ? vb.width / vb.height : 1;
@@ -3009,10 +2618,6 @@ setTimeout(() => {
   $("study-submit").addEventListener("click", submitType);
   $("study-input").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitType(); } });
 
-  // Enter = Next, anywhere on the study card. (After you answer, Next is focused so Enter already worked,
-  // but only if the focus actually got there; on the "learn" cards, or after you click somewhere else, it
-  // didn't. Now it works regardless of where the focus is.) It leaves alone anything that handles Enter
-  // itself: the text box (Enter submits your answer), buttons and links, and the map's counties.
   document.addEventListener("keydown", e => {
     if (e.key !== "Enter" || e.repeat || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
     if (!$("screen-study").classList.contains("active") || $("study-run").classList.contains("hidden")) return;
@@ -3030,9 +2635,6 @@ if (btnGotoSettings) {
 }
 
 
-// Opens Settings from mid-game without losing the running game — the
-// Settings screen's back button (below) will say "Back to Game" and
-// send the player back to screen-game instead of screen-home here.
 if (btnGameSettings) {
   btnGameSettings.addEventListener("click", () => openSettings("screen-game"));
 }
@@ -3045,9 +2647,6 @@ backButtons.forEach(btn => {
       showScreen(settingsReturnScreen);
 
 
-      // Re-show whichever overlay was open when Settings was launched,
-      // so the player still has Play Again / Retry / Home available
-      // instead of being stranded with only Quit in the header.
       if (settingsReturnOverlay === "modal" && modalSummary) {
         modalSummary.classList.remove("hidden");
       } else if (settingsReturnOverlay === "admire" && admireBar) {
@@ -3068,16 +2667,12 @@ backButtons.forEach(btn => {
 modeButtons.forEach(btn => {
   btn.addEventListener("click", () => {
     selectedMode = btn.dataset.mode || "pin";
-    // Shown just above "Select State(s)" so it's clear which mode you're
-    // about to set states up for, without having to remember which
-    // button you clicked on the previous screen.
     if (setupModeIndicator) setupModeIndicator.textContent = `Mode: ${MODE_LABELS[selectedMode] || selectedMode}`;
     showScreen("screen-setup");
   });
 });
 
 
-// --- Settings Screen Handlers ---
 if (toggleDark) {
   toggleDark.addEventListener("change", (e) => {
     gameSettings.darkMode = e.target.checked;
@@ -3125,7 +2720,7 @@ if (toggleHideStatsDefault) {
   toggleHideStatsDefault.addEventListener("change", (e) => {
     gameSettings.hideStatsByDefault = e.target.checked;
     localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    renderStatsPanel(); // re-render so states without a manual override pick up the new default right away
+    renderStatsPanel();
   });
 }
 
@@ -3134,7 +2729,6 @@ if (toggleListByState) {
   toggleListByState.addEventListener("change", (e) => {
     gameSettings.listByState = e.target.checked;
     localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    // Re-render immediately if the checklist happens to be open right now.
     renderCountyListPanel();
   });
 }
@@ -3144,12 +2738,8 @@ if (toggleSortStatesAlpha) {
   toggleSortStatesAlpha.addEventListener("change", (e) => {
     gameSettings.sortStatesAlphabetically = e.target.checked;
     localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    // Re-render both setup-screen lists immediately so the new order
-    // shows up right away instead of waiting for the next state click.
     renderCountyCheckboxes();
     renderStatsPanel();
-    // Also reorder the in-game maps right away — in case this was
-    // toggled from the game screen's own Settings button mid-game.
     applyMapDomOrder();
   });
 }
@@ -3159,13 +2749,6 @@ if (toggleScaleStatesBySize) {
   toggleScaleStatesBySize.addEventListener("change", (e) => {
     gameSettings.scaleStatesBySize = e.target.checked;
     localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    // Flip the body class immediately so the switch between uniform
-    // boxes and the original size-by-complexity layout shows up right
-    // away, even if this was toggled mid-game from the in-game Settings
-    // button rather than before a game starts. Routed through
-    // updateMapLayoutMode() rather than toggling the class directly here,
-    // since "Use Dividers for Few States" can also demand the divided
-    // layout even while this setting is off.
     updateMapLayoutMode();
   });
 }
@@ -3175,9 +2758,6 @@ if (toggleDividersForFewStates) {
   toggleDividersForFewStates.addEventListener("change", (e) => {
     gameSettings.useDividersForFewStates = e.target.checked;
     localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    // Same live-update reasoning as the "Scale States by Size" listener
-    // above — this setting can flip the divided-vs-uniform layout on its
-    // own, independent of that one.
     updateMapLayoutMode();
   });
 }
@@ -3187,16 +2767,11 @@ if (selectStatesPerRow) {
   selectStatesPerRow.addEventListener("change", (e) => {
     gameSettings.statesPerRow = parseInt(e.target.value, 10) || 2;
     localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    // Re-apply immediately so the grid re-flows right away if this was
-    // changed mid-game from the in-game Settings button.
     updateMapGridColumns();
   });
 }
 
 
-// Best-Known Counties to Select: any whole number >= 1. Saves as you
-// type (when the value is valid) and tidies up invalid/blank input once
-// the box loses focus.
 function updateBestKnownButtonLabel() {
   if (btnSelectSuggested) btnSelectSuggested.textContent = `Select your ${gameSettings.bestKnownCount} best-known`;
 }
@@ -3228,8 +2803,6 @@ if (toggleRequireDiacritics) {
   });
 }
 
-// "...except for Saint": only does anything while Require Diacritic Marks is on (with it off, St. / Ste.
-// are always accepted), so it's greyed out and unclickable otherwise.
 function syncStAbbrevSettingUI() {
   if (toggleAcceptStAbbrev) toggleAcceptStAbbrev.disabled = !gameSettings.requireDiacritics;
   if (settingAcceptStAbbrev) settingAcceptStAbbrev.classList.toggle("is-inactive", !gameSettings.requireDiacritics);
@@ -3246,9 +2819,6 @@ if (toggleShowStateInPrompt) {
   toggleShowStateInPrompt.addEventListener("change", (e) => {
     gameSettings.showStateInPrompt = e.target.checked;
     localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    // Re-render the current prompt right away if a target is already
-    // up, instead of waiting for the next county. Applies to all four
-    // modes now, not just Type/Verbatim.
     if (isGameActive) refreshTargetPrompt(false);
   });
 }
@@ -3273,22 +2843,15 @@ btnResetProgress.addEventListener("click", () => {
     localStorage.removeItem(STUDY_KEY);
     localStorage.removeItem("countyMistakes");
     renderStateListUI();
-    renderCountyCheckboxes(); // redraw checkboxes so mistake badges clear too
+    renderCountyCheckboxes();
     renderStatsPanel();
-    if (suggestionBox) suggestionBox.classList.add("hidden"); // stale "top 5 missed" no longer applies
+    if (suggestionBox) suggestionBox.classList.add("hidden");
     alert("Progress and mistake history reset successfully!");
   }
 });
 }
 
 
-// --- Settings Table of Contents ---
-// Each caret button only expands/collapses its section's sub-list (see
-// .toc-items in style.css) — it's a separate element from the section
-// name link right beside it specifically so a click on one never also
-// triggers the other; a link nested inside a native <summary>-style
-// disclosure widget would make "navigate" and "expand" the same click,
-// which isn't what's wanted here.
 document.querySelectorAll(".toc-caret").forEach(caret => {
   caret.addEventListener("click", () => {
     const list = document.getElementById(caret.getAttribute("aria-controls"));
@@ -3300,12 +2863,6 @@ document.querySelectorAll(".toc-caret").forEach(caret => {
 });
 
 
-// Section names and individual setting names both just scroll the target
-// into view — smoothly, and clear of the sticky top edge — rather than
-// jumping straight there the way a plain #anchor link would. preventDefault()
-// here also stops a section-name click from being misread as a click on its
-// enclosing .toc-section-row that should toggle the caret; the two are
-// wired independently (see above), so this only ever does the scroll.
 document.querySelectorAll(".toc-section-link, .toc-item-link").forEach(link => {
   link.addEventListener("click", (e) => {
     e.preventDefault();
@@ -3313,13 +2870,8 @@ document.querySelectorAll(".toc-section-link, .toc-item-link").forEach(link => {
     const target = document.getElementById(targetId);
     if (!target) return;
     target.scrollIntoView({ behavior: "smooth", block: "start" });
-    // Only individual settings (not whole sections) get the brief
-    // highlight flash — a whole section landing at the top of the
-    // viewport is already obvious without one.
     if (target.classList.contains("setting-item")) {
       target.classList.remove("toc-highlight");
-      // Force a reflow so re-adding the class restarts the animation even
-      // if the same setting was just clicked again a moment ago.
       void target.offsetWidth;
       target.classList.add("toc-highlight");
     }
@@ -3327,13 +2879,6 @@ document.querySelectorAll(".toc-section-link, .toc-item-link").forEach(link => {
 });
 
 
-// --- Dynamic State Selector UI ---
-// FIX #1: previously this function bailed out immediately because
-// document.getElementById("state-list") returned null (no such element
-// exists in index.html), so none of the click/keydown handlers below it
-// were ever attached anywhere. Now it looks up each *existing* state row
-// (#state-delaware, #state-rhode_island, ...) by id and wires it up in
-// place, leaving the static WIP rows untouched.
 function renderStateListUI() {
   Object.keys(stateData).forEach(stateKey => {
     const state = stateData[stateKey];
@@ -3349,16 +2894,10 @@ function renderStateListUI() {
     stateRow.setAttribute("aria-pressed", isSelected);
 
 
-    // Only attach listeners once per row, even though this function can
-    // run again later (e.g. after a progress reset).
     if (stateRow.dataset.listenerAttached === "true") return;
     stateRow.dataset.listenerAttached = "true";
 
 
-    // Toggle this state in/out of the active set — lets more than one
-    // state be selected at once, so both maps can show and both counties
-    // pools get combined. Also refreshes the stats panel, which always
-    // shows every currently-selected state.
     const toggleState = () => {
       const idx = activeStateKeys.indexOf(stateKey);
       if (idx === -1) {
@@ -3393,12 +2932,6 @@ function renderStateListUI() {
 }
 
 
-// --- Per-County, Per-Mode Learning Stats ---
-// Returns the learned status for a county/mode pair: "clean" (learned in
-// one unbroken pass — no mistakes, and not a Retry Missed round), "retry"
-// (only ever gotten right during a Retry Missed round), or null (not
-// learned at all). `true` is also accepted as a legacy value, from
-// before this distinction existed — treated the same as "clean".
 function getCountyLearnedStatus(countyId, mode) {
   const status = countyProgress[countyId] && countyProgress[countyId][mode];
   if (status === true) return "clean";
@@ -3411,13 +2944,6 @@ function isCountyLearned(countyId, mode) {
 }
 
 
-// Marks a county learned for whichever mode it was just correctly
-// guessed in — "clean" for a normal first-try-correct guess, or "retry"
-// if this round was started via "Retry Missed" (see
-// currentRunIsRetryMissed/initGame()). A county already marked "clean"
-// never gets downgraded back to "retry"; otherwise this is idempotent
-// (re-marking the same status is a no-op) so it's safe to call on every
-// correct guess without spamming localStorage writes.
 function markCountyLearned(countyId, mode, viaRetryMissed) {
   const newStatus = viaRetryMissed ? "retry" : "clean";
   const current = getCountyLearnedStatus(countyId, mode);
@@ -3429,25 +2955,10 @@ function markCountyLearned(countyId, mode, viaRetryMissed) {
 }
 
 
-// Renders one stats section (state name header + per-mode/per-county
-// table) for every currently-selected state, back to back — the same
-// grouping order renderCountyCheckboxes() uses (click order, or
-// alphabetical if gameSettings.sortStatesAlphabetically is on — see
-// getOrderedStateKeys()). Hidden entirely when nothing is selected. Each
-// state's table can be individually collapsed via its Hide/Show button
-// (or all at once via Hide All) — see isStatsHidden()/statsHiddenOverride
-// above.
-// A small, non-interactive copy of a state's map with the counties you've
-// learned filled in (green). Built the same way as the Study map further
-// down: clone the game's own <svg>, strip its ids so the copy can never be
-// found by the game code, and drop the game's per-county styling.
 function miniMap(s, learned) {
   const src = document.getElementById(s.svgId);
-  if (!src || !src.querySelector(".county")) return null;   // not loaded yet
+  if (!src || !src.querySelector(".county")) return null;
   const svg = src.cloneNode(true);
-  // The click-here callouts (Alaska, Hawaii, California) only exist once
-  // the game has set them up, so leave them out: this overview then looks
-  // the same whether or not you've played yet.
   svg.querySelectorAll('[class*="callout"], [class*="arrowhead"], defs').forEach(el => el.remove());
   const done = new Set(s.counties.filter(c => learned[c.id]).map(c => c.id));
   svg.querySelectorAll(".county").forEach(el => {
@@ -3480,9 +2991,6 @@ function sortedCountiesOf(stateKey) {
 
 function renderStatsPanel() {
   if (!statsPanel || !statsSections) return;
-  // The panel lives on the home screen. Rebuilding its tables (a row per county, for every selected state)
-  // while you're playing is wasted work and gets slow with many states, so skip it unless home is showing;
-  // the observer near the bottom of this file redraws it as soon as you go back home.
   const homeScreen = document.getElementById("screen-home");
   if (homeScreen && !homeScreen.classList.contains("active")) return;
 
@@ -3493,11 +3001,9 @@ function renderStatsPanel() {
     return;
   }
 
-  // The Hide all button turns into "Show all" once every state's table is hidden (by it or one by one).
   const hideAllBtn = statsPanel.querySelector("#btn-hide-all-stats");
   if (hideAllBtn) hideAllBtn.textContent = activeStateKeys.every(isStatsHidden) ? "Show all" : "Hide all";
 
-  // Play and Learn each have their own progress; the Play | Learn switch picks which one to show.
   const learnView = statsView === "learn";
   const modes = learnView ? STUDY_MODE_LIST : MODE_LIST;
   const labelOf = m => learnView ? STUDY_MODE_LABELS[m] : MODE_LABELS[m];
@@ -3515,14 +3021,6 @@ function renderStatsPanel() {
 
     const summaryCells = modes.map(mode => {
       const learnedCount = sortedCounties.filter(c => !!statusOf(c.id, mode)).length;
-      // FIX: "Completed" used to fire whenever every county was *learned*
-      // (learnedCount === total), which counts "retry" (–) counties the
-      // same as "clean" (✓) ones — see isCountyLearned(). That meant a
-      // state showing a dash for some counties could still say flat-out
-      // "Completed", which reads as "you have this fully mastered" when
-      // you don't. Now "Completed" only fires when every county is
-      // "clean"; a state that's fully learned but leaning on some retries
-      // gets its own distinct label/style instead of either extreme.
       const cleanCount = sortedCounties.filter(c => statusOf(c.id, mode) === "clean").length;
       const allClean = cleanCount === total;
       const allLearned = learnedCount === total;
@@ -3543,9 +3041,6 @@ function renderStatsPanel() {
     const countyRows = sortedCounties.map(c => {
       const cells = modes.map(mode => {
         const status = statusOf(c.id, mode);
-        // "retry" = learned only during a Retry Missed round, shown as a
-        // distinct orange dash rather than the plain green checkmark —
-        // see markCountyLearned().
         const symbol = status === "clean" ? "✓" : status === "retry" ? "–" : "✗";
         const statusClass = status === "clean" ? "stats-yes" : status === "retry" ? "stats-retry" : "stats-no";
         const label = status === "clean" ? "Learned" : status === "retry" ? "Learned (Retry Missed)" : "Not learned";
@@ -3578,14 +3073,13 @@ function renderStatsPanel() {
 
   statsSections.innerHTML = stateSections;
 
-  // Learn view: fill each state's minimap (green = learned in the chosen Learn mode; "All" = in all three).
   if (learnView) {
     const mapModes = statsLearnMode === "all" ? STUDY_MODE_LIST : [statsLearnMode];
     const note = statsLearnMode === "all" ? "Green: learned in all three Learn modes" : `Green: learned in ${STUDY_MODE_LABELS[statsLearnMode]}`;
     statsSections.querySelectorAll("[data-minimap]").forEach(box => {
       const key = box.dataset.minimap, s = stateData[key];
       loadStateMap(key).then(() => {
-        if (!box.isConnected) return;               // the panel was redrawn while the map was loading
+        if (!box.isConnected) return;
         const learned = {};
         s.counties.forEach(c => { if (mapModes.every(m => isStudyLearned(c.id, m))) learned[c.id] = true; });
         const map = miniMap(s, learned);
@@ -3594,7 +3088,7 @@ function renderStatsPanel() {
         cap.className = "stats-minimap-note";
         cap.textContent = note;
         box.append(map, cap);
-      }).catch(() => { /* no minimap if the file can't be loaded */ });
+      }).catch(() => {  });
     });
   }
 
@@ -3603,17 +3097,12 @@ function renderStatsPanel() {
 }
 
 
-// Single delegated listener for the Hide/Show buttons rendered inside
-// the stats panel — attached once here (rather than re-bound on every
-// renderStatsPanel() call) since the buttons themselves are recreated
-// each time statsPanel.innerHTML is replaced.
 if (statsPanel) {
   statsPanel.addEventListener("click", (e) => {
     const viewBtn = e.target.closest("[data-stats-view]");
     if (viewBtn) { statsView = viewBtn.dataset.statsView; renderStatsPanel(); return; }
     const hideAllBtn = e.target.closest("#btn-hide-all-stats");
     if (hideAllBtn) {
-      // Hide everything, unless everything is already hidden, in which case show everything.
       const hide = !activeStateKeys.every(isStatsHidden);
       activeStateKeys.forEach(stateKey => { statsHiddenOverride[stateKey] = hide; });
       renderStatsPanel();
@@ -3630,35 +3119,6 @@ if (statsPanel) {
 }
 
 
-// Builds a "click here" stand-in for a county whose real shape is too
-// tiny to click reliably at normal zoom: a circle placed out in open
-// water plus a line pointing at the real shape. Uses getBBox() to find
-// the real position/size, so it's positioned correctly no matter the
-// exact path geometry — this only runs once the target SVG is actually
-// visible in the DOM (getBBox needs a rendered element).
-//
-// `key` is a short identifier (e.g. "kalawao", "sf") used to namespace
-// the generated element ids/classes so multiple callouts on different
-// maps don't collide. `offsetX`/`offsetY` place the callout circle
-// relative to the real shape's center, in the target SVG's own
-// coordinate system (i.e. viewBox units, not screen pixels) — pick a
-// spot that's open water/blank space on that particular map.
-// `radiusPadding` is added on top of the real shape's own size to get
-// the callout circle's radius; how much "extra" room it needs depends
-// on that map's own coordinate scale, so it's passed in per-county
-// rather than derived from the offset. Optional `radiusOverride` skips
-// that size-derived formula entirely and uses a fixed radius instead —
-// needed for counties whose real shape isn't actually
-// tiny the way Kalawao/SF/Skagway/Bristol Bay's are, so deriving the
-// circle's size from its own bounding box would make the "click here"
-// circle enormous instead of a small stand-in.
-// `styleKey` (optional, defaults to `key`) names the CSS classes and the shared arrowhead, so many callouts
-// (e.g. Virginia's) can share one look while each keeps its own unique element id from `key`.
-// The outermost edge of a shape along a ray: how far from (cx, cy), in direction (vx, vy), the last point still
-// inside the shape is (or null if (cx, cy) isn't inside it). Used to end Virginia's arrows exactly at the edge of
-// the city that faces its circle: the cities are tiny, and the old "stop a bit short of the center" put the
-// arrowhead on top of the city and hid it. The whole range is scanned (not just up to the first gap), so a city
-// with a notch or a detached piece still ends up with its arrowhead outside it.
 function distanceToShapeEdge(path, cx, cy, vx, vy, maxLen) {
   if (typeof path.isPointInFill !== "function") return null;
   const inside = (t) => path.isPointInFill(new DOMPoint(cx + vx * t, cy + vy * t));
@@ -3675,9 +3135,6 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
   const countyPath = document.getElementById(countyId);
   if (!countyPath || !targetSvg) return false;
 
-  // High-detail maps use a bigger coordinate system (data-unit-scale = how many
-  // times bigger than the old 800-unit-wide maps). The offsets and radii passed
-  // in are written for the 800-unit size, so scale them to match.
   const us = parseFloat(targetSvg.dataset && targetSvg.dataset.unitScale) || 1;
   offsetX *= us; offsetY *= us; radiusPadding *= us; stopShort *= us;
   if (radiusOverride !== undefined) radiusOverride *= us;
@@ -3685,10 +3142,6 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
   let bbox;
   try {
     bbox = countyPath.getBBox();
-    // Counties with far-off islands (e.g. San Francisco's Farallones) would
-    // pull the callout off target, so measure just the largest piece. Most
-    // maps list a county's biggest outline first, but not all do (Virginia's
-    // doesn't), so every piece is measured and the biggest one wins.
     const dAttr = countyPath.getAttribute && countyPath.getAttribute("d");
     if (dAttr && dAttr.indexOf("M", 1) > 0) {
       const tmp = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -3706,7 +3159,7 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
       if (best && (best.width || best.height)) bbox = best;
     }
   } catch (e) {
-    return false; // Bail quietly if the browser can't compute it yet.
+    return false;
   }
   if (!bbox || (bbox.width === 0 && bbox.height === 0)) return false;
 
@@ -3719,9 +3172,6 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
     ? radiusOverride
     : Math.max(bbox.width, bbox.height) * 1.6 + radiusPadding;
 
-  // Stop the shaft just shy of the real county's actual center — close
-  // enough that the arrowhead reads as touching the shape, not just
-  // gesturing vaguely toward the middle of the strait.
   const dx = cx - calloutX;
   const dy = cy - calloutY;
   const dist = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -3730,26 +3180,16 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
   let tipX = cx - ux * stopShort;
   let tipY = cy - uy * stopShort;
   if (styleKey === "va") {
-    // End the arrow right at the city's edge, on the side facing its circle.
     const edge = distanceToShapeEdge(countyPath, cx, cy, -ux, -uy, Math.min(dist, 20 * us));
     if (edge !== null) { tipX = cx - ux * edge; tipY = cy - uy * edge; }
   }
 
-  // Start the shaft at the circle's EDGE, not its center — the circle's
-  // radius is large enough relative to the total distance to the real
-  // shape that starting from dead-center would leave the circle covering
-  // almost the entire line, hiding the shaft with only the arrowhead
-  // poking out (or not even that).
   const startX = calloutX + ux * calloutRadius;
   const startY = calloutY + uy * calloutRadius;
 
   const svgNS = "http://www.w3.org/2000/svg";
   const targetGroup = targetSvg.querySelector("g") || targetSvg;
 
-  // Arrowhead marker, defined once and referenced by the line below via
-  // marker-end. markerUnits="strokeWidth" (the default) means its size
-  // automatically scales with the line's own stroke-width, so it stays
-  // proportional to the shaft without needing separate tuning per state.
   let defs = targetSvg.querySelector("defs");
   if (!defs) {
     defs = document.createElementNS(svgNS, "defs");
@@ -3767,9 +3207,6 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
     const arrowHead = document.createElementNS(svgNS, "path");
     arrowHead.setAttribute("d", "M0,0 L8,4 L0,8 Z");
     if (us !== 1) {
-      // Keep the arrowhead the same on-screen size in the bigger coordinate system.
-      // Virginia's cities are smaller than a normal arrowhead, so its heads are smaller, and the point of the
-      // head sits exactly on the end of the line (refX = m) instead of poking past it.
       const isVa = styleKey === "va";
       const m = (isVa ? 8 : 12) * us;
       marker.setAttribute("markerUnits", "userSpaceOnUse");
@@ -3808,33 +3245,12 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
   circle.setAttribute("aria-label", `${countyName} County (click here — the real county outline is very small)`);
   targetGroup.appendChild(circle);
 
-  // Re-collect every ".county" element so the new circle gets reset
-  // between games and included in the "all correct" win state exactly
-  // like every other county, then wire up its click/tap/keyboard handling.
   countyPaths = document.querySelectorAll(".county");
   bindCountyInteractivity(circle);
   return true;
 }
 
 
-// Physically reorders the .map-box elements (each one wrapping a single
-// state's <svg class="state-map">) inside .map-wrapper so the maps
-// you're actually playing with line up the same way the rest of the app
-// orders states: click order (the order you selected states in on the
-// setup screen — activeStateKeys, as-is) by default, or alphabetically
-// if gameSettings.sortStatesAlphabetically is on. States that aren't
-// currently selected are appended after, in no particular order —
-// they're hidden, so their relative order doesn't affect anything on
-// screen.
-//
-// This is a real DOM reorder (via appendChild, which moves rather than
-// clones a node) rather than a CSS "order" trick, because
-// switchVisibleSvgMap()'s divider logic below reads actual DOM order to
-// figure out which maps sit side by side (relevant when the "Scale
-// States by Size" setting is on) — a CSS-only reorder would desync the
-// two and put dividers in the wrong place. Moving the .map-box (rather
-// than the <svg> directly) keeps each map inside its own box wrapper
-// intact — moving the svg alone would rip it out of its box.
 function applyMapDomOrder() {
   const wrapper = document.querySelector(".map-wrapper");
   if (!wrapper) return;
@@ -3852,15 +3268,6 @@ function applyMapDomOrder() {
 }
 
 
-// True if the in-game maps should use the original variable-sized,
-// divided layout (body.scale-states-by-size) instead of the default
-// uniform-box grid. This is the case either because "Scale States by
-// Size" itself is on, or — when that's off — because "Use Dividers for
-// Few States" is on (its default) and there are 3 or fewer active
-// states, where a barely-populated uniform grid tends to look sparser
-// than the divided layout. Zero active states (nothing selected yet)
-// doesn't count as "few states" here, since there's nothing to lay out
-// either way.
 function shouldUseDividerLayout() {
   if (gameSettings.scaleStatesBySize) return true;
   return (
@@ -3871,25 +3278,11 @@ function shouldUseDividerLayout() {
 }
 
 
-// Keeps body.scale-states-by-size in sync with shouldUseDividerLayout().
-// Called any time either of the two settings it depends on changes, or
-// the active state selection changes (see switchVisibleSvgMap()), so
-// e.g. selecting a 4th state while "Use Dividers for Few States" is on
-// switches the game screen from the divided layout to the uniform grid
-// live, without needing a page reload.
 function updateMapLayoutMode() {
   document.body.classList.toggle("scale-states-by-size", shouldUseDividerLayout());
 }
 
 
-// Keeps .map-wrapper's --states-per-row custom property (see .map-wrapper
-// in style.css) in sync with the "States Per Row" setting, capped at the
-// number of states actually active — e.g. a "2 per row" setting with only
-// 1 state selected collapses to a single column so that one box grows to
-// fill the row, instead of sitting at half width beside an empty track.
-// Only meaningful for the uniform grid layout; harmless to keep updated
-// even while the divided layout (see updateMapLayoutMode()) is showing,
-// since that layout doesn't use CSS grid at all.
 function updateMapGridColumns() {
   const wrapper = document.querySelector(".map-wrapper");
   if (!wrapper) return;
@@ -3901,32 +3294,18 @@ function updateMapGridColumns() {
 
 
 function switchVisibleSvgMap() {
-  // Start fetching any selected state's shapes in the background (they aren't in index.html any more).
   prefetchStateMaps(activeStateKeys);
-  // A zoomed map lives outside its normal spot in the page; put it back first.
   exitMapZoom();
-  // The active state selection is what both of these depend on, and this
-  // is the one function guaranteed to run any time that selection changes
-  // (a state gets toggled on the setup screen, or a game is started) —
-  // see its call sites.
   updateMapLayoutMode();
   updateMapGridColumns();
   applyMapDomOrder();
 
-  // Re-query rather than reuse the module-level svgMaps NodeList: that
-  // NodeList is a snapshot taken once at load, so its internal order
-  // wouldn't reflect any reordering applyMapDomOrder() just did.
   const currentSvgMaps = document.querySelectorAll(".state-map");
 
   currentSvgMaps.forEach(map => {
     map.style.display = "none";
     map.classList.add("hidden");
     map.classList.remove("map-divider", "map-divider-top");
-    // The .map-box wrapper (see index.html) needs to be hidden along
-    // with its svg — otherwise an inactive state would still render as
-    // an empty box/tile in the uniform grid layout, since the box's own
-    // border/shadow/aspect-ratio don't depend on whether its child svg
-    // is visible.
     const box = map.closest(".map-box");
     if (box) box.classList.add("hidden");
   });
@@ -3943,45 +3322,19 @@ function switchVisibleSvgMap() {
       visibleMaps.push(targetSvg);
 
 
-      // setupCountyCallout() needs the target SVG to actually be
-      // rendered (getBBox() only works on visible elements), but this
-      // can run while we're still on the setup screen — before
-      // #screen-game (and this SVG) is actually shown. If it bails out
-      // early for that reason, only its own return value tells us so;
-      // kalawaoCalloutCreated/sfCalloutCreated must stay false so the
-      // very next call (once the screen is genuinely visible) tries
-      // again instead of silently giving up forever.
       if (key === "hawaii" && !kalawaoCalloutCreated) {
-        // Open ocean north of Moloka'i, clear of every other island —
-        // pulled out further from the real shape than a first pass so
-        // the leader line actually reads as a line pointing to a
-        // distant marker, rather than a circle sitting right on top of
-        // the coastline with the arrowhead barely poking out.
         kalawaoCalloutCreated = setupCountyCallout(targetSvg, "kalawao", "kalawao", -59, -110, 5, 2);
       }
       if (key === "california" && !sfCalloutCreated) {
-        // Open Pacific water just west of the city, clear of Marin
-        // (north), San Mateo (south), and Alameda (east) — the three
-        // counties boxing San Francisco in and making its real shape
-        // easy to miss at normal zoom.
         sfCalloutCreated = setupCountyCallout(targetSvg, "san-francisco", "sf", -150, -17, 10, 15);
       }
-      // Alaska's map is built from real Census boundary data (Alaska
-      // Albers projection, 800-unit-wide viewBox), so the two callouts
-      // below are placed in that coordinate system. Both use the
-      // same fixed radius (14) so the click targets match; offsets are in viewBox units relative to each county's
-      // bounding-box center.
       if (key === "alaska" && !skagwayCalloutCreated) {
-        // Blank space north-east of the panhandle (Canada isn't drawn,
-        // so it reads as empty space).
         skagwayCalloutCreated = setupCountyCallout(targetSvg, "skagway", "skagway", 40, -55, 4, 9, 14);
       }
       if (key === "alaska" && !bristolBayCalloutCreated) {
-        // Open water south-west of the borough in Bristol Bay.
         bristolBayCalloutCreated = setupCountyCallout(targetSvg, "bristol-bay", "bristol-bay", -85, 15, 4, 8, 14);
       }
       if (key === "virginia") {
-        // One circle + arrow per independent city (see VIRGINIA_CALLOUTS). Same retry rule as the callouts above.
         VIRGINIA_CALLOUTS.forEach(([id, ox, oy]) => {
           if (!virginiaCalloutsDone[id]) {
             virginiaCalloutsDone[id] = setupCountyCallout(targetSvg, id, `va-${id}`, ox, oy, 0, 3, 9, "va");
@@ -3992,16 +3345,6 @@ function switchVisibleSvgMap() {
   });
 
 
-  // Add the subtle divider line between maps, but never after the last
-  // one — so a single map shown alone has no stray border.
-  //
-  // Important: this has to be based on the maps' actual DOM order, not
-  // the order the user selected the states in. .map-wrapper is a flex
-  // row, so visual left-to-right position always follows DOM order —
-  // if we instead used activeStateKeys' order (selection order), the
-  // divider could land on the wrong map whenever the user picked the
-  // states in a different order than they appear in the markup, making
-  // it show up outside the pair instead of between them.
   const domOrderedVisibleMaps = Array.from(currentSvgMaps).filter(map => visibleMaps.includes(map));
 
 
@@ -4009,62 +3352,18 @@ function switchVisibleSvgMap() {
 }
 
 
-// Works out which visible maps share a row and which wrapped onto a new
-// one, and tags them for the divider lines in style.css (.map-divider /
-// .map-divider-top, only drawn in the "Scale States by Size" layout).
-// Called whenever the set of maps changes (switchVisibleSvgMap) and when
-// the window is resized — rows re-wrap at a new width, which is why the
-// dividers used to go stale until the next time states were toggled.
 function updateMapDividers() {
   const domOrderedVisibleMaps = Array.from(document.querySelectorAll(".state-map"))
     .filter(map => !map.classList.contains("hidden") && map.style.display !== "none" && !map.classList.contains("zoomed"));
   domOrderedVisibleMaps.forEach(map => map.classList.remove("map-divider", "map-divider-top"));
 
-  // Group the visible maps into their actual visual rows by checking
-  // whether their vertical spans overlap, not by comparing top edges.
-  // Reading getBoundingClientRect here forces the browser to lay things
-  // out, so this reflects where .map-wrapper's flex-wrap really put each
-  // map — not just DOM order. Two maps on the same row get a vertical
-  // divider between them; a map that wrapped onto a new row instead gets
-  // a horizontal divider along its top, separating it from the row above.
-  //
-  // NOTE: .map-wrapper uses align-items: center, so maps of different
-  // heights (e.g. Delaware next to the shorter Rhode Island, or Hawaii
-  // next to Rhode Island) still overlap heavily in their vertical span
-  // when on the same row, even though their centers can land a few
-  // pixels apart due to sub-pixel rounding — comparing centers with a
-  // tight 2px tolerance was enough to misclassify Hawaii (a much wider,
-  // shorter map) as its own row even when it was genuinely beside Rhode
-  // Island, giving it the wrong (horizontal) divider style. Checking for
-  // real overlap between vertical spans is a much more forgiving, more
-  // accurate test for "these are actually on the same row" — comparing
-  // top here would wrongly treat every map as its own row.
   const rows = [];
   domOrderedVisibleMaps.forEach(map => {
-    // NOTE: map is an <svg> element (SVGElement), and SVGElement does not
-    // have an .offsetTop property the way HTMLElement does — it's always
-    // undefined, which made every comparison below resolve to NaN < 2
-    // (always false), so every map was treated as starting a new row no
-    // matter where it actually rendered. getBoundingClientRect() works
-    // on any element type and reflects the real on-screen position.
     const rect = map.getBoundingClientRect();
     const lastRow = rows[rows.length - 1];
     if (lastRow) {
       const overlap = Math.min(lastRow.bottom, rect.bottom) - Math.max(lastRow.top, rect.top);
       const smallerHeight = Math.min(lastRow.bottom - lastRow.top, rect.height);
-      // FIX: was a 0.5 (50%) threshold. Once New Hampshire and Hawaii
-      // got their own bigger, custom flex-basis/max-width (see
-      // #svg-new-hampshire / #svg-hawaii in style.css), the height gap
-      // between the shortest map sharing a row (Hawaii, ~208px) and the
-      // tallest (Delaware, ~466px) got wide enough that ordinary
-      // sub-row jitter — different maps hitting their own max-width cap
-      // at slightly different points as flex-grow distributes leftover
-      // space — could push a short map's overlap with its row just
-      // under 50%, misclassifying it as starting a new row and giving
-      // it a stray map-divider-top even though it's still visually on
-      // the same line. 0.35 keeps genuinely separate rows (which have
-      // ~0% overlap) from ever being merged, while giving same-row maps
-      // enough slack to survive that jitter.
       if (overlap > smallerHeight * 0.35) {
         lastRow.maps.push(map);
         lastRow.top = Math.min(lastRow.top, rect.top);
@@ -4082,8 +3381,6 @@ function updateMapDividers() {
         map.classList.add("map-divider");
       }
     });
-    // Every map in a wrapped row (not just its first) gets the top rule,
-    // so the horizontal line runs the full width of that row.
     if (rowIndex > 0) {
       row.maps.forEach(map => map.classList.add("map-divider-top"));
     }
@@ -4097,10 +3394,6 @@ window.addEventListener("resize", () => {
 });
 
 
-// --- State & County Setup Logic ---
-  // One checkbox row per county in every selected state: about 3,100 rows (and ~19,000 elements) with all
-  // 50 states selected. They only matter once you answer "Yes" to excluding counties, so while that list is
-  // hidden we just remember that it's out of date and build it when it is shown (see the radio handler).
   let checkboxesDirty = false;
   function renderCountyCheckboxes() {
   if (!checkboxContainer) return;
@@ -4108,19 +3401,10 @@ window.addEventListener("resize", () => {
   checkboxesDirty = false;
 
 
-  // Remove both the county labels AND any state-header dividers from
-  // the previous render.
   const existingChildren = checkboxContainer.querySelectorAll("label, .county-group-header");
   existingChildren.forEach(el => el.remove());
 
 
-  // Grouped by state — in click order by default, or alphabetically if
-  // gameSettings.sortStatesAlphabetically is on (see getOrderedStateKeys())
-  // — with each state's own counties sorted alphabetically underneath its
-  // header. The header itself is what disambiguates two counties that
-  // share a name (e.g. "Kent" in Delaware vs Rhode Island), so the
-  // label text no longer needs a ", State" suffix the way the flat
-  // combined list did.
   getOrderedStateKeys().forEach(stateKey => {
     const state = stateData[stateKey];
     if (!state) return;
@@ -4163,17 +3447,6 @@ window.addEventListener("resize", () => {
 }
 
 
-// --- Setup-screen search boxes ---
-// Both boxes ignore case and diacritics (so "hawaii" finds Hawaiʻi and
-// "coos" finds Coös) and only match names that CONTAIN the typed text.
-//
-// The ʻokina (U+02BB) is a letter, though, so it can be searched for too:
-//   - typing no apostrophe-like character ignores them all in the names, so "hawaii"
-//     still finds Hawaiʻi and "kauai" finds Kauaʻi;
-//   - typing a ʻokina matches only names that really contain one (so "ʻ" alone lists
-//     just Hawaiʻi and Kauaʻi, and "kauaʻi" works);
-//   - typing a plain or curly apostrophe (or backtick) matches any apostrophe-like
-//     character in the name, so "kaua'i" finds Kauaʻi and "george's" finds Prince George's.
 const APOS_LIKE = /[\u02bb\u2018\u2019`']/g;
 function searchMode(rawQuery) {
   const q = String(rawQuery);
@@ -4183,12 +3456,11 @@ function searchMode(rawQuery) {
 }
 function normalizeForSearch(str, mode = "plain") {
   let t = foldDiacriticsForComparison(String(str)).toLowerCase();
-  if (mode === "okina") t = t.replace(/[\u2018\u2019`']/g, "");        // keep only the real ʻokina
-  else if (mode === "apostrophe") t = t.replace(APOS_LIKE, "'");         // all apostrophe-likes count as one
-  else t = t.replace(APOS_LIKE, "");                                     // ignore them entirely
+  if (mode === "okina") t = t.replace(/[\u2018\u2019`']/g, "");
+  else if (mode === "apostrophe") t = t.replace(APOS_LIKE, "'");
+  else t = t.replace(APOS_LIKE, "");
   return t.replace(/\s+/g, " ").trim();
 }
-// True when `text` contains what was typed in a search box (an empty search matches everything).
 function searchMatches(text, rawQuery) {
   if (!String(rawQuery).trim()) return true;
   const mode = searchMode(rawQuery);
@@ -4209,9 +3481,6 @@ function applyStateSearchFilter() {
   if (empty) empty.classList.toggle("hidden", shown > 0);
 }
 
-// Hides county rows that don't match, and any state header whose counties
-// are all hidden. Checked/unchecked state lives on the checkboxes
-// themselves, so hiding a row never changes what's excluded.
 function applyCountySearchFilter() {
   const input = document.getElementById("county-search");
   const empty = document.getElementById("county-search-empty");
@@ -4253,15 +3522,10 @@ if (countySearchInput) {
   countySearchInput.addEventListener("input", applyCountySearchFilter);
   countySearchInput.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { countySearchInput.value = ""; applyCountySearchFilter(); }
-    // Enter shouldn't do anything surprising (like submitting a form).
     if (e.key === "Enter") e.preventDefault();
   });
 }
 
-// --- "Which one's that?" locator popup ---
-// Clones the real state map (already in the DOM inside #screen-game),
-// strips everything that could clash with the live game (ids, game-state
-// classes, listeners aren't cloned anyway), and highlights one county.
 const locatorModal = document.getElementById("modal-locator");
 const locatorHolder = document.getElementById("locator-map-holder");
 const locatorSubtitle = document.getElementById("locator-subtitle");
@@ -4284,7 +3548,6 @@ function openLocator(countyId) {
 
   const svg = sourceSvg.cloneNode(true);
 
-  // Find the target(s) while the ids still exist, and tag them.
   const targets = [];
   svg.querySelectorAll("[id]").forEach(el => {
     if (el.id === countyId) targets.push(el);
@@ -4293,15 +3556,11 @@ function openLocator(countyId) {
     if (!targets.includes(el)) targets.push(el);
   });
 
-  // Reset every county to its plain look, then strip ids so nothing here
-  // can ever be picked up by document.getElementById() in the game code.
   svg.querySelectorAll(".county").forEach(el => {
     el.setAttribute("class", "county");
     el.style.removeProperty("fill");
     el.style.removeProperty("stroke");
   });
-  // SVG has no z-index: whatever is drawn later paints on top. Re-append the highlighted county(ies) so
-  // they're drawn LAST; otherwise any neighbour that comes after it in the file covers part of its border.
   targets.forEach(el => { el.classList.add("locator-target"); if (el.parentNode) el.parentNode.appendChild(el); });
   svg.removeAttribute("id");
   svg.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
@@ -4317,8 +3576,6 @@ function openLocator(countyId) {
   locatorHolder.appendChild(svg);
   locatorModal.classList.remove("hidden");
 
-  // Tiny counties (Kalawao, Bristol, ...) are easy to miss even when
-  // coloured, so circle them. Needs the modal visible to measure.
   requestAnimationFrame(() => {
     try {
       const target = targets.find(t => t.classList.contains("locator-target") && t.getBoundingClientRect().width > 0)
@@ -4340,19 +3597,17 @@ function openLocator(countyId) {
       ring.setAttribute("cy", (a.y + b.y) / 2);
       ring.setAttribute("r", Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y)) / 2 + vbWidth * 0.02);
       svg.appendChild(ring);
-    } catch (err) { /* ring is a nicety; the highlight alone is fine */ }
+    } catch (err) {  }
   });
 
   if (btnLocatorClose) btnLocatorClose.focus();
 }
 
-// One delegated listener covers every "?" button, including ones
-// re-created whenever the checkbox list re-renders.
 if (checkboxContainer) {
   checkboxContainer.addEventListener("click", (e) => {
     const btn = e.target.closest(".county-locate-btn");
     if (!btn) return;
-    e.preventDefault();   // don't let the surrounding <label> toggle the checkbox
+    e.preventDefault();
     e.stopPropagation();
     openLocator(btn.dataset.countyId);
   });
@@ -4371,25 +3626,16 @@ function getActiveCountiesPool() {
 }
 
 
-// How many of the most-missed counties get auto-selected by "Select the
-// ones you struggled with" / the initial suggestion. Capped rather than
-// selecting every county with any mistake at all, since that list grows
-// unhelpfully long once more states/counties have been played.
-// (Now a setting — see Settings > General > "Best-Known Counties to
-// Select". This getter keeps the old call sites simple.)
 function getSuggestionLimit() {
   return gameSettings.bestKnownCount;
 }
 
 
-// Returns the ids of up to `limit` currently-rendered counties with the
-// highest mistake counts, highest first. Counties with zero mistakes are
-// never included, so this can return fewer than `limit` ids.
 function getLowestMistakeCountyIds(limit) {
   return Array.from(document.querySelectorAll(".county-checkbox"))
     .map(cb => ({ id: cb.value, mistakes: countyMistakes[cb.value] || 0 }))
-    .filter(c => c.mistakes >= 0) // Change to c.mistakes >= 0 if you want to include 0-mistake counties
-    .sort((a, b) => a.mistakes - b.mistakes) // Sorts lowest to highest
+    .filter(c => c.mistakes >= 0)
+    .sort((a, b) => a.mistakes - b.mistakes)
     .slice(0, limit)
     .map(c => c.id);
 }
@@ -4399,14 +3645,12 @@ radioSpecific.forEach(radio => {
   radio.addEventListener("change", (e) => {
     if (e.target.value === "yes") {
       if (checkboxContainer) checkboxContainer.classList.remove("hidden");
-      if (checkboxesDirty) renderCountyCheckboxes();   // built now, because it was skipped while hidden
+      if (checkboxesDirty) renderCountyCheckboxes();
     }
     const countyCheckboxes = document.querySelectorAll(".county-checkbox");
     if (e.target.value === "yes") {
 
 
-      // Start with nothing selected — the user can check counties
-      // manually, or use the "Select your N best-known" button.
       countyCheckboxes.forEach(cb => {
         cb.checked = false;
       });
@@ -4432,10 +3676,6 @@ radioSpecific.forEach(radio => {
 
 if (btnSelectAllStates) {
   btnSelectAllStates.addEventListener("click", () => {
-    // Add every enabled state to the active set (stateData only ever
-    // contains states that are actually playable — the disabled
-    // "WORK IN PROGRESS" rows aren't real entries), then mirror the same
-    // row updates and side effects that a single toggleState() click does.
     Object.keys(stateData).forEach(stateKey => {
       if (!activeStateKeys.includes(stateKey)) {
         activeStateKeys.push(stateKey);
@@ -4460,12 +3700,8 @@ if (btnSelectAllStates) {
 
 if (btnDeselectAllStates) {
   btnDeselectAllStates.addEventListener("click", () => {
-    // Nothing selected, so there's nothing to deselect — do nothing
-    // (otherwise the refresh below pops up the greyed-out Play button).
     if (activeStateKeys.length === 0) return;
 
-    // Clear the active set and un-highlight every currently-rendered row,
-    // mirroring the same side effects a single toggleState() click does.
     activeStateKeys.length = 0;
     Object.keys(stateData).forEach(stateKey => {
       const stateRow = document.getElementById(`state-${stateKey}`);
@@ -4488,9 +3724,6 @@ if (btnDeselectAllStates) {
 
 if (btnSelectSuggested) {
   btnSelectSuggested.addEventListener("click", () => {
-    // Deselect everything first so it's obvious the button reset the
-    // selection, then check only the suggested 5 — even if some of them
-    // happened to already be checked.
     document.querySelectorAll(".county-checkbox").forEach(cb => {
       cb.checked = false;
     });
@@ -4517,10 +3750,6 @@ if (btnDeselectAll) {
 function updateSetupPlayButton() {
   if (!btnStartGame) return;
 
-  // The Play button is always visible, so it's clear what the screen is
-  // building toward. It's just greyed out (with a tooltip saying why)
-  // until the setup is playable: at least one state, and — if you're
-  // choosing specific counties — at least one of them ticked.
   let blockedReason = "";
   if (activeStateKeys.length === 0) {
     blockedReason = "Select at least one state to play.";
@@ -4557,18 +3786,9 @@ if (btnStartGame) {
     if (selectedCounties.length === 0) return;
 
 
-    // The county shapes load on demand: make sure every state in play has arrived before the game starts.
     try { await ensureStateMaps(activeStateKeys); }
     catch (err) { alert("Couldn't load the map data. Make sure the maps folder is next to index.html, then try again."); return; }
 
-    // NOTE: showScreen() has to run BEFORE switchVisibleSvgMap(). The maps
-    // live inside #screen-game, which is display:none until it gets the
-    // "active" class — and getBoundingClientRect() (used by
-    // switchVisibleSvgMap() to detect which maps share a visual row)
-    // returns all-zero rects for anything inside a display:none ancestor.
-    // Computing row layout first and only THEN revealing the screen meant
-    // every map measured as {top:0, left:0}, so they all looked like they
-    // were on the same row no matter how they actually wrapped.
     showScreen("screen-game");
     switchVisibleSvgMap();
     initGame(selectedCounties);
@@ -4603,14 +3823,6 @@ if (btnNewGame) {
 }
 
 
-// --- Give Up ---
-// Reveals every county still left in the pool as missed (in red), then
-// shows the same end-of-game summary (percentage + options) the player
-// would get from finishing normally. Works the same way in every mode,
-// including the Type modes where counties normally aren't clickable —
-// each revealed county gets its pointer-events force-enabled so hovering
-// it still pops out its name, even though isGameActive being false means
-// clicking or typing can no longer register a guess.
 function giveUp() {
   if (!isGameActive) return;
 
@@ -4654,17 +3866,6 @@ if (btnGiveUp) {
 }
 
 
-// --- Forfeit This One ---
-// Gives up on just the county currently being asked about: it's counted
-// as a miss (same as a wrong guess — it lands in the end-of-game "What
-// you missed" list, the persistent mistake tally, and Retry Missed),
-// revealed on the map, and the game moves straight on to the next
-// target. Unlike Give Up, the rest of the round carries on.
-//
-// Pin mode keeps found counties on the map permanently, so the
-// forfeited one stays red (hover it to see its name). The other modes
-// never leave anything on the map between targets, so the reveal is
-// brief.
 function forfeitCurrentTarget() {
   if (!isGameActive || !currentTarget || selectedMode === "type") return;
 
@@ -4677,8 +3878,6 @@ function forfeitCurrentTarget() {
   localStorage.setItem("countyMistakes", JSON.stringify(countyMistakes));
   playSound("wrong");
 
-  // Drop the pulsing "this is the one" highlight (Type/Verbatim, or a
-  // Pin/Flash reveal-after-mistakes) so it doesn't fight the red reveal.
   getCountyElements(forfeited.id).forEach(el => {
     el.classList.remove("typing-highlight");
     el.classList.add("given-up-missed");
@@ -4705,13 +3904,6 @@ if (btnForfeitTarget) {
 }
 
 
-// --- Game Loop Functions ---
-// isRetryMissedRun: true only when this round was started via "Retry
-// Missed" (either the modal button or the Admire bar's retry button) —
-// i.e. it's re-covering ground the player already missed once, not a
-// fresh/full attempt. Threaded through to markCountyLearned() below so
-// a county gotten right only during such a round is tracked separately
-// from one gotten right clean the first time (see currentRunIsRetryMissed).
 function initGame(countiesToPlay, isRetryMissedRun = false) {
   targetPool = [...countiesToPlay];
   totalTargetsCount = targetPool.length;
@@ -4723,9 +3915,6 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   forfeitedCount = 0;
   currentAttemptMistakes = 0;
   currentRunIsRetryMissed = isRetryMissedRun;
-  // Recompute per-game: e.g. retrying only Delaware's missed counties
-  // means "Kent" is no longer ambiguous even if it was during the full
-  // multi-state round.
       ambiguousCountyNames = computeAmbiguousNames(getActiveCountiesPool());
 
 
@@ -4738,25 +3927,16 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   hideHoverTooltip();
 
 
-  // The optional county-list sidebar only makes sense in List Mode
-  // (every other mode either shows the answer up front or hides it on
-  // purpose) — hide the toggle button entirely outside it, and always
-  // start a fresh game with the sidebar itself collapsed.
   if (btnToggleCountyList) {
     btnToggleCountyList.classList.toggle("hidden", selectedMode !== "type");
     btnToggleCountyList.textContent = "Show List";
   }
   if (countyListPanel) countyListPanel.classList.add("hidden");
-  // List mode is free recall — there's no single "current" county to
-  // forfeit — so the button only appears in the other four modes.
   if (btnForfeitTarget) btnForfeitTarget.classList.toggle("hidden", selectedMode === "type");
 
 
   countyPaths.forEach(path => {
     path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered", "typing-highlight", "given-up-missed");
-    // Typing modes are solved by typing, not clicking — disabling
-    // pointer events also removes the hover highlight so the map
-    // doesn't look clickable when it isn't.
     path.style.pointerEvents = TYPE_MODES.has(selectedMode) ? "none" : "auto";
     path.setAttribute("tabindex", "0");
     path.setAttribute("role", "button");
@@ -4768,28 +3948,14 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
 }
 
 
-// Shows how many counties have been found so far out of the total in
-// this game (e.g. "1/3"), regardless of mode.
 function updateProgressCounter() {
   if (!progressCounter) return;
   const found = totalTargetsCount - targetPool.length - forfeitedCount;
   progressCounter.textContent = `${found}/${totalTargetsCount}`;
 }
 
-// Refreshes the optional List Mode sidebar: one blank cell per county in
-// this game. A cell stays blank (no name shown) until that county has
-// actually been typed correctly (i.e. it's no longer in targetPool) —
-// only then does its cell fill in with the name. Nothing about an
-// unfound county (which letter, how long the name is) leaks out early;
-// filling in a cell is the reward for the guess, not a running spoiler.
-// When gameSettings.listByState is on (the default), counties are
-// grouped into a labeled section per state instead of one mixed
-// alphabetical list. Cheap enough to just re-render in full each time
-// rather than diffing.
 function renderCountyListPanel() {
   if (!countyListItems) return;
-  // It's a table with a row for every county in the game, rebuilt after every answer. Nobody sees it while
-  // the panel is hidden (the Show List button draws it when you open it), so don't build it then.
   if (countyListPanel && countyListPanel.classList.contains("hidden")) return;
   const tbody = countyListItems.querySelector("tbody") || countyListItems;
   const remainingIds = new Set(targetPool.map(c => c.id));
@@ -4809,9 +3975,6 @@ function renderCountyListPanel() {
       const nameB = stateData[b]?.name || b;
       return nameA.localeCompare(nameB);
     });
-    // Within a grouped-by-state section the header already gives the
-    // state, so cells use the plain county name rather than
-    // getDisplayName's "Kent, Rhode Island" disambiguation.
     const groupedCellRow = (c) => {
       const found = !remainingIds.has(c.id);
       return `<tr><td class="${found ? "found" : "blank"}">${found ? c.name : ""}</td></tr>`;
@@ -4832,10 +3995,6 @@ function renderCountyListPanel() {
   }
 }
 
-// --- "(State)" in the prompt: click it to jump to that state's map ---
-// With dozens of states on screen it's hard to find the one a county is in, so with more than one state in
-// play the "(Texas)" in the prompt is a link: it scrolls that state's map into view and pulses an outline
-// around it for a moment. (With a single state there's nothing to find, so it stays plain text.)
 function statePromptHTML(stateName) {
   if (!stateName) return "";
   const key = activeStateKeys.length > 1 ? Object.keys(stateData).find(k => stateData[k].name === stateName) : null;
@@ -4847,13 +4006,10 @@ function statePromptHTML(stateName) {
 function jumpToStateMap(key) {
   const data = stateData[key];
   const svg = data && document.getElementById(data.svgId);
-  if (!svg || !svg.getClientRects().length) return;               // not on screen (e.g. hidden)
+  if (!svg || !svg.getClientRects().length) return;
   const box = svg.closest(".map-box");
-  // "Scale States by Size" removes the tile box (display: contents), so then the map itself gets the pulse.
   const target = box && getComputedStyle(box).display !== "contents" ? box : svg;
   const calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // The prompt box sticks to the top of the screen, so aim for the space BELOW it: centre the map there, or if
-  // the map is taller than that space, line its top up just under the prompt so its label stays visible.
   let barBottom = 0;
   for (let e = targetPrompt; e && e !== document.body; e = e.parentElement) {
     const pos = getComputedStyle(e).position;
@@ -4863,7 +4019,7 @@ function jumpToStateMap(key) {
   const y = window.scrollY + rect.top - barBottom - gap - (rect.height < room ? (room - rect.height) / 2 : 0);
   window.scrollTo({ top: Math.max(0, y), behavior: calm ? "auto" : "smooth" });
   target.classList.remove("map-jump-flash");
-  void target.getBoundingClientRect();                            // restart the animation if clicked twice
+  void target.getBoundingClientRect();
   target.classList.add("map-jump-flash");
   setTimeout(() => target.classList.remove("map-jump-flash"), 1900);
 }
@@ -4880,23 +4036,10 @@ if (targetPrompt) {
   });
 }
 
-// Renders (or re-renders) the #target-prompt text for whatever
-// currentTarget/selectedMode currently are.
-//
-// forceReveal only matters for "Type" (type-hard) and "Verbatim"
-// (type-strict) — the two modes that normally just say "Type the
-// highlighted county" without naming it. Once the "Reveal Answer After
-// Mistakes" setting has decided the player's stuck (see
-// registerWrongTypedGuess), this switches that prompt over to naming
-// the county outright, the same way Pin's prompt always does. List
-// ("type") is free-recall with no single right answer, so it ignores
-// forceReveal entirely — there's nothing specific to reveal.
 function refreshTargetPrompt(forceReveal) {
   if (!targetPrompt || !currentTarget) return;
 
   if (selectedMode === "type") {
-    // Open-ended: any remaining county counts, so there's no single
-    // name to reveal here — the prompt just explains what to do.
     targetPrompt.innerHTML = `<span class="find-label">Find any county</span>`;
     return;
   }
@@ -4907,14 +4050,10 @@ function refreshTargetPrompt(forceReveal) {
       const stateName = state || getStateNameForCounty(currentTarget);
       targetPrompt.innerHTML = `
         <span class="find-label">It's:</span>
-        <span class="target-name">${name}</span>
+        <span class="target-name">${name}</span>${speakerHTML(currentTarget)}
         ${statePromptHTML(stateName)}
       `;
     } else {
-      // "Show State in Prompt" — auto-on. With several states in play
-      // at once, a lone flashing highlight can be genuinely hard to
-      // spot (e.g. a small county like Rockwall, TX or Bristol, RI), so
-      // naming the state up front narrows the search.
       const stateName = gameSettings.showStateInPrompt ? getStateNameForCounty(currentTarget) : "";
       targetPrompt.innerHTML = `
         <span class="find-label">${selectedMode === "mc" ? "Which county is highlighted?" : "Type the highlighted county"}</span>
@@ -4924,36 +4063,94 @@ function refreshTargetPrompt(forceReveal) {
     return;
   }
 
-  // Pin / Flash: always names the target up front. The state is shown
-  // either because it's needed to tell two same-named counties apart
-  // (e.g. two "Kent"s in play — that one's non-negotiable, so it's
-  // shown regardless of the setting), or because "Show State in
-  // Prompt" is on, same as Type/Verbatim above.
   const { name, state: ambiguousState } = getDisplayParts(currentTarget);
   const stateName = ambiguousState || (gameSettings.showStateInPrompt ? getStateNameForCounty(currentTarget) : "");
   targetPrompt.innerHTML = `
     <span class="find-label">Find:</span>
-    <span class="target-name">${name}</span>
+    <span class="target-name">${name}</span>${speakerHTML(currentTarget)}
     ${statePromptHTML(stateName)}
   `;
 }
 
-// --- Multiple-Choice ("mc") ---
-// Four answer buttons for the highlighted county: the right one plus three wrong ones, drawn from the
-// same state first (they're the believable ones) and then from the other states in play. A wrong pick
-// goes through the same registerWrongTypedGuess() as Verbatim (counts against you, "Reveal Answer
-// After Mistakes" works), and the right one through acceptTypedMatches() (progress, colours, next target).
 function mcShuffle(a) { a = a.slice(); for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; }
+/* ---------- Confusion tracking (shared by every Play and Learn mode) ---------- */
+const CONFUSE_KEY = "countyConfusions";
+let confusions = {};
+try { confusions = JSON.parse(localStorage.getItem(CONFUSE_KEY) || "{}") || {}; } catch (e) { confusions = {}; }
+let confTotals = null;
+const confPair = (a, b) => (a < b ? a + "|" + b : b + "|" + a);
+function confTotal(id) {
+  if (!confTotals) {
+    confTotals = {};
+    for (const k in confusions) { const [a, b] = k.split("|"); confTotals[a] = (confTotals[a] || 0) + confusions[k]; confTotals[b] = (confTotals[b] || 0) + confusions[k]; }
+  }
+  return confTotals[id] || 0;
+}
+function recordConfusion(targetId, pickedId) {
+  if (!targetId || !pickedId || targetId === pickedId) return;
+  const k = confPair(targetId, pickedId);
+  confusions[k] = (confusions[k] || 0) + 1;
+  confTotals = null;
+  try { localStorage.setItem(CONFUSE_KEY, JSON.stringify(confusions)); } catch (e) {}
+}
+function recordConfusionByTypedName(targetId, typed, pool) {
+  const n = normalizeTypedName(typed);
+  if (!n) return;
+  const hit = pool.find(c => c.id !== targetId && normalizeTypedName(c.name) === n);
+  if (hit) recordConfusion(targetId, hit.id);
+}
+
+/* ---------- Similarity between counties ---------- */
+let nameFreq = null;
+function countyNameFreq(name) {
+  if (!nameFreq) {
+    nameFreq = {};
+    Object.values(stateData).forEach(s => (s.counties || []).forEach(c => { const k = c.name.toLowerCase(); nameFreq[k] = (nameFreq[k] || 0) + 1; }));
+  }
+  return nameFreq[name.toLowerCase()] || 1;
+}
+function nameLev(a, b) {
+  if (a === b) return 0;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+function confusabilityScore(t, c) {
+  const a = t.name.toLowerCase(), b = c.name.toLowerCase();
+  let s = confusions[confPair(t.id, c.id)] ? 10 + 3 * confusions[confPair(t.id, c.id)] : 0;
+  const sim = 1 - nameLev(a, b) / Math.max(a.length, b.length);
+  if (sim >= 0.5) s += sim * 5;
+  let p = 0; while (p < a.length && p < b.length && a[p] === b[p]) p++;
+  if (p >= 3) s += 1.5; else if (p >= 2) s += 0.7;
+  if (a.slice(-3) === b.slice(-3)) s += 0.5;
+  if (c.stateKey === t.stateKey) s += 1.2;
+  if (countyNameFreq(c.name) >= 3) s += 0.8;
+  return s + Math.random() * 1.5;
+}
+function pickConfusable(target, candidates, n, avoid, bonus) {
+  const seen = new Set([target.name]), picks = [];
+  const scored = candidates
+    .filter(c => c.id !== target.id)
+    .map(c => ({ c, s: confusabilityScore(target, c) + (bonus && bonus.has(c) ? 1.5 : 0) - (avoid && avoid.has(c.id) ? 100 : 0) }))
+    .sort((x, y) => y.s - x.s);
+  for (const { c } of scored) { if (picks.length >= n) break; if (seen.has(c.name)) continue; seen.add(c.name); picks.push(c); }
+  return picks;
+}
+let mcRecent = [], mcLastShown = new Set();
+const mcRemember = id => { if (id) { mcRecent.push(id); if (mcRecent.length > 8) mcRecent.shift(); } };
+
 function renderMcOptions() {
   if (!mcOptions || !currentTarget) return;
   const target = currentTarget;
-  const others = getActiveCountiesPool().filter(c => c.id !== target.id);
-  const ordered = [...mcShuffle(others.filter(c => c.stateKey === target.stateKey)), ...mcShuffle(others.filter(c => c.stateKey !== target.stateKey))];
-  const seen = new Set([target.name]), picks = [];
-  for (const c of ordered) { if (picks.length >= 3) break; if (seen.has(c.name)) continue; seen.add(c.name); picks.push(c); }
+  const avoid = new Set([...mcRecent, ...mcLastShown]);
+  avoid.delete(target.id);
+  const picks = pickConfusable(target, getActiveCountiesPool(), 3, avoid);
+  mcLastShown = new Set([target.id, ...picks.map(c => c.id)]);
   const choices = mcShuffle([target, ...picks]);
-  // The four choices always have different names (see `seen` above), so ", State" is never needed to tell
-  // them apart. When they're all from one state it's just clutter; only show it if they come from several.
   const oneState = choices.every(c => c.stateKey === target.stateKey);
   mcOptions.replaceChildren(...choices.map((c, i) => {
     const b = document.createElement("button");
@@ -4962,8 +4159,8 @@ function renderMcOptions() {
     b.append(key, document.createTextNode(oneState ? getPlainName(c) : getDisplayName(c)));
     b.addEventListener("click", () => {
       if (!isGameActive || !currentTarget || b.disabled) return;
-      if (c.id === currentTarget.id) acceptTypedMatches([currentTarget]);
-      else { registerWrongTypedGuess(); b.disabled = true; b.classList.add("wrong"); }
+      if (c.id === currentTarget.id) { mcRemember(c.id); acceptTypedMatches([currentTarget]); }
+      else { recordConfusion(currentTarget.id, c.id); mcRemember(c.id); registerWrongTypedGuess(); b.disabled = true; b.classList.add("wrong"); }
     });
     return b;
   }));
@@ -4984,8 +4181,6 @@ function pickNextTarget() {
   updateProgressCounter();
   renderCountyListPanel();
 
-  // Clear any leftover "Type" (type-hard) highlight before picking the next
-  // target — otherwise the previous target would stay pulsing blue.
   document.querySelectorAll(".county.typing-highlight").forEach(el => {
     el.classList.remove("typing-highlight");
   });
@@ -4998,8 +4193,13 @@ function pickNextTarget() {
   }
 
 
-  const randomIndex = Math.floor(Math.random() * targetPool.length);
-  currentTarget = targetPool[randomIndex];
+  const lastId = currentTarget && currentTarget.id;
+  const cand = targetPool.length > 1 ? targetPool.filter(c => c.id !== lastId) : targetPool;
+  const wts = cand.map(c => 1 + Math.min(confTotal(c.id), 5));
+  let roll = Math.random() * wts.reduce((a, b) => a + b, 0), randomIndex = 0;
+  for (; randomIndex < cand.length - 1; randomIndex++) { roll -= wts[randomIndex]; if (roll <= 0) break; }
+  currentTarget = cand[randomIndex];
+  if (selectedMode === "mc") mcRemember(currentTarget.id);
 
 
   refreshTargetPrompt(false);
@@ -5022,20 +4222,12 @@ function pickNextTarget() {
 
 function handleCountyClick(pathEl) {
   if (!isGameActive || !currentTarget) return;
-  if (TYPE_MODES.has(selectedMode)) return; // clicking doesn't solve typing modes
-  // A county revealed by "Forfeit This One" stays hoverable (for its
-  // name popout) but isn't a valid guess anymore.
-  if (pathEl.classList.contains("given-up-missed")) return;
+  if (TYPE_MODES.has(selectedMode)) return;
+  if (pathEl.classList.contains("given-up-missed") || pathEl.classList.contains("found")) return;
 
 
-  // The Kalawao callout circle carries data-county-id="kalawao" so it
-  // resolves to the real county's id; every other element just falls
-  // back to its own id, unchanged from before.
   const clickedId = pathEl.dataset.countyId || pathEl.id;
   const clickedCounty = findCountyById(clickedId);
-  // "Oops! That's X." names what you clicked, with no state. The one exception: a wrong click on a county
-  // that has the same name as the target (the other Washington), where the state is the only thing that
-  // makes the message make sense.
   const clickedName = clickedCounty
     ? (currentTarget && clickedCounty.name === currentTarget.name ? getDisplayName(clickedCounty) : getPlainName(clickedCounty))
     : (pathEl.getAttribute("data-name") || pathEl.id);
@@ -5044,14 +4236,7 @@ function handleCountyClick(pathEl) {
   if (clickedId === currentTarget.id) {
     scoreRight++;
     playSound("correct");
-    // currentAttemptMistakes counts wrong guesses made on THIS target
-    // before it was finally found. pickNextTarget() (called below)
-    // resets it to 0, so it has to be read here first.
     const recoveredFromMistake = currentAttemptMistakes > 0;
-    // Only counts as "learned" if it was found with zero mistakes on
-    // this attempt — i.e. first try (or, during Retry Missed, first
-    // try within that retry). Getting it right only after guessing
-    // wrong first doesn't earn the checkmark.
     if (!recoveredFromMistake) markCountyLearned(currentTarget.id, selectedMode, currentRunIsRetryMissed);
 
 
@@ -5061,9 +4246,6 @@ function handleCountyClick(pathEl) {
     }
 
 
-    // Apply the "found" state to every element representing this county
-    // (the real shape AND its callout circle, if it has one) so they
-    // stay in sync no matter which one was actually clicked.
     getCountyElements(currentTarget.id).forEach(el => {
       if (selectedMode === "pin") {
         el.classList.add(recoveredFromMistake ? "correct-recovered" : "correct", "found");
@@ -5082,6 +4264,7 @@ function handleCountyClick(pathEl) {
     scoreWrong++;
     currentAttemptMistakes++;
     playSound("wrong");
+    recordConfusion(currentTarget.id, clickedId);
 
 
     if (feedbackEl) {
@@ -5093,16 +4276,9 @@ function handleCountyClick(pathEl) {
     missedCounties.add(currentTarget);
 
 
-    // Save mistake persistence
     countyMistakes[currentTarget.id] = (countyMistakes[currentTarget.id] || 0) + 1;
     localStorage.setItem("countyMistakes", JSON.stringify(countyMistakes));
 
-    // Reveal Answer After Mistakes: Pin/Flash already name the target
-    // in the prompt from the start, so there's nothing textual left to
-    // reveal — but the actual challenge in these modes is *finding* it
-    // on the map, so after enough wrong clicks this pulses the real
-    // county blue (the same highlight Type/Verbatim use) without
-    // clicking it for the player.
     if (
       gameSettings.revealAnswerAfterMistakes &&
       (selectedMode === "pin" || selectedMode === "pin-hard") &&
@@ -5118,14 +4294,6 @@ function handleCountyClick(pathEl) {
 }
 
 
-// --- Typing Modes ("List" / type, "Type" / type-hard, "Verbatim" / type-strict) ---
-// A correct guess is shared logic across all three modes; only how the
-// match(es) are *found* differs (getTypedGuessMatches, defined earlier)
-// and how strictly a wrong guess gets submitted (see the Instant Check
-// listener below).
-// matchedCounties is always an array — length 1 for the single-target
-// modes, but List can hand back several counties at once when their
-// bare names are identical (e.g. two "Kent"s in play).
 function acceptTypedMatches(matchedCounties) {
   scoreRight++;
   playSound("correct");
@@ -5133,14 +4301,8 @@ function acceptTypedMatches(matchedCounties) {
 
   if (feedbackEl) {
     if (SINGLE_TARGET_TYPE_MODES.has(selectedMode)) {
-      // There's exactly one specific target here, so naming it is useful
-      // confirmation.
       feedbackEl.textContent = `Correct! That's ${getPlainName(matchedCounties[0])}.`;
     } else {
-      // List: the player typed the name themselves, so repeating it
-      // back as "Correct! That's Kent!" is redundant — just confirm the
-      // guess, and note the count if it resolved more than one county at
-      // once.
       feedbackEl.textContent = matchedCounties.length > 1
         ? `Correct! That matched ${matchedCounties.length} counties.`
         : "Correct!";
@@ -5149,16 +4311,9 @@ function acceptTypedMatches(matchedCounties) {
   }
 
   matchedCounties.forEach(matchedCounty => {
-    // Same "first try only" rule as click mode — see handleCountyClick.
     if (!recoveredFromMistake) markCountyLearned(matchedCounty.id, selectedMode, currentRunIsRetryMissed);
     getCountyElements(matchedCounty.id).forEach(el => {
       el.classList.remove("typing-highlight");
-      // Only "Verbatim" (type-strict) gets the yellow "recovered"
-      // treatment: it's the one mode where a wrong guess actually
-      // penalizes you (counts against you), so the color means
-      // something there. "Type" (type-hard) doesn't punish a wrong
-      // guess the same way, and List's wrong guesses aren't reliably
-      // about whichever county ends up matching — both stay plain green.
       const useRecoveredColor = recoveredFromMistake && (selectedMode === "type-strict" || selectedMode === "mc");
       el.classList.add(useRecoveredColor ? "correct-recovered" : "correct", "found");
       el.style.pointerEvents = "none";
@@ -5171,12 +4326,6 @@ function acceptTypedMatches(matchedCounties) {
 }
 
 function registerWrongTypedGuess() {
-  // Only "Verbatim" (type-strict) actually penalizes your percentage
-  // for a wrong guess — that's the one mode explicitly billed as "wrong
-  // guesses count against you". List ("type") and "Type" (type-hard)
-  // still track the mistake below (for the shake/sound, the "recovered"
-  // state, missed-county suggestions, etc.) but it shouldn't move
-  // scoreWrong, since only giving up should knock those modes below 100%.
   if (selectedMode === "type-strict" || selectedMode === "mc") scoreWrong++;
   currentAttemptMistakes++;
   playSound("wrong");
@@ -5186,31 +4335,12 @@ function registerWrongTypedGuess() {
     feedbackEl.className = "feedback-message error";
   }
 
-  // Attributed to whatever county is currently "in focus" (the
-  // highlighted one in "Type" (type-hard), or the arbitrarily pre-picked one
-  // in Type) so the persistent countyMistakes counter still feeds the
-  // "5 best-known" suggestions, same as click-based modes. missedCounties
-  // (the set that drives the end-of-game "You missed X" summary) only
-  // gets a wrong guess added in "Verbatim" (type-strict) — that's the
-  // one mode where a wrong guess is a real, permanent miss. In List and
-  // "Type", a wrong guess is just a retry: if you land on the right
-  // answer afterward, nothing should count against you, so we leave
-  // missedCounties alone here and let giveUp() be the only way a
-  // List/Type county ends up "missed".
   if (currentTarget) {
     if (selectedMode === "type-strict" || selectedMode === "mc") missedCounties.add(currentTarget);
     countyMistakes[currentTarget.id] = (countyMistakes[currentTarget.id] || 0) + 1;
     localStorage.setItem("countyMistakes", JSON.stringify(countyMistakes));
   }
 
-  // Reveal Answer After Mistakes: after enough wrong guesses on the
-  // same "Type"/"Verbatim" target, stop making the player guess blind
-  // and just name the county in the prompt (same info Pin's prompt
-  // shows from the start). Doesn't apply to List ("type") — with no
-  // single right answer there, refreshTargetPrompt() ignores the
-  // reveal flag for that mode anyway.
-  // Multiple-Choice is excluded: it has 4 options, so by the 3rd wrong pick the other three are already
-  // crossed out and naming the county would reveal nothing.
   if (
     gameSettings.revealAnswerAfterMistakes &&
     SINGLE_TARGET_TYPE_MODES.has(selectedMode) &&
@@ -5222,27 +4352,16 @@ function registerWrongTypedGuess() {
 
   if (typeInputBox) {
     typeInputBox.classList.remove("shake");
-    // Force a reflow so the animation can re-trigger on consecutive
-    // wrong guesses, not just the first one.
     void typeInputBox.offsetWidth;
     typeInputBox.classList.add("shake");
   }
 
-  // Clear the box after a wrong Enter submission so the next attempt
-  // starts clean. Without this, leftover text from a mistyped guess
-  // (e.g. "keenyt") sticks around and silently gets prepended to
-  // whatever's typed next (e.g. "keenytsussex"), so a perfectly good
-  // second guess like "sussex" reads as wrong too.
   if (typeInput && selectedMode !== "mc") {
     typeInput.value = "";
     typeInput.focus();
   }
 }
 
-// Live-check (as-you-type) path: only ever silently accepts an exact
-// match. Never fires the "wrong" buzz/shake for partial input — that's
-// reserved for an explicit Enter press, otherwise every half-typed
-// word would falsely register as a mistake.
 function tryAutoMatchTypedInput() {
   if (!isGameActive || !typeInput) return;
   const normalized = normalizeTypedName(typeInput.value);
@@ -5251,9 +4370,6 @@ function tryAutoMatchTypedInput() {
   if (matches.length > 0) acceptTypedMatches(matches);
 }
 
-// Submit path (Enter key, always available regardless of the Instant
-// Check setting): checks the full current input and treats a mismatch
-// as a real wrong guess.
 function submitTypedGuess() {
   if (!isGameActive || !typeInput) return;
   const normalized = normalizeTypedName(typeInput.value);
@@ -5262,18 +4378,13 @@ function submitTypedGuess() {
   if (matches.length > 0) {
     acceptTypedMatches(matches);
   } else {
+    if (currentTarget) recordConfusionByTypedName(currentTarget.id, typeInput.value, getActiveCountiesPool());
     registerWrongTypedGuess();
   }
 }
 
 if (typeInput) {
   typeInput.addEventListener("input", () => {
-    // "Verbatim" (type-strict) always requires an explicit Enter
-    // press to submit, so a wrong guess actually registers as wrong
-    // (see registerWrongTypedGuess) instead of just sitting there
-    // unmatched. The Instant Check setting applies to List and
-    // "Type" (type-hard) — both still auto-accept a match as you type,
-    // if the setting is on.
     if (selectedMode !== "type-strict" && gameSettings.instantTypeCheck) tryAutoMatchTypedInput();
   });
   typeInput.addEventListener("keydown", (e) => {
@@ -5285,21 +4396,6 @@ if (typeInput) {
 }
 
 
-// --- Special-Character Buttons (Type modes) ---
-// Lots of players can't easily type marks like ö or the Hawaiian ʻokina
-// on their keyboard, which makes "Require Diacritic Marks" unfair (and
-// inaccessible) for them. So while that setting is on, a row of buttons
-// under the text box inserts each special character for them.
-//
-// The buttons aren't a hardcoded list: they're derived from the county
-// names in the current round (originalTargetList), so they always match
-// exactly what the player might need to type — Coös today, and things
-// like Doña Ana or Puerto Rico's names automatically once those exist.
-// Plain apostrophes, letters, digits, spaces, etc. are on every
-// keyboard and never get a button.
-//
-// Typed guesses are lowercased before comparison (see normalizeTypedName),
-// so only lowercase versions are offered.
 const specialCharsBar = document.getElementById("special-chars");
 const specialCharsButtons = document.getElementById("special-chars-buttons");
 const OKINA = "\u02BB";
@@ -5317,8 +4413,6 @@ const COMBINING_MARK_NAMES = {
   "\u0328": "ogonek"
 };
 
-// Spoken/tooltip name for a special character: "o with diaeresis", etc.
-// Falls back to the character itself if it doesn't decompose (ß, ø, æ…).
 function describeSpecialChar(ch) {
   if (ch === OKINA) return "ʻokina (Hawaiian glottal stop)";
   const [base, mark] = Array.from(ch.normalize("NFD"));
@@ -5326,8 +4420,6 @@ function describeSpecialChar(ch) {
   return markName ? `${base} with ${markName}` : ch;
 }
 
-// Every non-ASCII character used by the current round's county names,
-// okina first, then alphabetical.
 function getNeededSpecialChars() {
   const found = new Set();
   (originalTargetList || []).forEach(county => {
@@ -5340,8 +4432,6 @@ function getNeededSpecialChars() {
   );
 }
 
-// Shows/hides the bar and (re)builds its buttons if the set changed.
-// Safe to call any time; it's a no-op outside typing modes.
 function refreshSpecialCharsBar() {
   if (!specialCharsBar || !specialCharsButtons) return;
 
@@ -5362,16 +4452,11 @@ function refreshSpecialCharsBar() {
     btn.dataset.char = ch;
     btn.title = describeSpecialChar(ch);
     btn.setAttribute("aria-label", `Insert ${describeSpecialChar(ch)}`);
-    // Roving tabindex: the whole bar is a single Tab stop, and arrow
-    // keys move between buttons (see the keydown handler below).
     btn.tabIndex = i === 0 ? 0 : -1;
     return btn;
   }));
 }
 
-// Inserts a character at the caret (replacing any selection), keeps focus
-// in the text box, and fires a normal "input" event so Instant Check /
-// List mode react exactly as if the character had been typed.
 function insertSpecialChar(ch) {
   if (!typeInput || !isGameActive) return;
   const start = typeInput.selectionStart ?? typeInput.value.length;
@@ -5382,9 +4467,6 @@ function insertSpecialChar(ch) {
 }
 
 if (specialCharsButtons) {
-  // Pressing a button would normally pull focus (and, on phones, the
-  // on-screen keyboard) away from the text box. Cancel that so typing
-  // can carry straight on.
   ["mousedown", "pointerdown"].forEach(type => {
     specialCharsButtons.addEventListener(type, (e) => {
       if (e.target.closest(".special-char-btn")) e.preventDefault();
@@ -5397,9 +4479,6 @@ if (specialCharsButtons) {
   });
 }
 
-// Keyboard support: Left/Right/Home/End move between buttons, Escape
-// hops back to the text box. Enter/Space activate the focused button
-// (native <button> behavior → the click handler above).
 if (specialCharsBar) {
   specialCharsBar.addEventListener("keydown", (e) => {
     const buttons = Array.from(specialCharsButtons.querySelectorAll(".special-char-btn"));
@@ -5425,9 +4504,6 @@ if (specialCharsBar) {
 }
 
 
-// --- Cursor-Following Tooltip (Give Up-revealed counties) ---
-// Only ever shown for counties carrying "given-up-missed" — normal
-// unplayed/found/wrong counties never trigger it.
 function showHoverTooltip(text, x, y) {
   if (!hoverTooltip) return;
   hoverTooltip.textContent = text;
@@ -5447,29 +4523,15 @@ function hideHoverTooltip() {
 }
 
 
-// --- County Map Mouse & Accessibility Keyboard Interactivity ---
-// Normal mode responds on "click", which only fires once the mouse
-// button (or finger) is released over the same element it was pressed
-// on. Speedrun mode instead responds on "pointerdown" — the instant the
-// press begins — so there's no need to lift off before the guess
-// registers. Both listeners stay attached at all times; each one just
-// checks gameSettings.speedrunMode and no-ops if it isn't the active mode,
-// so toggling the setting mid-game takes effect immediately without
-// re-binding anything.
-//
-// Factored out into its own function so the Kalawao callout circle
-// (created later, after Hawaii's map is first shown) can get the exact
-// same handling as every county that already existed at page load.
 function bindCountyInteractivity(path) {
   path.addEventListener("pointerdown", (e) => {
     if (!gameSettings.speedrunMode) return;
-    if (isZoomGestureStart(e)) return;       // right-click / Mac Ctrl+click = zoom, not a guess
-    if (e.pointerType === "touch") return;   // touch guesses wait for the finger to lift (below)
+    if (isZoomGestureStart(e)) return;
+    if (e.pointerType === "touch") return;
     handleCountyClick(e.currentTarget);
   });
 
 
-  // Speedrun, touch only: respond when the finger lifts, unless that touch became a long-press zoom.
   path.addEventListener("pointerup", (e) => {
     if (!gameSettings.speedrunMode || e.pointerType !== "touch") return;
     if (touchGestureWasLongPress) return;
@@ -5480,7 +4542,7 @@ function bindCountyInteractivity(path) {
   path.addEventListener("click", (e) => {
     if (gameSettings.speedrunMode) return;
     if (isZoomGestureStart(e)) return;
-    if (Date.now() < suppressClickUntil) return;   // the click from lifting a long-press zoom
+    if (Date.now() < suppressClickUntil) return;
     handleCountyClick(e.currentTarget);
   });
 
@@ -5493,11 +4555,9 @@ function bindCountyInteractivity(path) {
   });
 
 
-  // Cursor-following name popout — only does anything once Give Up has
-  // marked this county "given-up-missed"; otherwise these are no-ops.
   path.addEventListener("mouseenter", (e) => {
     const el = e.currentTarget;
-    if (!el.classList.contains("given-up-missed")) return;
+    if (isGameActive && !el.classList.contains("given-up-missed") && !el.classList.contains("found")) return;
     const id = el.dataset.countyId || el.id;
     const county = findCountyById(id);
     const name = county ? getPlainName(county) : (el.getAttribute("data-name") || "");
@@ -5517,7 +4577,6 @@ function bindCountyInteractivity(path) {
 countyPaths.forEach(bindCountyInteractivity);
 
 
-// --- End-Game Summary & Admire Map Logic ---
 function showSummaryModal() {
   if (!modalSummary) return;
 
@@ -5543,15 +4602,10 @@ function showSummaryModal() {
 
 
   if (missedArray.length === 0) {
-    // Perfect Score Flow
     const activeStateNames = activeStateKeys.map(key => stateData[key]?.name || key);
 
 
     if (summaryMessage) {
-      // List ("type") is a free-recall mode — you're naming counties
-      // from memory, not being tested on ones you're shown — so
-      // "listed" reads more accurately than "learned" there. Every
-      // other mode keeps "learned".
       const verb = selectedMode === "type" ? "listed" : "learned";
       if (activeStateNames.length === 1) {
         summaryMessage.textContent = `You've ${verb} all the counties in ${activeStateNames[0]}! Good job!`;
@@ -5574,15 +4628,13 @@ function showSummaryModal() {
     renderStatsPanel();
 
 
-    appendModalButton("Admire Map", "btn-secondary", enableAdmireBar);
+    appendModalButton("See Results", "btn-secondary", enableAdmireBar);
     appendModalButton("Play Again", "btn-primary", () => {
       modalSummary.classList.add("hidden");
       initGame(selectedCounties);
     });
     appendModalButton("Settings", "btn-secondary", () => {
       modalSummary.classList.add("hidden");
-      // FIX: pass "modal" so the summary popup reappears when the
-      // player backs out of Settings, instead of staying hidden forever.
       openSettings("screen-game", "modal");
     });
     appendModalButton("Home", "btn-secondary", () => {
@@ -5590,12 +4642,6 @@ function showSummaryModal() {
       showScreen("screen-home");
     });
   } else {
-    // Mistakes Flow
-    // Full list, not truncated — the whole point is being able to see
-    // everything you missed so you know what to study. It lives in its
-    // own "What you missed" section under the main message, grouped into
-    // an actual per-state list rather than one long comma-separated
-    // sentence — same grouping idea as the List Mode checklist.
     if (summaryMessage) {
       summaryMessage.textContent = `You missed ${missedArray.length} county target${missedArray.length > 1 ? 's' : ''}. What would you like to do?`;
     }
@@ -5621,7 +4667,7 @@ function showSummaryModal() {
     }
 
 
-    appendModalButton("Admire Map", "btn-secondary", enableAdmireBar);
+    appendModalButton("See Results", "btn-secondary", enableAdmireBar);
     appendModalButton("Retry Missed", "btn-primary", () => {
       modalSummary.classList.add("hidden");
       initGame(missedArray, true);
@@ -5632,7 +4678,6 @@ function showSummaryModal() {
     });
     appendModalButton("Settings", "btn-secondary", () => {
       modalSummary.classList.add("hidden");
-      // FIX: pass "modal" here too, for the same reason as above.
       openSettings("screen-game", "modal");
     });
     appendModalButton("Home", "btn-secondary", () => {
@@ -5656,7 +4701,6 @@ function appendModalButton(text, className, onClick) {
 }
 
 
-// --- Bottom Bar "Admire Map" Interactivity ---
 function enableAdmireBar() {
   modalSummary.classList.add("hidden");
   if (admirePercentage) admirePercentage.textContent = summaryPercentage.textContent;
@@ -5692,8 +4736,6 @@ if (btnAdmireReplay) {
 }
 
 
-// admire bar's Settings button — already correctly passes "admire" so
-// the bar reappears (instead of the summary modal) when Settings closes.
 if (btnAdmireSettings) {
   btnAdmireSettings.addEventListener("click", () => {
     admireBar.classList.add("hidden");
@@ -5710,25 +4752,19 @@ if (btnAdmireHome) {
 }
 
 
-// ===== Home screen: pick a mode FIRST, then states, then Play/Learn =====
-// The map, "exclude counties" panel and Play button now live on the home screen but are the
-// same elements (and the same logic) the old Setup screen used. This just gates them behind a
-// mode choice and routes Learn modes to Study.
 (function initHome() {
   const $ = id => document.getElementById(id);
   const layout = $("home-layout");
   if (!layout) return;
-  // The home screen is the first thing shown, and showScreen() never runs for it, so turn on its wide card here.
   if (appContainer) appContainer.classList.add("wide-picker");
   const start = $("btn-start-game"), msg = $("home-msg"), skipWrap = $("home-skip-wrap"), skip = $("home-skip-learned");
   const playBtns = [...layout.querySelectorAll("[data-home-mode]")];
   const learnBtns = [...layout.querySelectorAll("[data-home-learn]")];
-  let chosen = null; // { kind: "play" | "learn", mode }
+  let chosen = null;
 
-  // "Skip counties I've already learned" only means something once you've picked a Learn mode AND a state.
   function updateSkip() {
     skipWrap.classList.toggle("hidden", !(chosen && chosen.kind === "learn" && activeStateKeys.length > 0));
-    msg.textContent = "";   // any old notice is stale once the selection changes
+    msg.textContent = "";
   }
   skip.addEventListener("change", () => { msg.textContent = ""; });
   const pickedBox = $("setup-picked");
@@ -5739,7 +4775,7 @@ if (btnAdmireHome) {
     learnBtns.forEach(b => { const on = !!chosen && chosen.kind === "learn" && b.dataset.homeLearn === chosen.mode; b.classList.toggle("selected", on); b.setAttribute("aria-pressed", on); });
   }
   function choose(kind, mode) {
-    if (chosen && chosen.kind === kind && chosen.mode === mode) {   // clicking the selected mode again unselects it
+    if (chosen && chosen.kind === kind && chosen.mode === mode) {
       chosen = null;
       layout.classList.add("no-mode");
       start.textContent = "Play";
@@ -5749,10 +4785,10 @@ if (btnAdmireHome) {
       return;
     }
     chosen = { kind, mode };
-    statsView = kind === "play" ? "play" : "learn";   // show the progress tables that match the mode
+    statsView = kind === "play" ? "play" : "learn";
     if (kind === "learn") statsLearnMode = mode;
     renderStatsPanel();
-    if (kind === "play") selectedMode = mode;      // the Play game reads this
+    if (kind === "play") selectedMode = mode;
     layout.classList.remove("no-mode");
     start.textContent = kind === "play" ? "Play" : "Learn";
     updateSkip();
@@ -5764,10 +4800,9 @@ if (btnAdmireHome) {
   playBtns.forEach(b => b.addEventListener("click", () => choose("play", b.dataset.homeMode)));
   learnBtns.forEach(b => b.addEventListener("click", () => choose("learn", b.dataset.homeLearn)));
 
-  // Capture phase so this runs before the normal Play handler.
   start.addEventListener("click", async e => {
     if (!chosen) { e.stopImmediatePropagation(); msg.textContent = "Pick a mode first."; return; }
-    if (chosen.kind === "play") return;            // normal Play handler takes it from here
+    if (chosen.kind === "play") return;
     e.stopImmediatePropagation();
     const yes = document.querySelector('input[name="specific-counties"]:checked');
     const excluded = new Set(yes && yes.value === "yes" ? [...document.querySelectorAll(".county-checkbox:checked")].map(cb => cb.value) : []);

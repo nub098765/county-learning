@@ -19,9 +19,6 @@ body {
  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Held on <body> from the first moment until the page has loaded (see the inline script at the top
-   of index.html), so the saved theme and other startup settings take effect instantly instead of
-   fading in. */
 body.no-transition,
 body.no-transition *,
 body.no-transition *::before,
@@ -30,7 +27,6 @@ body.no-transition *::after {
 }
 
 
-/* Dark Mode Dynamic Class */
 body.dark-mode {
  background-color: #181816;
  color: #fdeca6;
@@ -46,40 +42,16 @@ body.dark-mode {
  text-align: center;
  max-width: 460px;
  width: 90%;
- /* NOTE: max-width used to be transitioned here too, but that's what was
-    causing the Hawaii/Rhode Island divider bug: switchVisibleSvgMap()
-    calls getBoundingClientRect() on the maps immediately after the
-    "wide-map" class is toggled on this element, and while max-width is
-    mid-transition the container (and therefore .map-wrapper) is still
-    close to its old, narrower width — often narrow enough that Hawaii
-    doesn't fit beside its neighbor yet and gets measured as having
-    wrapped onto its own row, even though the transition finishes a
-    moment later with it correctly beside the other map. Only animating
-    background-color avoids that mismatch between measured and final
-    layout. */
  transition: background-color 0.3s ease;
 }
 
 
-/* Applied to .app-container only while #screen-game is active AND more
-  than one state's map is in play (toggled in script.js's showScreen()).
-  width: fit-content lets the card hug however wide the row of maps in
-  .map-wrapper/.game-body actually is — two small states stay narrow,
-  several large ones spread out further — rather than jumping to some
-  arbitrary fixed width regardless of how much room the maps need.
-  max-width still caps it at the viewport so it can't overflow the
-  screen; .map-wrapper's own flex-wrap takes over and drops maps onto a
-  new row once they no longer fit within that cap. */
 .app-container.wide-map {
  width: fit-content;
  max-width: 96vw;
 }
 
 
-/* Widens the card specifically for the settings screen, to make room for
-   the always-visible table-of-contents sidebar (see .settings-layout
-   below) alongside the actual settings list. Toggled in script.js's
-   showScreen(), the same way .wide-map is toggled for the game screen. */
 .app-container.wide-settings {
  max-width: 900px;
  width: 94vw;
@@ -92,13 +64,11 @@ body.dark-mode .app-container {
 }
 
 
-/* Global Hidden Class Override */
 .hidden {
  display: none !important;
 }
 
 
-/* Screen Visibility Control */
 .screen {
  display: none;
 }
@@ -126,10 +96,6 @@ body.dark-mode .subtitle {
 }
 
 
-/* Small "Mode: X" label shown above the "Select State(s)" heading, set
-   in script.js's modeButtons click handler — a reminder of which mode
-   you picked on the previous screen, since it's otherwise easy to
-   forget once you're a few states deep into the setup screen. */
 .setup-mode-indicator {
  color: #8a4b00;
  font-size: 0.8rem;
@@ -143,7 +109,6 @@ body.dark-mode .setup-mode-indicator {
 }
 
 
-/* Buttons & Inputs */
 button {
  font-family: 'Roboto Serif', Georgia, serif;
  font-size: 0.9rem;
@@ -220,12 +185,6 @@ body.dark-mode .btn-mode {
 }
 
 
-/* Mode groups share a hue so related pairs read as connected:
-   Pin + Flash (click-to-find, same interaction, Flash just doesn't
-   stay filled in) share one hue, and Type + Verbatim (single-target
-   typing, same interaction, Verbatim is just stricter about it) share
-   another. List is the odd one out — free-recall typing, not tied to
-   a highlighted target — so it keeps its own distinct hue. */
 .btn-mode.mode-pin {
  border-left-color: #3b6ea5;
 }
@@ -256,7 +215,6 @@ body.dark-mode .btn-mode span {
 }
 
 
-/* Settings Screen */
 .settings-group-title {
  text-align: left;
  font-size: 0.75rem;
@@ -287,7 +245,6 @@ body.dark-mode .setting-item {
 }
 
 
-/* Label + description column for a setting row. */
 .setting-text {
  display: flex;
  flex-direction: column;
@@ -308,7 +265,6 @@ body.dark-mode .setting-desc {
 }
 
 
-/* Red warning line shown under a setting's description. */
 .setting-warning {
  font-size: 0.75rem;
  font-weight: 700;
@@ -321,7 +277,6 @@ body.dark-mode .setting-warning {
 }
 
 
-/* Sound volume slider */
 .setting-item input[type="range"] {
  width: 140px;
  accent-color: #2d5a27;
@@ -329,7 +284,6 @@ body.dark-mode .setting-warning {
 }
 
 
-/* States Per Row dropdown */
 .setting-item select {
  font: inherit;
  font-size: 0.85rem;
@@ -347,13 +301,6 @@ body.dark-mode .setting-item select {
 }
 
 
-/* --- Settings screen: two-column layout with a table of contents --- */
-/* The settings list has grown enough that finding one specific setting by
-   scrolling got tedious, so the settings screen gets its own left-hand
-   nav (.settings-toc) listing every section and setting, always visible
-   alongside the settings themselves (.settings-main) rather than requiring
-   a scroll back to the top. Everything here is scoped to #screen-settings
-   (via its .settings-layout wrapper) so no other screen is affected. */
 .settings-layout {
  display: flex;
  align-items: flex-start;
@@ -396,10 +343,6 @@ body.dark-mode .settings-toc {
 }
 
 
-/* Small disclosure triangle that only toggles the sub-list open/closed —
-   kept separate from the section name link right next to it, so a single
-   click unambiguously either navigates (clicking the name) or expands/
-   collapses (clicking the caret), never both at once. */
 .toc-caret {
  background: none;
  border: none;
@@ -470,10 +413,6 @@ body.dark-mode .toc-item-link:hover {
 }
 
 
-/* Keeps the "Back to Home" button centered like it is on every other
-   screen, even though .settings-layout switched this screen's text-align
-   to left (needed for the settings rows and the ToC) — a plain <button>
-   otherwise follows its container's text-align for its own position. */
 .settings-main > .btn-back {
  display: block;
  width: fit-content;
@@ -482,8 +421,6 @@ body.dark-mode .toc-item-link:hover {
 }
 
 
-/* Brief highlight so landing on a setting from the ToC is easy to spot
-   amid a long list, without needing a permanent visual marker. */
 .setting-item.toc-highlight {
  animation: toc-flash 1.4s ease;
 }
@@ -493,10 +430,6 @@ body.dark-mode .toc-item-link:hover {
 }
 
 
-/* Below this width the sidebar no longer has room to sit beside the
-   settings list, so it stacks above instead — still fully usable, just
-   not sticky (there's no long independent scroll region to stick within
-   once it's not beside a taller column). */
 @media (max-width: 700px) {
  .settings-layout {
    flex-direction: column;
@@ -517,7 +450,6 @@ body.dark-mode .toc-item-link:hover {
 }
 
 
-/* Scrollable State List Container */
 .states-list {
  max-height: 240px;
  overflow-y: auto;
@@ -546,7 +478,6 @@ body.dark-mode .states-list::-webkit-scrollbar-thumb {
 }
 
 
-/* State Row Bar */
 .state-row {
  display: flex;
  justify-content: space-between;
@@ -587,7 +518,6 @@ body.dark-mode .state-count {
 }
 
 
-/* Active Selection */
 .state-row.active,
 .state-row.selected {
  border-color: #111;
@@ -601,7 +531,6 @@ body.dark-mode .state-row.selected {
 }
 
 
-/* Disabled State Row */
 .state-row.disabled {
  opacity: 0.5;
  cursor: not-allowed;
@@ -612,8 +541,6 @@ body.dark-mode .state-row.disabled {
 }
 
 
-/* Soft divider — a subtle horizontal rule, e.g. between the Back button
-  and the state progress tables on the setup screen. */
 .soft-divider {
  border: none;
  border-top: 1px solid #e0e0da;
@@ -624,9 +551,6 @@ body.dark-mode .soft-divider {
 }
 
 
-/* Per-state learning stats — shows every currently-selected state at
-  once, one section per state, sitting below everything else on the
-  setup screen. Hidden entirely when no state is selected. */
 .state-stats-panel {
  text-align: left;
  background: #f9f9f5;
@@ -641,9 +565,6 @@ body.dark-mode .state-stats-panel {
 }
 
 
-/* State-name divider between sections — matches .county-group-header's
-  look so the two groupings read as the same pattern. Now a flex row so
-  the per-state Hide/Show button can sit at the right edge. */
 .stats-state-header {
  display: flex;
  align-items: center;
@@ -669,10 +590,6 @@ body.dark-mode .stats-state-header {
 }
 
 
-/* Row above the first state section holding the panel title and the
-  "Hide all" button. Carries its own bottom border since the first
-  state-stats-header below has that border suppressed (it would
-  otherwise double up against this panel's own top edge). */
 .stats-panel-actions {
  display: flex;
  align-items: center;
@@ -696,8 +613,6 @@ body.dark-mode .stats-panel-title {
 }
 
 
-/* Per-state Hide/Show and the Hide All button — small, understated,
-  and not shouty in uppercase like the header text next to it. */
 .btn-stats-toggle,
 #btn-hide-all-stats {
  text-transform: none;
@@ -708,8 +623,6 @@ body.dark-mode .stats-panel-title {
 }
 
 
-/* Horizontally scrollable so the four mode columns never force the
-  whole app wider than its fixed max-width on small screens. */
 .stats-table-wrap {
  overflow-x: auto;
 }
@@ -771,11 +684,6 @@ body.dark-mode .stats-summary-cell.stats-complete {
 }
 
 
-/* Every county in this state/mode is learned, but at least one only via
-   a Retry Missed round (see .stats-check-cell.stats-retry below) rather
-   than a clean first pass. Uses the same orange as that dash so it's
-   visually tied to it, rather than reading as a plain, fully-earned
-   "Completed" — see renderStatsPanel() in script.js. */
 .stats-summary-cell.stats-complete-retry {
  color: #c98a1a;
 }
@@ -802,12 +710,6 @@ body.dark-mode .stats-check-cell.stats-no {
 }
 
 
-/* A county learned only during a "Retry Missed" round — i.e. it was
-   missed on the original pass and only gotten right afterward, rather
-   than in one clean sweep. Shown as a distinct orange dash rather than
-   the plain green checkmark, so the progress table doesn't quietly
-   count a Retry Missed save the same as a true first-try/clean run. See
-   markCountyLearned() in script.js. */
 .stats-check-cell.stats-retry {
  color: #c98a1a;
  font-weight: 700;
@@ -825,7 +727,6 @@ body.dark-mode .stats-check-cell.stats-retry {
 }
 
 
-/* Specific Counties Options Setup */
 .plain-prompt {
  font-size: 1rem;
  font-weight: 600;
@@ -857,7 +758,6 @@ body.dark-mode .checkbox-container {
 }
 
 
-/* Individual county checkbox row (dynamically rendered in script.js) */
 .checkbox-label {
  display: flex;
  align-items: center;
@@ -870,8 +770,6 @@ body.dark-mode .checkbox-container {
 
 
 .checkbox-label input[type="checkbox"].county-checkbox {
- /* The label already renders a styled .checkbox-custom box; keep the
-    native input functional but visually out of the way. */
  width: 1rem;
  height: 1rem;
  accent-color: #2d5a27;
@@ -885,7 +783,6 @@ body.dark-mode .checkbox-container {
 }
 
 
-/* Mistake-count badge shown next to a county's checkbox */
 .badge-mistake {
  font-size: 0.7rem;
  font-weight: 700;
@@ -915,7 +812,6 @@ body.dark-mode .badge-mistake {
 }
 
 
-/* Map & Game Elements */
 .game-header {
  display: flex;
  justify-content: space-between;
@@ -924,9 +820,6 @@ body.dark-mode .badge-mistake {
 }
 
 
-/* Holds the map(s) for the active game. The county-list sidebar used to
-  live in here as a flex sibling, but now lives outside .app-container
-  entirely as its own card — see .county-list-panel. */
 .game-body {
  position: relative;
  display: flex;
@@ -936,21 +829,10 @@ body.dark-mode .badge-mistake {
  align-items: flex-start;
  gap: 1rem;
  max-width: 100%;
- /* FIX: the info button below is absolutely positioned in this corner
-   with no reserved space of its own, so it was sitting right on top of
-   the map's bottom-right counties whenever a map's own bottom edge
-   reached that far down — most noticeably with California's bigger solo
-   size. This padding gives the button its own clear strip under the
-   map(s) instead of overlapping them. */
  padding-bottom: 2.75rem;
 }
 
 
-/* "i"-in-a-circle help button, pinned to the bottom-right corner of the
-  play area (.game-body, which is why that got position: relative
-  above). Sits above the map itself since it comes right after
-  .map-wrapper in source order and .map-wrapper doesn't set its own
-  z-index. */
 .info-button {
  position: absolute;
  bottom: 0.75rem;
@@ -998,14 +880,6 @@ body.dark-mode .info-button:hover {
 }
 
 
-/* Optional "Show List" sidebar for List Mode. Lives OUTSIDE
-  .app-container entirely — as its own separate rounded-rectangle card,
-  sitting beside the main card rather than inside it — with one blank
-  cell per county. Every cell starts blank — the point is that it only
-  tells you how many counties are left, never which ones, so typing a
-  name never feels like it "used up" a spoiler. A cell fills in with the
-  county's name only once that county has actually been guessed
-  correctly, as a little reveal/reward rather than a running answer key. */
 .county-list-panel {
  background: #ffffff;
  padding: 1.25rem 1.1rem;
@@ -1056,7 +930,6 @@ body.dark-mode .county-list-panel td {
  border-color: #4a7c59;
  background: rgba(74, 124, 89, 0.15);
  font-weight: 600;
- /* A quick pop when a cell fills in, so it reads as a small reveal. */
  animation: county-cell-fill 0.35s ease;
 }
 body.dark-mode .county-list-panel td.found {
@@ -1067,8 +940,6 @@ body.dark-mode .county-list-panel td.found {
  from { transform: scale(0.9); opacity: 0.4; }
  to { transform: scale(1); opacity: 1; }
 }
-/* State-section headers shown above each group of cells when the
-  "Separate List Mode Checklist by State" setting is on. */
 .county-list-panel th {
  text-align: center;
  font-size: 0.7rem;
@@ -1083,26 +954,6 @@ body.dark-mode .county-list-panel td.found {
 }
 
 
-/* Default layout: every state's map sits inside a uniform, button-like
-   box (see .map-box below) laid out in a simple, evenly-spaced grid, so
-   a state's real-world size/complexity has no effect on how much room
-   it takes up on screen, and there's no need for dividers between maps
-   to show where one state ends and the next begins. This is what's shown
-   unless the "Scale States by Size" setting is turned on (see the
-   body.scale-states-by-size overrides throughout this file) — or,
-   automatically, whenever "Use Dividers for Few States" is on (the
-   default) and 3 or fewer states are in play — either of which restores
-   the original variable-sized, divided layout instead.
-
-   The number of columns comes from the "States Per Row" setting (default
-   2) via the --states-per-row custom property, kept in sync with the
-   actual number of states on screen by updateMapGridColumns() in
-   script.js — e.g. picking "2" but only having 1 state active collapses
-   this to a single column so that one box grows to fill the row, rather
-   than sitting at half width next to an empty track. Using repeat(N, 1fr)
-   rather than the old auto-fit/minmax means each box's size is driven
-   directly by how many are meant to share a row instead of an arbitrary
-   140px floor, so a lower "per row" count reliably yields bigger boxes. */
 .map-wrapper {
  max-width: 720px;
  margin: 0 auto;
@@ -1122,11 +973,6 @@ body.scale-states-by-size .map-wrapper {
 }
 
 
-/* Uniform per-state "card" — same size and shape no matter which state
-   is inside it, so a row of several states reads as one clean, evenly-
-   spaced group instead of a jumble of differently-sized shapes. Looks
-   and sits like a button, but isn't one — the actual clicking/tapping
-   still happens on the county shapes inside it, exactly as before. */
 .map-box {
  position: relative;
  aspect-ratio: 1 / 1;
@@ -1142,16 +988,6 @@ body.scale-states-by-size .map-wrapper {
 }
 
 
-/* Magnifying-glass button, added by JS (see the svgMaps.forEach loop
-   right after zoomBackdrop is set up in script.js) as a more discoverable
-   alternative to right-click/long-press for the same zoom — that gesture
-   isn't obvious it's available at all. Sits in the corner of each map's
-   own box and calls the same toggleMapZoom() the gesture does.
-   display: contents in "Scale States by Size" mode (see .map-box above)
-   removes .map-box from the render tree entirely, which breaks this
-   button's absolute positioning against it — rather than sort out a new
-   anchor for that layout, it's simplest to just not show the button
-   there, same as this feature's original ask. */
 .map-magnify-btn {
  position: absolute;
  bottom: 0.5rem;
@@ -1193,25 +1029,11 @@ body.dark-mode .map-box {
  background: #242420;
  border-color: #3f3f38;
 }
-/* display: contents removes the box from the render tree entirely
-   (while keeping its child in the DOM), so the map inside behaves
-   exactly as if .map-box didn't exist — going back to being a direct
-   flex child of .map-wrapper, which is what all of the original
-   per-state sizing rules below assume. This lets the "Scale States by
-   Size" original layout work unchanged, without needing its own
-   duplicate copy of every state's box styling. */
 body.scale-states-by-size .map-box {
  display: contents;
 }
 
 
-/* Base styling for vector map counties.
-  vector-effect: non-scaling-stroke keeps the border a fixed screen-pixel
-  width no matter how much a map's SVG viewBox gets scaled down to fit its
-  display size. Without it, Rhode Island's huge viewBox (thousands of
-  units) shrinks a "2.5px" stroke down to a fraction of a real pixel,
-  making its county borders effectively invisible even though the same
-  value looks fine on Delaware's much smaller viewBox. */
 .county {
  fill: #e8e4d9;
  stroke: #2b4c32;
@@ -1222,19 +1044,11 @@ body.scale-states-by-size .map-box {
 }
 
 
-/* Newport and Washington counties are drawn as multiple <path> elements
-  nested inside a <g class="county">. stroke and fill are inherited from
-  the group, but vector-effect is not, so it has to be set on the paths
-  directly too. */
 .county path {
  vector-effect: non-scaling-stroke;
 }
 
 
-/* Hover state: a subtle shift (darker in light mode, lighter in dark mode) so you can see the county
-  under your cursor. It only applies to counties that haven't been answered
-  yet, so found/wrong/revealed colors are never overridden. The selector is
-  deliberately specific so it beats body.dark-mode .county's fill. */
 .county:hover:not(.found):not(.correct):not(.wrong):not(.correct-recovered):not(.given-up-missed):not(.typing-highlight):not(.locator-target):not(.locator-wrong) {
  fill: #d9d4c5;
 }
@@ -1243,8 +1057,6 @@ body.dark-mode .county:hover:not(.found):not(.correct):not(.wrong):not(.correct-
 }
 
 
-/* Remove the default click/tap outline box, but keep a visible outline
-  for keyboard (Tab) focus so accessibility isn't lost. */
 .county:focus {
  outline: none;
 }
@@ -1256,15 +1068,11 @@ body.dark-mode .county:hover:not(.found):not(.correct):not(.wrong):not(.correct-
 }
 
 
-/* Correctly guessed county */
 .county.found {
  fill: #4a7c59;
 }
 
 
-/* Correct, but only after at least one wrong guess on this target this
-  round — a lighter "you got there eventually" signal instead of the
-  clean green used for a first-try correct answer. */
 .county.correct-recovered {
  fill: #d4a017 !important;
 }
@@ -1276,20 +1084,11 @@ body.high-contrast .county.correct-recovered {
 }
 
 
-/* Incorrect guess flash */
 .county.wrong {
  fill: #c94a29;
 }
 
 
-/* Stops iOS/Android's default long-press gesture (text selection, or the
-   "callout" menu offering to copy/share) from ever getting a chance to
-   start on the maps or the floating info button that sits over them.
-   Without this, a long press meant for the manual zoom handling in
-   script.js could instead be swallowed by the browser's own selection
-   gesture — landing on whatever nearby text happened to be selectable
-   (typically the info button's lone "i") rather than doing anything on
-   the map itself. */
 .map-wrapper, .map-wrapper *, .info-button {
  -webkit-touch-callout: none;
  -webkit-user-select: none;
@@ -1297,10 +1096,6 @@ body.high-contrast .county.correct-recovered {
 }
 
 
-/* Ensure SVG scales inside its .map-box, filling it edge to edge (minus
-   the box's own padding). This is the default, uniform-box sizing; the
-   original per-state variable sizing lives under the
-   body.scale-states-by-size overrides below. */
 .state-map {
  width: 100%;
  height: 100%;
@@ -1311,22 +1106,7 @@ body.high-contrast .county.correct-recovered {
  flex: none;
  padding: 0;
 }
-/* FIX: this used to be max-width: 180px / flex: 1 1 140px for every state
-   without its own #svg-* override below (Hawaii/California/Texas). With
-   a couple of those bigger states sharing a row, that small a flex-basis
-   let the smaller states (New Hampshire, Rhode Island, Delaware...) get
-   squeezed down toward their basis, or below it, way more than their
-   actual complexity warranted — reading as "eensy weensy" next to their
-   neighbors. Bumping the default cap and basis up gives every ordinary
-   state noticeably more room to stay legible before Hawaii/California/
-   Texas's own larger overrides below even come into play. */
 body.scale-states-by-size .state-map {
- /* Each state's on-screen width comes from its own --w (set per state
-    below). They're picked so every state ends up with a roughly similar
-    amount of screen AREA — a little more for states with lots of
-    counties, a little less for ones with only a few — instead of the
-    old hand-tuned widths, which gave Arizona about a tenth of Texas's
-    room. --w includes the padding below (border-box). */
  --w: 330px;
  width: var(--w);
  height: auto;
@@ -1334,107 +1114,34 @@ body.scale-states-by-size .state-map {
  max-height: none;
  display: block;
  margin: 0;
- flex: 0 0 var(--w); /* no shrinking: wrap to a new row instead */
+ flex: 0 0 var(--w);
  box-sizing: border-box;
- /* Even breathing room on every side, so a divider sits exactly halfway
-    between two maps (and between two rows). */
  padding: 0.85rem;
- /* Stretch to the full height of the row (see .map-wrapper below). The
-    map itself stays centered and un-distorted inside, but the box — and
-    therefore its divider border — now spans the whole row instead of
-    just that one map's own height. */
  align-self: stretch;
 }
-/* A zoomed map is a floating overlay, not a map in the row: keep its own
-   roomier padding and no divider lines. */
 body.scale-states-by-size .state-map.zoomed {
  padding: 1rem;
- border: 0 !important; /* beats the (later) .map-divider / .map-divider-top rules */
+ border: 0 !important;
 }
 
 
-/* Hawaii's county shapes are small and spread across a huge viewBox
-  (Kalawao especially), so it gets more on-screen room than the other
-  states to stay legible. Only relevant to the original variable-sized
-  layout — see "Scale States by Size" — since every state gets the same
-  size box in the default uniform layout. */
 body.scale-states-by-size #svg-hawaii { --w: 430px; }
 
 
-/* California has 58 densely-packed counties, so it needs considerably
-  more on-screen room than the smaller states to stay legible/clickable
-  when it's sharing the screen with others. Only relevant to the original
-  variable-sized layout — see "Scale States by Size". Its solo-play size
-  now comes from the generic .app-container.solo-map rule below instead
-  of a California-specific one. */
-/* California's viewBox is 910 wide, starting at x=-110 (it used to be 0..800): San Francisco's "click
-   here" circle sits in the Pacific about 100 units west of the map's own left edge, and in this layout
-   the svg is exactly its viewBox's shape (no letterbox margin) so the circle was clipped away,
-   leaving just the line. The extra 110 units give it room. 446px keeps California itself at the same
-   on-screen size as the old 395px: (395 - 27) * 910 / 800 + 27. */
 body.scale-states-by-size #svg-california { --w: 446px; }
 
 
-/* Texas has 254 counties — more than 4x California's — packed into a
-  similarly dense grid, so it gets at least as much room as California
-  when sharing the screen with other states. Only relevant to the
-  original variable-sized layout — see "Scale States by Size". */
 body.scale-states-by-size #svg-texas { --w: 580px; }
 
 
-/* Wisconsin has 72 counties in a compact area — noticeably denser than
-  the small states, though not as sprawling as Texas or California — so
-  it lands between them for on-screen room. Only relevant to the
-  original variable-sized layout — see "Scale States by Size". */
 body.scale-states-by-size #svg-ohio { --w: 435px; }
 body.scale-states-by-size #svg-wisconsin { --w: 450px; }
 
 
-/* Alaska's 30 boroughs/census areas are spread across a wide, thin,
-  irregular shape (the Southeast panhandle especially is a dense chain
-  of slivers and islands), so — like Hawaii — it needs more on-screen
-  room than a compact state would to keep those shapes legible and
-  clickable. Only relevant to the original variable-sized layout — see
-  "Scale States by Size". */
 body.scale-states-by-size #svg-alaska { --w: 570px; }
 
 
-/* Solo play: exactly one state selected, so there's no row of other maps
-  it needs to stay visually even with. That state's map gets a modest
-  boost over its normal shared-row size — and this applies equally to
-  every state, not just the dense ones above, so a lone Delaware gets
-  exactly as big a boost as a lone Texas. Works in both layout modes:
-  bumping .map-wrapper's max-width grows the single box in the default
-  uniform grid (see updateMapGridColumns() collapsing it to one column),
-  while the .state-map/#svg-* overrides take over in the divided
-  "Scale States by Size" layout, where .map-box is display: contents and
-  sizing comes from the map itself. The !importants are needed to beat
-  the base Hawaii/California/Texas rules above, which would otherwise
-  still win on specificity. Toggled via .app-container.solo-map in
-  script.js's showScreen().
-  FIX: this used to size the map at up to min(94vw, 1100px)/85vh — nearly
-  the full viewport — which meant .app-container (width: fit-content via
-  .wide-map) had to balloon out to match it, i.e. the *body* was
-  stretching to accommodate however big the map decided to be. Capping
-  the map at a much smaller, fixed-feeling size instead means the
-  container only ever grows as much as this modest size actually needs —
-  the map stays a reasonable, predictable size and the body just
-  compensates around it, not the other way around. */
 .app-container.solo-map .map-wrapper {
- /* FIX: this used to be max-width only, with no definite width. Paired
-    with .app-container.wide-map's own "width: fit-content" and the map
-    SVG's "width: 100%" below, that left the actual width to fall out of
-    a circular fit-content resolution instead of ever reaching this cap —
-    in practice every solo map topped out around ~300px wide regardless
-    of the 560px/60vw ceiling. Because states differ in their viewBox's
-    aspect ratio, that bug hit some states far harder than others: a
-    tall/narrow state like Rhode Island still ended up with a reasonably
-    big map (height follows from width via aspect ratio), while a
-    square-ish or wide state — California, Texas, Hawaii, New Hampshire —
-    ended up with a noticeably shorter, smaller-looking map, even though
-    every state is meant to get the same generous solo-play box. Setting
-    a definite "width" (not just "max-width") here breaks that circular
-    dependency so the cap actually takes effect for every state. */
  width: min(60vw, 560px) !important;
  max-width: min(60vw, 560px) !important;
 }
@@ -1452,16 +1159,6 @@ body.scale-states-by-size #svg-alaska { --w: 570px; }
 }
 
 
-/* Divider lines between maps shown side by side. Applied via JS
-  (updateMapDividers, run whenever the maps change AND whenever the window
-  is resized) only to maps that are actually visible, so a hidden map never
-  leaves a stray line behind.
-  - .map-divider: a vertical line to the right of every map that has a
-    neighbour beside it in the same row. Because every map is stretched to
-    the full height of its row, the line runs the whole height of the row.
-  - .map-divider-top: a horizontal line along the top of every map in a
-    row that wrapped below another one, so the rule runs the whole width
-    of that row. */
 body.scale-states-by-size .state-map.map-divider {
  border-right: 1px solid #ddd;
 }
@@ -1476,39 +1173,6 @@ body.dark-mode.scale-states-by-size .state-map.map-divider-top {
 }
 
 
-/* FIX: every .state-map has flex-grow: 1 (see "flex: 1 1 ..." rules
-  above), so with several maps sharing a row they don't just sit at their
-  natural max-width-capped size — they keep growing to soak up whatever
-  free space is left, and different maps hit their own max-width cap
-  (180 / 320 / 520) at different points. That uneven growth is what was
-  pulling Rhode Island off-center against its divider and leaving a big
-  uneven gap around Hawaii that read as "disconnected" once all four
-  states were active. Growth is only useful for a single map filling its
-  card (see #svg-california below); once .wide-map confirms more than
-  one map is in play, turn it off so every map renders at its own natural
-  size and .map-wrapper's justify-content: center spaces the row evenly.
-  FIX 2: this alone didn't actually reach Hawaii or California — their
-  own #svg-hawaii / #svg-california rules set flex-grow: 1 via an ID
-  selector, and an ID always outranks any number of classes, so the
-  class-only override below was silently losing to those and Hawaii kept
-  growing unevenly while Rhode Island (no ID rule of its own) got
-  flattened correctly. Repeating the override with those IDs included
-  gives it equal ID-specificity (1 ID + extra classes beats 1 ID alone),
-  so it actually wins now.
-  FIX 3: turning off flex-grow wasn't the whole story either. .state-map
-  also has margin: 0 auto (below), and on a flex item auto margins absorb
-  any leftover space on their OWN line independently of flex-grow — that
-  happens before justify-content ever runs. With every map on a shared
-  row carrying auto margins on both sides, leftover space was getting
-  split across *each* map's own margins rather than pooled once around
-  the whole row: that doubles the gap wherever two maps' facing auto
-  margins land next to each other (Hawaii's "disconnected" gap), and can
-  land unevenly enough elsewhere to shove a narrower map like Rhode
-  Island off from where it looks centered. Zeroing the horizontal margins
-  here removes that per-item competition, so the row packs snugly against
-  its dividers and .map-wrapper's justify-content: center is the only
-  thing left deciding how the row as a whole is centered.
-  Only relevant to the original variable-sized layout. */
 body.scale-states-by-size .app-container.wide-map .state-map {
  flex-grow: 0;
  margin-left: 0;
@@ -1526,13 +1190,6 @@ body.scale-states-by-size .app-container.wide-map #svg-alaska {
 }
 
 
-/* Right-click-to-zoom overlay (see the zoom-backdrop / enterMapZoom
-  setup in script.js, right after svgMaps is defined). The backdrop
-  dims everything else and catches clicks to close the zoom; the
-  zoomed map itself gets pulled out of the page flow and centered as a
-  large, easy-to-click overlay. !important is used for the sizing
-  properties because they need to win over each state's own more
-  specific max-width/flex rules (e.g. #svg-california, #svg-hawaii). */
 .zoom-backdrop {
  position: fixed;
  inset: 0;
@@ -1544,17 +1201,6 @@ body.scale-states-by-size .app-container.wide-map #svg-alaska {
  display: block;
 }
 
-/* The zoomed map lives inside .zoom-scroller (created in script.js): a fixed
-  layer that starts just below the target banner (its top is measured in
-  JS, because the banner's height changes while you play) and scrolls if
-  the map is bigger than the space available. The map's own width/height
-  are also set in JS, with !important inline, from that measured space and
-  the state's aspect ratio — so no per-state or per-layout size rule can
-  override them any more. Only the look is defined here. */
-/* Don't center with justify-content here. When the zoomed map is wider than the screen, flex centering
-   spills half of the extra width off the LEFT edge, where a scroll box can't reach it (the scrollbar just
-   stops, with map still to the left). .state-map.zoomed has margin: 0 auto, which centers it whenever
-   there's room and falls back to left-aligned (fully scrollable) when there isn't. */
 .zoom-scroller {
  position: fixed;
  left: 0;
@@ -1564,7 +1210,7 @@ body.scale-states-by-size .app-container.wide-map #svg-alaska {
  overflow: auto;
  overscroll-behavior: contain;
  display: flex;
- justify-content: flex-start; /* NOT center: see below */
+ justify-content: flex-start;
  align-items: flex-start;
  padding-bottom: 8px;
 }
@@ -1572,7 +1218,7 @@ body.scale-states-by-size .app-container.wide-map #svg-alaska {
  position: static !important;
  margin: 0 auto !important;
  transform: none !important;
- align-self: flex-start !important; /* not the row-stretch the "Scale States by Size" layout gives every map */
+ align-self: flex-start !important;
  background: #ffffff;
  border-radius: 16px;
  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
@@ -1583,10 +1229,6 @@ body.dark-mode .state-map.zoomed {
  background: #242420;
 }
 
-/* Alaska's real shape is wide, so give it a wide box instead of the
-  square one every other state gets. Solo play: a much bigger map than
-  the shared 560px cap. Uniform grid (4+ states): the Alaska box takes
-  a full row at the shape's own aspect ratio. */
 .app-container.solo-map .map-wrapper:has(#svg-alaska:not(.hidden)) {
  width: min(88vw, 960px) !important;
  max-width: min(88vw, 960px) !important;
@@ -1595,20 +1237,10 @@ body.dark-mode .state-map.zoomed {
  max-width: 100% !important;
  max-height: none !important;
 }
-/* Uniform grid: Alaska is a normal one-cell card like every other state
-   (spanning a whole row left a lone neighbour stranded beside empty
-   space whenever Alaska wasn't first in the order), but the grid is a bit
-   wider while Alaska is in play so its wide shape still gets a decent
-   amount of room in its cell. */
 body:not(.scale-states-by-size) .map-wrapper:has(#svg-alaska:not(.hidden)) {
- /* The card hugs its content (.wide-map is fit-content), so a bigger
-    max-width alone wouldn't widen it — the width has to be explicit. The
-    calc() keeps it inside the screen (and the card's own padding). */
  width: min(860px, calc(96vw - 5rem));
  max-width: none;
 }
-/* One column (a single state): the box is the whole row, so use Alaska's
-   own wide shape instead of a square. */
 body:not(.scale-states-by-size) .map-wrapper[style*="--states-per-row: 1;"] .map-box:has(#svg-alaska) {
  aspect-ratio: 800 / 434;
 }
@@ -1621,7 +1253,6 @@ body.dark-mode .county {
 
 
 
-/* Standard County State Colors */
 .county.correct {
  fill: #2d5a27 !important;
 }
@@ -1630,7 +1261,6 @@ body.dark-mode .county {
 }
 
 
-/* High Contrast Settings Overrides */
 body.high-contrast .county.correct {
  fill: #008800 !important;
 }
@@ -1639,8 +1269,6 @@ body.high-contrast .county.wrong {
 }
 
 
-/* Counties revealed as missed by the "Give Up" button. Same red as a
-  wrong guess, but persistent (not a flash) until the next game starts. */
 .county.given-up-missed {
  fill: #c94a29 !important;
 }
@@ -1660,8 +1288,6 @@ body.high-contrast .county.given-up-missed {
 }
 
 
-/* Pin (Hard) mode's flash for a correct guess that followed at least one
-  wrong guess on the same target this round. */
 .county.flash-correct-recovered {
  animation: flashYellow 0.6s ease-in-out;
 }
@@ -1673,10 +1299,6 @@ body.high-contrast .county.given-up-missed {
 }
 
 
-/* "Type (Hard)" mode: the county the player has to name from memory,
-  without giving away its name in text. A slow pulse between the
-  default fill and a distinct blue keeps it noticeably different from
-  the green/red found/wrong states so it can't be mistaken for either. */
 .county.typing-highlight {
  animation: pulseTypingTarget 1.6s ease-in-out infinite;
 }
@@ -1700,20 +1322,6 @@ body.high-contrast .county.typing-highlight {
 }
 
 
-/* Kalawao's real shape is tiny, so it gets a bigger, easier-to-click
-  circle out in open water connected back to it with a line. The circle
-  shares .county so it participates fully in hover/found/wrong states;
-  this just gives the circle (and San Francisco's, further down) the
-  same solid orange stroke as its leader line/arrowhead, instead of the
-  default green county border, so it still visually reads as a "click
-  here" marker rather than actual coastline.
-  A dashed ring was tried here first, but Hawaii's and California's
-  viewBoxes differ in scale by roughly 70x, and no single dasharray
-  read as clearly "dashed" on both — it either left a visible gap
-  before completing one lap around San Francisco's small circle, or
-  came out so fine-grained on Kalawao's that it visually collapsed
-  into a solid-looking ring anyway. A solid stroke in a distinct color
-  sidesteps that scale-dependence entirely. */
 .kalawao-callout-line {
  stroke: #b5651d;
  stroke-width: 1.5px;
@@ -1748,16 +1356,6 @@ body.high-contrast .kalawao-callout {
 }
 
 
-/* San Francisco is the same story as Kalawao above: its real shape is
-  tiny and boxed in by Marin, San Mateo, and Alameda, so it gets the
-  same "click here" circle-and-line treatment out in the open Pacific
-  just west of the city. Same colors as Kalawao's callout so the two
-  read as the same kind of UI element wherever they show up.
-  NOTE: stroke-width here is much smaller than Kalawao's 3px — the
-  arrowhead marker's actual size is markerWidth × stroke-width (in the
-  SVG's own coordinate units), and California's map uses a viewBox only
-  about 1/70th the size of Hawaii's, so reusing 3px would draw an
-  arrowhead many times larger than San Francisco's own real shape. */
 .sf-callout-line {
  stroke: #b5651d;
  stroke-width: 1.5px;
@@ -1791,17 +1389,6 @@ body.high-contrast .sf-callout {
  stroke: #ff8800;
 }
 
-/* Virginia callouts: same look as San Francisco's */
-/* San Francisco is the same story as Kalawao above: its real shape is
-  tiny and boxed in by Marin, San Mateo, and Alameda, so it gets the
-  same "click here" circle-and-line treatment out in the open Pacific
-  just west of the city. Same colors as Kalawao's callout so the two
-  read as the same kind of UI element wherever they show up.
-  NOTE: stroke-width here is much smaller than Kalawao's 3px — the
-  arrowhead marker's actual size is markerWidth × stroke-width (in the
-  SVG's own coordinate units), and California's map uses a viewBox only
-  about 1/70th the size of Hawaii's, so reusing 3px would draw an
-  arrowhead many times larger than San Francisco's own real shape. */
 .va-callout-line {
  stroke: #b5651d;
  stroke-width: 1.5px;
@@ -1836,11 +1423,6 @@ body.high-contrast .va-callout {
 }
 
 
-/* Skagway and Bristol Bay get the same treatment on the Alaska
-  map — both are real boroughs whose actual shapes are about as
-  tiny, relative to their map, as Kalawao's and San Francisco's are on
-  theirs. Same colors as both of those so all five callouts read as
-  the same kind of UI element. */
 .skagway-callout-line {
  stroke: #b5651d;
  stroke-width: 1.5px;
@@ -1909,16 +1491,12 @@ body.high-contrast .bristol-bay-callout {
 }
 
 
-/* Prominent Target Banner */
 .prompt-box {
  background: #ffffff;
  border: 2px solid #2d5a27;
  border-radius: 16px;
  padding: 1rem 2rem;
  margin: 1rem auto 1.5rem auto;
- /* Normally 480px wide, but grows sideways (instead of wrapping the name
-    onto a second line and getting taller) when a long county name needs
-    more room; only capped by the screen itself. */
  width: fit-content;
  min-width: min(480px, 100%);
  max-width: 100%;
@@ -1928,10 +1506,6 @@ body.high-contrast .bristol-bay-callout {
  flex-direction: column;
  align-items: center;
  justify-content: center;
- /* Stays pinned to the top of the viewport while the page scrolls (e.g.
-   a tall map like California's), instead of scrolling out of view. It
-   naturally stops sticking once the bottom of #screen-game scrolls past,
-   since sticky positioning is bound to that ancestor. */
  position: sticky;
  top: 0.5rem;
  z-index: 20;
@@ -1944,14 +1518,6 @@ body.dark-mode .prompt-box {
 }
 
 
-/* While a map is right-click-zoomed (see enterMapZoom/exitMapZoom in
-  script.js, which toggle "map-zoomed" on <body>), pull the target
-  banner out of the normal page flow and pin it to the top of the
-  viewport, above both the zoom backdrop (z-index 999) and the zoomed
-  map itself (z-index 1000). Otherwise the banner stays behind them —
-  dimmed by the backdrop or covered outright by the enlarged map — right
-  when you need it most, since zooming in is usually to hunt for one
-  particular small county. */
 body.map-zoomed .prompt-box {
  position: fixed;
  top: 0.75rem;
@@ -1969,7 +1535,7 @@ body.map-zoomed .prompt-box {
  margin-top: 0.75rem;
  width: 100%;
  display: flex;
- flex-direction: column; /* text box, then the special-character bar under it */
+ flex-direction: column;
  align-items: center;
 }
 
@@ -2045,8 +1611,6 @@ body.dark-mode .progress-counter {
  font-weight: 700;
  line-height: 1;
  letter-spacing: -0.5px;
- /* Keep the name on one line and let the box widen to fit. On narrow
-    screens there's no room to widen, so it's allowed to wrap there. */
  white-space: nowrap;
 }
 @media (max-width: 700px) {
@@ -2074,13 +1638,7 @@ body.dark-mode #target-prompt {
 }
 
 
-/* --- "How to Play" info modal: intro + embedded mode example --- */
 
-
-/* Wider than the default modal-content so the two example panels have
-  room to sit side by side, and left-aligned since it's now a short
-  paragraph + a two-column example rather than a single centered
-  headline/button pair. */
 .info-modal-content {
  max-width: 460px;
  text-align: left;
@@ -2101,10 +1659,6 @@ body.dark-mode .info-intro {
 }
 
 
-/* Two side-by-side cards: "You'll see" (the prompt or the highlighted
-  county) and "You'll do" (the click or typing action), each labeled
-  with a small caption above a tiny looping demo. Stacks to one column
-  on narrow screens instead of squeezing both down unreadably. */
 .info-example {
  display: grid;
  grid-template-columns: 1fr 1fr;
@@ -2151,13 +1705,6 @@ body.dark-mode .info-example-caption {
 }
 
 
-/* Only one of the two children in each demo slot is shown at once —
-  which one depends on the mode, set via data-demo on .info-example.
-  These default-hide rules are scoped under .info-example (specificity
-  0,2,0) specifically so they beat each element's own unconditional
-  base style (e.g. .mini-type-box's own display:flex, specificity
-  0,1,0) — otherwise the base style would win by source order and the
-  element would show in every mode regardless of data-demo. */
 .info-example .demo-banner,
 .info-example .demo-highlight-map,
 .info-example .demo-click-map,
@@ -2189,8 +1736,6 @@ body.dark-mode .info-example-caption {
 }
 
 
-/* Tiny replica of the real #target-prompt banner, used for the "You'll
-  see" side in Pin/Flash/List modes. */
 .mini-prompt-box {
  background: #ffffff;
  border: 2px solid #2d5a27;
@@ -2233,8 +1778,6 @@ body.dark-mode .mini-target-name {
 }
 
 
-/* Tiny looping map demos, built from a single generic blob shape so
-  they read as "a county" without claiming to be any real one. */
 .mini-map-demo {
  width: 100%;
  max-width: 120px;
@@ -2261,8 +1804,6 @@ body.dark-mode .mini-cursor-shape {
 }
 
 
-/* Pin mode: the shape fills in on "click" and stays filled, matching
-  .county.correct never reverting. */
 .info-example[data-demo="pin"] .click-shape {
  fill: #e8e4d9;
  animation: miniFillPin 2.6s ease-in-out infinite;
@@ -2273,8 +1814,6 @@ body.dark-mode .mini-cursor-shape {
 }
 
 
-/* Flash mode: the shape flashes on "click" then fades back to blank,
-  matching .county.flash-correct's brief, non-persistent green. */
 .info-example[data-demo="pin-hard"] .click-shape {
  fill: #e8e4d9;
  animation: miniFillFlash 2.6s ease-in-out infinite;
@@ -2292,9 +1831,6 @@ body.dark-mode .info-example[data-demo="pin-hard"] .click-shape {
 }
 
 
-/* Type/Verbatim modes: the shape pulses blue on its own, matching
-  .county.typing-highlight — nothing to click, just something to look
-  at while you type. */
 .highlight-shape {
  fill: #e8e4d9;
  animation: miniPulseHighlight 1.7s ease-in-out infinite;
@@ -2308,9 +1844,6 @@ body.dark-mode .highlight-shape {
 }
 
 
-/* Tiny replica of #type-input, used for the "You'll do" side in every
-  typing mode, plus List mode's free-recall version. Text/caret/enter
-  cue/checkmark are all driven by script.js's typing-demo loop. */
 .mini-type-box {
  background: #fff;
  border: 2px solid #2d5a27;
@@ -2376,8 +1909,6 @@ body.dark-mode .mini-type-check {
 }
 
 
-/* Collapsed by default so the modal leads with the short, mode-specific
-  explanation instead of every general tip at once. */
 .info-tips {
  margin-top: 0.9rem;
 }
@@ -2400,10 +1931,6 @@ body.dark-mode .info-tips summary {
 }
 
 
-/* Small "made by" footer, pinned to the corner of the viewport rather
-  than the app-container card, so it never scrolls with the content or
-  gets squeezed by a tall map. Sits at a low z-index and ignores clicks
-  so it never competes with anything interactive on top of it. */
 .site-credits {
  position: fixed;
  bottom: 0.6rem;
@@ -2420,8 +1947,6 @@ body.dark-mode .site-credits {
  color: #6b6b5f;
 }
 
-
-/* --- Fixed Modal Overlay Controls --- */
 
 
 .modal, .modal-overlay {
@@ -2465,9 +1990,6 @@ body.dark-mode .modal-card {
 }
 
 
-/* "What you missed" section on the end-of-game summary popup: its own
-  block under the main pass/fail message, rather than a parenthetical
-  crammed into that sentence. */
 .summary-missed-section {
  margin: 1rem 0;
  padding: 0.75rem 1rem;
@@ -2560,8 +2082,6 @@ body.dark-mode .summary-text {
  font-size: 0.85rem;
 }
 
-
-/* --- Admire Map Bottom Bar --- */
 
 
 .admire-bar {
@@ -2664,7 +2184,6 @@ body.dark-mode .county-group-header {
 }
 
 
-/* Cursor-following tooltip for hovering a county revealed by Give Up */
 .county-hover-tooltip {
  position: fixed;
  top: 0;
@@ -2688,10 +2207,6 @@ body.dark-mode .county-hover-tooltip {
 
 body.scale-states-by-size #svg-new-hampshire { --w: 295px; }
 
-/* The remaining states, sized by the same rough-equal-area idea: a state's
-   width follows its shape (tall and narrow states are wider than their
-   outline suggests, short and wide ones narrower) so that none of them
-   ends up looking tiny next to the big ones. */
 body.scale-states-by-size #svg-arizona { --w: 370px; }
 body.scale-states-by-size #svg-alabama { --w: 350px; }
 body.scale-states-by-size #map-delaware { --w: 295px; }
@@ -2699,9 +2214,6 @@ body.scale-states-by-size #svg-florida { --w: 470px; }
 body.scale-states-by-size #svg-rhode-island { --w: 315px; }
 
 
-/* --- Special-character buttons (Type modes, "Require Diacritic Marks") ---
-   Sits under #type-input inside #type-input-box. Buttons are deliberately
-   big (>= 44px) so they're easy to tap on a phone. */
 .special-chars {
  margin-top: 0.6rem;
  display: flex;
@@ -2735,7 +2247,7 @@ body.dark-mode .special-chars-label {
  border: 2px solid #2d5a27;
  border-radius: 10px;
  cursor: pointer;
- touch-action: manipulation; /* no double-tap-zoom delay on rapid taps */
+ touch-action: manipulation;
 }
 .special-char-btn:hover {
  background: #f3f1ea;
@@ -2759,11 +2271,6 @@ body.dark-mode .special-char-btn:active {
  background-color: #3f4a3a;
 }
 
-/* --- Bug report (report.js) --- */
-
-/* Small text-style trigger on the home screen. Deliberately NOT built on
-   .btn-back: script.js attaches a "go to screen" click handler to every
-   .btn-back, which would misfire on a button with no data-target. */
 .report-link {
   display: block;
   margin: 1.25rem auto 0;
@@ -2788,9 +2295,6 @@ body.dark-mode .report-link:hover {
   color: #fdeca6;
 }
 
-/* The popup. Same look as the "How to Play" popup, left-aligned so the
-   form reads naturally, and scrollable so it still fits on short screens
-   (or with the phone keyboard open). */
 .report-modal-content {
   max-width: 460px;
   max-height: 90vh;
@@ -2867,8 +2371,6 @@ body.dark-mode .report-privacy {
   color: #aaa;
 }
 
-/* Reserve a line for the status text so the buttons don't jump when a
-   message appears. report.js toggles .is-error / .is-success on it. */
 .report-status {
   min-height: 1.4em;
   margin: 0.6rem 0 0;
@@ -2888,8 +2390,6 @@ body.dark-mode .report-status.is-success {
   color: #81c784;
 }
 
-/* Spam-bot trap: pushed off-screen rather than display:none, since some
-   bots skip fields that are display:none. */
 .report-honeypot {
   position: absolute;
   left: -9999px;
@@ -2898,7 +2398,6 @@ body.dark-mode .report-status.is-success {
   overflow: hidden;
 }
 
-/* --- Search boxes (state list + county exclusion list) --- */
 .list-search {
  width: 100%;
  box-sizing: border-box;
@@ -2938,7 +2437,6 @@ body.dark-mode .list-search {
 .checkbox-label.search-hidden,
 .state-row.search-hidden { display: none !important; }
 
-/* --- "Which one's that?" button next to each county --- */
 .county-locate-btn {
  flex-shrink: 0;
  width: 1.5rem;
@@ -2969,7 +2467,6 @@ body.dark-mode .county-locate-btn:focus-visible {
  color: #111;
 }
 
-/* --- Locator popup --- */
 .locator-modal-content {
  max-width: 560px;
  padding: 1.5rem 1.25rem;
@@ -3007,7 +2504,6 @@ body.dark-mode .county-locate-btn:focus-visible {
 }
 
 
-/* Best-Known Counties to Select number box */
 .setting-item input[type="number"] {
  font: inherit;
  font-size: 0.85rem;
@@ -3026,9 +2522,6 @@ body.dark-mode .setting-item input[type="number"] {
 }
 
 
-/* Game header: with the Forfeit button there are up to five buttons in
-   the row, so let them wrap onto a second line on narrow screens
-   instead of squashing each label onto several lines. */
 .game-header {
  flex-wrap: wrap;
  gap: 0.5rem;
@@ -3042,15 +2535,11 @@ body.dark-mode .setting-item input[type="number"] {
  }
 }
 
-/* When the game screen's card grows to fit a big map (.wide-map), the
-   header buttons used to spread out to the far edges. Keep them grouped
-   in the middle instead. */
 .app-container.wide-map .game-header {
  justify-content: center;
  gap: 0.75rem;
 }
 
-/* Learn > Study */
 .study-select {
   width: 100%;
   padding: 0.55rem;
@@ -3077,8 +2566,6 @@ body.dark-mode .study-select { background: #2a2a2a; color: #eee; border-color: #
 .study-nav { display: flex; justify-content: center; gap: 0.5rem; margin-top: 0.8rem; }
 .study-choices .study-correct { background: #2e7d32; border-color: #2e7d32; color: #fff; }
 .study-choices .study-wrong { background: #b3261e; border-color: #b3261e; color: #fff; }
-/* Answered buttons keep their green/red whether or not the mouse is over them (the generic
-   .btn-secondary:hover rules used to win, especially in dark mode); hovering just lightens them. */
 .study-choices button.study-correct,
 body.dark-mode .study-choices button.study-correct { background: #2e7d32; border-color: #2e7d32; color: #fff; }
 .study-choices button.study-wrong,
@@ -3089,7 +2576,6 @@ body.dark-mode .study-choices button.study-correct:hover { background: #43a047; 
 body.dark-mode .study-choices button.study-wrong:hover { background: #cf4a41; border-color: #cf4a41; }
 @media (max-width: 480px) { .study-choices { grid-template-columns: 1fr; } }
 
-/* Study: state list extras */
 #study-states { margin-bottom: 0.8rem; }
 .study-learned-panel { max-height: 40vh; overflow-y: auto; margin-bottom: 0.8rem; }
 .study-learned-state h3 { font-size: 0.95rem; margin: 0.6rem 0 0.4rem; }
@@ -3108,7 +2594,6 @@ body.dark-mode .study-chip.learned { color: #fff; border-color: #2e7d32; }
 
 .study-hint { margin-bottom: 1rem; text-align: left; }
 
-/* Study: typing step */
 .study-type { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; align-items: center; }
 .study-type.hidden { display: none; }
 .study-chars { display: flex; gap: 0.4rem; width: 100%; justify-content: center; }
@@ -3124,12 +2609,9 @@ body.dark-mode .study-chip.learned { color: #fff; border-color: #2e7d32; }
 body.dark-mode .study-input,
 body.dark-mode .study-chars .special-char-btn { background: #2a2a2a; color: #eee; border-color: #555; }
 
-/* US map state picker (setup + Study) */
 #screen-setup .states-list,
 #screen-setup #state-search,
-#screen-setup #state-search-empty { display: none; } /* rows stay in the DOM; the map drives them */
-/* The card goes wide on the picker screens, but everything except the map stays in
-   a normal-width column; the map holder then breaks out of that column. */
+#screen-setup #state-search-empty { display: none; }
 .app-container.wide-picker { max-width: 96vw; width: 96vw; }
 .app-container.wide-picker .screen { max-width: 396px; margin-left: auto; margin-right: auto; }
 .us-map-holder {
@@ -3151,7 +2633,7 @@ body.dark-mode .study-chars .special-char-btn { background: #2a2a2a; color: #eee
 .us-map .us-leaders circle { fill: #888; }
 .us-map text {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-weight: 700;
-  fill: #8a8a8a; text-anchor: middle; pointer-events: none; /* size is set per label */
+  fill: #8a8a8a; text-anchor: middle; pointer-events: none;
 }
 .us-map text.built { fill: #1d3550; }
 .us-map text.selected { fill: #3a1d00; }
@@ -3167,9 +2649,6 @@ body.dark-mode .us-map text { fill: #888; }
 body.dark-mode .us-map text.built { fill: #dbe8f5; }
 body.dark-mode .us-map text.selected { fill: #fff; }
 .us-picked { margin-bottom: 0.8rem; font-size: 0.9rem; color: #666;
-  /* Fixed height = the heading plus two rows of chips (one chip row is ~1.6rem), so picking
-     a state never makes this area grow and shove the map and everything else around.
-     More chips than that scroll inside the box. */
   height: 4.3rem; overflow-y: auto; }
 body.dark-mode .us-picked { color: #aaa; }
 .us-picked-head { font-weight: 600; margin-bottom: 0.4rem; color: #222; }
@@ -3177,7 +2656,6 @@ body.dark-mode .us-picked-head { color: #eee; }
 .us-picked-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .us-chip { font-size: 0.8rem; padding: 0.15rem 0.55rem; border-radius: 999px; background: #e8892b; color: #2a1400; }
 
-/* ===== Setup screen: map on the left, everything else on the right ===== */
 .app-container.wide-picker #screen-setup { max-width: none; }
 @media (min-width: 900px) {
   #screen-setup.active {
@@ -3199,9 +2677,7 @@ body.dark-mode .us-picked-head { color: #eee; }
 }
 
 
-/* ===== Study: Pin phase ===== */
 .locator-map.pin-mode .county { pointer-events: auto; cursor: pointer; }
-/* Learn > Pin hover: same subtle shift as the Play maps (no more bright blue). */
 .locator-map.pin-mode .county:hover { fill: #d9d4c5; }
 body.dark-mode .locator-map.pin-mode .county:hover { fill: #45453f; }
 .locator-map.pin-mode.pin-done .county { pointer-events: none; }
@@ -3209,14 +2685,12 @@ body.dark-mode .locator-map.pin-mode .county:hover { fill: #45453f; }
 .locator-map .county.locator-wrong path { fill: #b3261e !important; stroke: #5c0f0b !important; }
 .locator-map.pin-mode .county:focus-visible { outline: 2px solid #000; }
 
-/* Territories strip + insets on the picker map */
 .us-map .us-box { fill: none; stroke: #b0b0b0; stroke-width: 1.2; pointer-events: none; }
 body.dark-mode .us-map .us-box { stroke: #a9a9a2; }
 body.dark-mode .us-map .us-st { stroke: #a9a9a2; }
 body.dark-mode .us-map .us-st:focus-visible { stroke: #fff; }
 
-/* ===== Study: state picker laid out like the setup screen (map left, everything else right) ===== */
-#study-pick:not(.hidden) ~ .study-back-run { display: none; } /* the picker has its own Back */
+#study-pick:not(.hidden) ~ .study-back-run { display: none; }
 @media (min-width: 900px) {
   .app-container.wide-picker #screen-study { max-width: none; }
   #study-pick {
@@ -3231,18 +2705,6 @@ body.dark-mode .us-map .us-st:focus-visible { stroke: #fff; }
   #study-pick .us-map-holder { left: 0; transform: none; width: 100%; overflow: visible; }
   #study-pick .us-map { min-width: 0; max-height: calc(100vh - 13rem); }
   #study-pick .study-learned-panel { max-height: none; overflow: visible; }
-  /* Nothing chosen yet: the right column only holds Back. Keep it in the right column,
-     but put it on the same grid row as the map so it's vertically centred with the map
-     (not with the whole left stack, which also has the title and buttons). The left
-     column's pieces become individual grid rows to make that possible. */
-  /* "display: contents" below turns each left-column piece into its own grid row, and the grid's
-     row-gap would then add 8px between every piece that the normal (one-block) layout doesn't have,
-     so the map jumped up 16px on the first click. Zero the gap; the one gap that really exists in
-     both layouts (under the mode indicator, on the setup screen) is put back as a margin. */
-  /* The right column used to be allowed to grow taller than the map column as more states were
-     picked (its county lists get longer), which stretched the whole card and shifted the map.
-     `contain: size` stops its content from sizing the row; `stretch` makes it exactly as tall as the
-     map column, and it already scrolls (max-height / overflow-y above) if its content is longer. */
   #screen-setup .setup-right, #study-pick .study-right { align-self: stretch; contain: size; }
   #screen-setup.no-selection, #study-pick.no-selection { row-gap: 0; }
   #screen-setup.no-selection .setup-left > :first-child { margin-top: 0.5rem; }
@@ -3253,22 +2715,14 @@ body.dark-mode .us-map .us-st:focus-visible { stroke: #fff; }
   #screen-setup.no-selection .setup-right { grid-column: 2; grid-row: 4; align-self: center; max-height: none; overflow: visible; contain: none; }
   #study-pick.no-selection .study-right { grid-column: 2; grid-row: 3; align-self: center; max-height: none; overflow: visible; contain: none; }
 }
-/* The Study button stays visible (greyed out) like Play; only its options wait for a chosen state. */
 #study-pick.no-selection .study-skip,
 #study-pick.no-selection #study-pick-msg { display: none; }
 
 
-/* Stacked (narrow) picker layout: selecting a state adds content below the map. The page centres the
-   card vertically, so a taller card would move the map up; anchor it to the top instead. */
 @media (max-width: 899px) {
   .app-container.wide-picker { align-self: flex-start; margin: 1rem 0; }
 }
 
-/* ===== Study session: card sized to the map ===== */
-/* --study-aspect is the widest map's width/height, set in script.js when a session starts.
-   The map gets up to 60vh of height, so the card is that many vh times the aspect wide
-   (never narrower than the normal card, never wider than the screen), and the controls
-   stay in a normal-width column under the map. */
 .app-container.wide-study {
   width: calc(clamp(396px, calc(var(--study-aspect, 1) * 60vh), 1100px) + 4rem);
   max-width: 96vw;
@@ -3277,7 +2731,6 @@ body.dark-mode .us-map .us-st:focus-visible { stroke: #fff; }
 .app-container.wide-study #study-run > :not(#study-map) { max-width: 396px; margin-left: auto; margin-right: auto; }
 
 
-/* ===== Study picker: small state maps with learned counties filled in ===== */
 .study-learned-panel {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
@@ -3292,23 +2745,18 @@ body.dark-mode .us-map .us-st:focus-visible { stroke: #fff; }
   min-width: 0;
 }
 body.dark-mode .study-learned-state { background: #242420; border-color: #3f3f38; }
-/* Opening a state's county list gives that card the full row, so the chips
-   have room instead of stretching one narrow card taller than its neighbours. */
 .study-learned-state:has(details[open]),
 .study-learned-state:only-child { grid-column: 1 / -1; }
 .study-learned-state h3 { margin: 0; font-size: 0.95rem; }
 .study-learned-count { margin: 0 0 0.4rem; font-size: 0.78rem; opacity: 0.75; }
 .study-mini-map { max-height: 170px; margin: 0 auto 0.4rem; }
-/* A lone state has the whole panel to itself, so let its map be bigger. */
 .study-learned-panel:has(.study-learned-state:only-child) .study-mini-map { max-height: 260px; }
-/* Thin fixed outlines: the game's usual 2.5px would swallow a 254-county Texas at this size. */
 .study-mini-map .county { stroke-width: 0.75px !important; }
 .study-mini-map .county.mini-learned,
 .study-mini-map .county.mini-learned path { fill: #2e7d32 !important; stroke: #14401a !important; }
 .study-list-toggle summary { cursor: pointer; font-size: 0.8rem; opacity: 0.85; padding: 0.15rem 0; }
 .study-list-toggle[open] summary { margin-bottom: 0.4rem; }
 
-/* ===== Study: per-round summary + results board ===== */
 .app-container.wide-study #study-run > .study-summary { max-width: 396px; }
 .study-summary.rs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 0.5rem; margin-bottom: 0.9rem; text-align: left; }
 .rs-card { border: 1px solid #ddd; border-top: 3px solid #2e7d32; border-radius: 8px; padding: 0.35rem; background: #fafafa; min-width: 0; }
@@ -3339,7 +2787,6 @@ body.dark-mode .rs-row { border-bottom-color: #3f3f38; }
 body.dark-mode .rs-perfect { color: #7fd68a; }
 body.dark-mode .rs-of, body.dark-mode .rs-detail { color: #888; }
 
-/* Carousel: one row, fixed-size cards, scroll sideways */
 .study-summary.rs-grid { display: block; position: relative; }
 .rs-track { display: flex; gap: 0.5rem; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 0 0.45rem; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
 .rs-track .rs-card { flex: 0 0 128px; scroll-snap-align: start; }
@@ -3347,7 +2794,6 @@ body.dark-mode .rs-of, body.dark-mode .rs-detail { color: #888; }
 .rs-arrow.left { left: -0.3rem; } .rs-arrow.right { right: -0.3rem; }
 .rs-arrow:disabled { opacity: 0; pointer-events: none; }
 
-/* Bigger carousel */
 .app-container.wide-study:has(.study-summary.rs-grid:not(.hidden)) {
   width: calc(max(clamp(396px, calc(var(--study-aspect, 1) * 60vh), 1100px), 640px) + 4rem);
 }
@@ -3358,7 +2804,6 @@ body.dark-mode .rs-of, body.dark-mode .rs-detail { color: #888; }
 .rs-cap { font-size: 1rem; line-height: 1.3; margin-top: 0.5rem; }
 .rs-arrow { width: 2.4rem; height: 2.4rem; font-size: 1.7rem; top: 36%; }
 
-/* Fit: carousel always matches the card's inner width, never wider */
 .app-container.wide-study #study-run > .study-summary.rs-grid {
   width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-left: 0; margin-right: 0;
 }
@@ -3367,21 +2812,17 @@ body.dark-mode .rs-of, body.dark-mode .rs-detail { color: #888; }
 .rs-arrow.left { left: 0.35rem; } .rs-arrow.right { right: 0.35rem; }
 .app-container.wide-study:has(.study-summary.rs-grid:not(.hidden)) { box-sizing: border-box; max-width: 96vw; }
 
-/* Beat the older "#study-run > :not(#study-map) { max-width: 396px }" rule (that :not() counts as an id) */
 .app-container.wide-study #study-run > #study-summary.study-summary.rs-grid {
   width: 100%; max-width: 100%; margin-left: 0; margin-right: 0;
 }
 .app-container.wide-study #study-run > #study-summary.study-summary.rs-board { max-width: 480px; }
-/* a lone Continue button spans the row, centered */
 .study-choices > .btn-primary:only-child { grid-column: 1 / -1; justify-self: center; min-width: 14rem; }
 
-/* One section per mode on the round summary */
 .rs-section { margin-bottom: 0.9rem; }
 .rs-section-title { font-size: 1.2rem; font-weight: 600; text-align: left; margin: 0.2rem 0 0.5rem; }
 .rs-carousel { position: relative; }
 
 
-/* ===== New home screen: states on the left, modes on the right ===== */
 .app-container.wide-picker #screen-home { max-width: none; position: relative; }
 .home-top-actions { position: absolute; top: 0; right: 0; display: flex; gap: 0.6rem; z-index: 3; }
 .icon-btn { width: 3rem; height: 3rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: #fafaf7; color: #222; border: 1px solid #ddd; cursor: pointer; }
@@ -3416,7 +2857,7 @@ body.dark-mode .home-map-hint { color: #fdeca6; text-shadow: 0 0 8px rgba(0,0,0,
 #screen-home > .state-stats-panel { margin-top: 1.5rem; }
 @media (max-width: 899px) {
   .home-layout { grid-template-columns: 1fr; }
-  .home-right { order: -1; }                 /* on narrow screens the modes come first */
+  .home-right { order: -1; }
   .home-columns { grid-template-columns: 1fr; }
   .home-top-actions { position: static; justify-content: flex-end; margin-bottom: 0.5rem; }
   .home-left .us-map-holder { overflow-x: auto; }
@@ -3424,7 +2865,6 @@ body.dark-mode .home-map-hint { color: #fdeca6; text-shadow: 0 0 8px rgba(0,0,0,
 }
 
 
-/* ===== Play: Multiple-Choice answer buttons ===== */
 .mc-options { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.9rem auto 0; max-width: 560px; }
 .mc-options .mc-option { display: flex; align-items: center; gap: 0.6rem; text-align: left; padding: 0.7rem 0.9rem; font-size: 1.05rem; border-radius: 10px; border: 1px solid #ccc; background: #fafaf7; color: #111; cursor: pointer; }
 .mc-options .mc-option kbd { font: inherit; font-size: 0.75rem; opacity: 0.55; border: 1px solid currentColor; border-radius: 4px; padding: 0 0.3rem; }
@@ -3435,19 +2875,16 @@ body.dark-mode .mc-options .mc-option:hover:not(:disabled) { background: #36362f
 body.dark-mode .mc-options .mc-option.wrong { background: #4a2420; border-color: #e57368; color: #ffb4ab; }
 @media (max-width: 520px) { .mc-options { grid-template-columns: 1fr; } }
 
-/* Home must always get the wide card, even before any screen switch has happened */
 .app-container:has(#screen-home.active) { max-width: 96vw; width: 96vw; }
 .app-container:has(#screen-home.active) #screen-home { max-width: none; position: relative; }
 .home-right { padding-top: 2.6rem; }
 @media (max-width: 899px) { .home-right { padding-top: 0; } }
 
-/* Mode strips: Multiple-Choice green, All salmon pink (dark-mode variants so they aren't outranked) */
 .btn-mode.mode-mc { border-left-color: #4caf50; }
 .btn-mode.mode-all { border-left-color: #f4978e; }
 body.dark-mode .btn-mode.mode-mc { border-left-color: #6cc36a; }
 body.dark-mode .btn-mode.mode-all { border-left-color: #f28b82; }
 
-/* Inset boxes (Alaska, Hawaii, ...) are clickable anywhere inside */
 .us-map .us-box[data-key] { fill: transparent; pointer-events: all; cursor: pointer; }
 .us-map .us-box[data-key]:hover { stroke: #86a7c8; }
 .us-map .us-box.selected, .us-map .us-box.selected:hover { stroke: #e8892b; stroke-width: 2; }
@@ -3458,12 +2895,9 @@ body.dark-mode .us-map .us-box.selected, body.dark-mode .us-map .us-box.selected
 body.dark-mode .us-map .us-st.built.hover { fill: #5c7b99; }
 body.dark-mode .us-map .us-st.selected.hover { fill: #c9741f; }
 
-/* Home screen: anchor the card to the top so panels appearing below (exclude counties, skip checkbox,
-   the "selected states" list) never push everything else around. */
 body:has(#screen-home.active) { align-items: flex-start; box-sizing: border-box; padding: 1.5rem 0; }
-html:has(#screen-home.active) { scrollbar-gutter: stable; }   /* no sideways jump when a scrollbar appears */
+html:has(#screen-home.active) { scrollbar-gutter: stable; }
 
-/* One options card for "skip learned" + "exclude counties" (only shows when it has something to show) */
 .home-options { display: none; margin-top: 1rem; text-align: left; border: 1px solid #ddd; border-radius: 12px; background: #fafaf7; padding: 0.9rem 1.1rem; }
 .home-options:has(> :not(.hidden)) { display: block; }
 .home-options > :not(.hidden) + :not(.hidden) { margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid #e2e2e2; }
@@ -3476,21 +2910,18 @@ html:has(#screen-home.active) { scrollbar-gutter: stable; }   /* no sideways jum
 body.dark-mode .home-options { background: #242420; border-color: #3f3f38; }
 body.dark-mode .home-options > :not(.hidden) + :not(.hidden) { border-top-color: #3f3f38; }
 
-/* Options card: centered */
 .home-options { text-align: center; }
 .home-options .study-skip { justify-content: center; }
 .home-options .plain-prompt { text-align: center; }
 .home-options .radio-group { justify-content: center; }
 .home-options .checkbox-container { text-align: left; }
 
-/* Combined end-of-round page: score header over each carousel */
 .rs-section { margin-bottom: 1.1rem; }
 .rs-section .rs-head { margin-bottom: 0.5rem; }
 .rs-section .rs-label { padding-bottom: 0.3rem; }
 .rs-section .rs-big { font-size: 3rem; }
 .rs-section .rs-of { margin-bottom: 0.3rem; }
 
-/* Carousel scrollbar: slim and on-theme instead of the browser's white default */
 .rs-track { scrollbar-width: thin; scrollbar-color: #c9c4b0 transparent; }
 .rs-track::-webkit-scrollbar { height: 8px; }
 .rs-track::-webkit-scrollbar-track { background: rgba(0,0,0,0.06); border-radius: 8px; }
@@ -3501,12 +2932,10 @@ body.dark-mode .rs-track::-webkit-scrollbar-track { background: #242420; }
 body.dark-mode .rs-track::-webkit-scrollbar-thumb { background: #5c5a4a; }
 body.dark-mode .rs-track::-webkit-scrollbar-thumb:hover { background: #fdeca6; }
 
-/* Home notice under the Play/Learn button: a small muted warning chip, hidden when empty */
 #home-msg { min-height: 0; margin: 0.7rem 0 0; padding: 0.5rem 0.8rem; font-size: 0.85rem; line-height: 1.35; text-align: center; border-radius: 10px; color: #8a3b33; background: rgba(224, 115, 107, 0.12); border: 1px solid rgba(224, 115, 107, 0.35); }
 #home-msg:empty { display: none; }
 body.dark-mode #home-msg { color: #f2a69e; background: rgba(242, 139, 130, 0.1); border-color: rgba(242, 139, 130, 0.3); }
 
-/* Play | Learn switch above the progress tables */
 .stats-view-toggle { display: inline-flex; border: 1px solid #ccc; border-radius: 8px; overflow: hidden; margin: 0 0.6rem; }
 .stats-view-toggle button { border: 0; border-radius: 0; padding: 0.3rem 0.9rem; font-size: 0.85rem; cursor: pointer; background: #fafaf7; color: #333; }
 .stats-view-toggle button + button { border-left: 1px solid #ccc; }
@@ -3516,7 +2945,6 @@ body.dark-mode .stats-view-toggle button { background: #242420; color: #fdeca6; 
 body.dark-mode .stats-view-toggle button + button { border-left-color: #444; }
 body.dark-mode .stats-view-toggle button[aria-pressed="true"] { background: #c9741f; color: #fff; }
 
-/* ===== Progress tables: a real grid, sized to its columns instead of the whole page ===== */
 #screen-home > .state-stats-panel { max-width: 880px; margin-left: auto; margin-right: auto; }
 .stats-table-wrap { display: flex; justify-content: center; padding: 0.2rem 0 0.4rem; }
 .stats-table { width: auto; min-width: min(100%, 26rem); border-collapse: collapse; font-size: 0.82rem; border: 1px solid #cfcfc6; }
@@ -3524,7 +2952,7 @@ body.dark-mode .stats-view-toggle button[aria-pressed="true"] { background: #c97
 .stats-table thead th { background: #efeee6; border-bottom: 2px solid #c8c8bd; }
 .stats-table .stats-county-name { min-width: 9rem; background: #f6f5ef; }
 .stats-table .stats-summary-row td { background: #f3f1e8; border-bottom: 2px solid #c8c8bd; }
-.stats-table tbody tr:not(.stats-summary-row):hover td { background: #fff3d6; }   /* follow the row across */
+.stats-table tbody tr:not(.stats-summary-row):hover td { background: #fff3d6; }
 .stats-table .stats-check-cell { font-size: 1rem; font-weight: 700; }
 .stats-table .stats-check-cell.stats-yes { background: rgba(76, 175, 80, 0.14); }
 .stats-table .stats-check-cell.stats-retry { background: rgba(232, 137, 43, 0.16); }
@@ -3541,7 +2969,6 @@ body.dark-mode .stats-table .stats-check-cell.stats-retry { background: rgba(255
 body.dark-mode .stats-table tbody tr:not(.stats-summary-row):hover .stats-check-cell.stats-yes { background: rgba(129, 199, 132, 0.28); }
 body.dark-mode .stats-table tbody tr:not(.stats-summary-row):hover .stats-check-cell.stats-retry { background: rgba(255, 183, 77, 0.3); }
 
-/* Fix: long labels like "Completed (Retry Missed)" wrap instead of forcing the table to scroll sideways */
 .stats-table th, .stats-table td { white-space: normal; line-height: 1.25; }
 .stats-table .stats-county-name { white-space: nowrap; }
 .stats-table .stats-summary-cell { min-width: 6.2rem; }
@@ -3549,9 +2976,6 @@ body.dark-mode .stats-table tbody tr:not(.stats-summary-row):hover .stats-check-
 .stats-table-wrap { max-width: 100%; }
 #screen-home > .state-stats-panel { max-width: 960px; }
 
-/* ===== How to Play: Multiple-Choice demo ("You'll do" side) =====
-   A tiny copy of .mc-option buttons. 5s loop: the cursor clicks a WRONG answer (red, crossed out, like
-   .mc-option.wrong), then the RIGHT one (green with a check). Colours are variables so dark mode can swap them. */
 .mini-mc-box {
   --mc-bg: #fafaf7; --mc-bd: #ccc; --mc-fg: #111;
   --mc-wrong-bg: #f6d5d2; --mc-wrong-bd: #b3261e; --mc-wrong-fg: #7a1812;
@@ -3559,7 +2983,7 @@ body.dark-mode .stats-table tbody tr:not(.stats-summary-row):hover .stats-check-
   position: relative;
   width: 100%; max-width: 200px;
   grid-template-columns: 1fr 1fr; gap: 0.3rem;
-  container-type: inline-size;   /* lets the buttons size their text from this box's width (cqw below) */
+  container-type: inline-size;
 }
 body.dark-mode .mini-mc-box {
   --mc-bg: #2b2b26; --mc-bd: #444; --mc-fg: #fdeca6;
@@ -3569,7 +2993,6 @@ body.dark-mode .mini-mc-box {
   display: flex; align-items: center; gap: 0.3em; min-width: 0; overflow: hidden;
   padding: 0.3em 0.4em; border-radius: 7px; border: 1px solid var(--mc-bd);
   background: var(--mc-bg); color: var(--mc-fg);
-  /* Text scales with the box (so "Sonoma" always fits its button) and is capped at 0.62rem */
   font-size: clamp(0.45rem, 6.4cqw, 0.62rem); font-weight: 600; line-height: 1.1; white-space: nowrap;
 }
 .mini-mc-opt kbd {
@@ -3605,29 +3028,17 @@ body.dark-mode .mini-mc-cursor { fill: #fdeca6; }
   100%      { background: var(--mc-bg); border-color: var(--mc-bd); color: var(--mc-fg); }
 }
 
-/* Study: reserve room for the Next and Check buttons while a question is unanswered. They used to be
-   display:none until you answered, so they popped in and the (vertically centred) card jumped up to
-   make room. Now they're just invisible until needed. The feedback line already reserves its own
-   line (.study-feedback min-height). On the end-of-round summary there's no Next button, so that
-   case still collapses it. */
 #study-next.hidden,
 #study-submit.hidden { display: inline-block !important; visibility: hidden; transition: none; }
-/* ^ transition: none because the global "button { transition: all 0.2s }" also animates visibility,
-   which would keep the button on screen for a moment after it should disappear. */
 #study-run:has(> #study-summary:not(.hidden)) #study-next.hidden { display: none !important; }
 
-/* A wrong Pin answer says what the county was AND what you clicked, which wraps to two lines, so
-   reserve two lines for the answer feedback or the card shifts down when it appears. (Scoped to the
-   session screen; the state picker's own message line keeps its single line.) */
 #study-run .study-feedback { line-height: 1.4; min-height: 2.8em; }
 
-/* Learn progress view: a minimap per state, above its county table */
 .stats-minimap { margin: 0.4rem 0 0.7rem; text-align: center; }
 .stats-minimap .study-mini-map { max-height: 220px; margin-bottom: 0.3rem; }
 .stats-minimap-note { margin: 0; font-size: 0.78rem; opacity: 0.75; }
 
-/* ===== Manual deep zoom controls (see script.js) ===== */
-.zoom-scroller { touch-action: pan-x pan-y; }   /* we handle pinch ourselves */
+.zoom-scroller { touch-action: pan-x pan-y; }
 .zoom-scroller.zoom-deep .state-map.zoomed { cursor: default; }
 .zoom-scroller.zoom-panning, .zoom-scroller.zoom-panning .state-map.zoomed { cursor: grabbing !important; }
 .zoom-controls {
@@ -3650,19 +3061,11 @@ body.dark-mode .zoom-controls button:not(:disabled):hover { background: #3a3a35;
 .site-credits a { color: inherit; text-decoration: underline; pointer-events: auto; }
 
 
-/* ===== Learn: one-line prompt, hover names, replay escape ===== */
-/* The prompt stays on one line (script.js shrinks it to fit) and always reserves that line, so the card
-   is the same height on every question and the Next button stays put. It may use the card's full width. */
 #study-name { white-space: nowrap; min-height: 2rem; }
 .app-container.wide-study #study-run > #study-name.study-name { max-width: 100%; }
-/* Buttons that only matter after you answer stay in the layout, invisible, so answering moves nothing. */
-/* Hidden-but-still-in-the-layout (Next before you've answered). "transition: none" matters: buttons
-   have "transition: all 0.2s", and visibility transitions keep the old "visible" value until the end,
-   so without it Next lingered for 0.2s after you pressed it. */
 .study-pending { visibility: hidden; transition: none !important; }
 
 .locator-map.study-hover .county { pointer-events: auto; }
-/* Blue, so a hovered county never looks like the orange study target or the green county outlines. */
 .study-hover-layer .study-hover-clone,
 .study-hover-layer .study-hover-clone path {
   fill: rgba(30, 105, 220, 0.42);
@@ -3682,27 +3085,16 @@ body.dark-mode .study-hover-layer .study-hover-clone path {
   background: #1a1a1a; color: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 body.dark-mode .study-hover-tip { background: #f2ecd9; color: #1a1a1a; }
-/* "Back to results" gets its look from the .btn-back rules above (it isn't a real .btn-back because
-   script.js attaches a go-to-screen handler to every .btn-back). Here it's just centered, and when it's
-   showing, the "Back to home" link right under it tucks up close instead of keeping its own big margin. */
 .study-replay-back { display: block; margin: 0.7rem auto 0; }
 #screen-study:has(.study-replay-back:not(.hidden)) .study-back-run { margin-top: 0; }
-/* Buttons have "transition: all 0.2s", which made that margin change animate (Back to home sliding up,
-   or the whole card growing when Back to results goes away). Only the hover colors should ease. */
 .study-back-run { transition: color 0.2s ease, background-color 0.2s ease; }
 
-/* State maps are cropped exactly to the shape (their viewBox has no margin), and an SVG clips to its box by
-   default, so the outer half of every outline along the map's outer edge (e.g. Arizona's flat bottom) was cut
-   off, making those edges look thinner than the borders inside. Let the strokes spill out instead. */
 svg.state-map,
 svg.locator-map { overflow: visible; }
 
-/* State maps load on demand (see loadStateMap in script.js): show a busy cursor and stop the Play /
-   Learn button from being double-clicked while a map file is on its way. */
 body.maps-loading, body.maps-loading * { cursor: progress !important; }
 body.maps-loading #btn-start-game { opacity: 0.6; pointer-events: none; }
 
-/* Settings: a second Back button, top-left, so you don't have to scroll to the bottom to leave */
 #screen-settings { position: relative; }
 .settings-back-top { position: absolute; top: 0; left: 0; margin: 0; padding: 0.35rem 0.7rem; text-decoration: none; border: 1px solid #ccc; border-radius: 8px; background: #fafaf7; color: #444; font-size: 0.9rem; cursor: pointer; z-index: 2; }
 .settings-back-top::before { content: "\2190\00a0"; }
@@ -3710,19 +3102,13 @@ body.maps-loading #btn-start-game { opacity: 0.6; pointer-events: none; }
 body.dark-mode .settings-back-top { background: #242420; border-color: #444; color: #fdeca6; }
 body.dark-mode .settings-back-top:hover { background: #33332c; }
 
-/* Speed: with many states selected, the home screen's progress tables hold a row for every county.
-   content-visibility:auto lets the browser skip laying out and painting the tables that are scrolled
-   out of view (it still draws them as you scroll to them). The size is only a guess used until a
-   table has been drawn once; after that the browser remembers its real height. */
 .stats-table-wrap {
   content-visibility: auto;
   contain-intrinsic-size: auto 30rem;
 }
 
-/* State name: a small, quiet label so it's clear which state a map is. In study mode it sits under the
-   progress line; in play mode it's in the corner of each map tile. */
 .study-state {
-  text-align: center;   /* the heading and progress line above it are centered too */
+  text-align: center;
   margin: 0 0 0.35rem 0;
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 0.78rem;
@@ -3737,7 +3123,7 @@ body.high-contrast .study-state { color: #555; }
 body.dark-mode.high-contrast .study-state { color: #ddd; }
 
 .map-box.has-state-label {
-  padding-top: 1.7rem;   /* room for the label so it never sits on top of the map */
+  padding-top: 1.7rem;
 }
 .map-state-label {
   position: absolute;
@@ -3756,12 +3142,8 @@ body.dark-mode.high-contrast .study-state { color: #ddd; }
 body.dark-mode .map-state-label { color: #9a968a; }
 body.high-contrast .map-state-label { color: #555; }
 body.dark-mode.high-contrast .map-state-label { color: #ddd; }
-/* "Scale States by Size" removes the tile box (display: contents), so there's nowhere to put it, same as
-   the magnifier button above. */
 body.scale-states-by-size .map-state-label { display: none; }
 
-/* A setting that hangs off the one above it ("...except for Saint" under Require Diacritic Marks): indented,
-   with a small elbow line joining it to its parent. Greyed out and unclickable while the parent is off. */
 .setting-item.setting-sub {
   position: relative;
   margin-left: 1.6rem;
@@ -3785,20 +3167,16 @@ body.dark-mode .setting-item.setting-sub::before { border-color: #55524a; }
 }
 .setting-item.setting-sub.is-inactive input { cursor: not-allowed; }
 
-/* No divider line between a setting and the one hanging off it; the elbow connector takes its place. */
 .setting-item:has(+ .setting-sub) {
   border-bottom: none;
 }
 
-/* ...and none under the hanging setting either. */
 .setting-item.setting-sub {
   border-bottom: none;
 }
 
-/* A table-of-contents entry for a setting that hangs off the one above it is indented under it. */
 .toc-items li.toc-sub { margin-left: 0.8rem; }
 
-/* "(State)" in the prompt is a link to that state's map when several states are in play */
 #target-prompt .target-state-link {
   cursor: pointer;
   text-decoration: underline dotted;
@@ -3806,10 +3184,35 @@ body.dark-mode .setting-item.setting-sub::before { border-color: #55524a; }
 }
 #target-prompt .target-state-link:hover,
 #target-prompt .target-state-link:focus-visible { opacity: 1; text-decoration-style: solid; }
-/* pulse around the map you were just taken to */
 .map-jump-flash { animation: mapJumpFlash 1.8s ease-out; }
 @keyframes mapJumpFlash {
   0%   { outline: 5px solid #e8892b; outline-offset: 4px; }
   55%  { outline: 5px solid rgba(232, 137, 43, 0.75); outline-offset: 4px; }
   100% { outline: 5px solid rgba(232, 137, 43, 0); outline-offset: 4px; }
 }
+
+.speak-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  margin-left: 0.35rem;
+  padding: 0;
+  vertical-align: middle;
+  border: 1px solid rgba(128, 128, 128, 0.55);
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  opacity: 0.8;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+.speak-btn:hover { opacity: 1; background: rgba(128, 128, 128, 0.18); }
+.speak-btn:focus-visible { outline: 2px solid #4a90d9; outline-offset: 2px; opacity: 1; }
+.speak-btn.speaking { opacity: 1; background: rgba(74, 144, 217, 0.25); border-color: #4a90d9; }
+.speak-btn.speak-failed { border-color: #c0392b; color: #c0392b; opacity: 1; }
+.speak-btn.speak-test { border-style: dashed; }
+/* answered counties stay hoverable so their names show */
+.county.found{pointer-events:auto !important;}
