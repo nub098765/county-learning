@@ -912,7 +912,7 @@ function getPlainName(county) {
   return county ? county.name : "";
 }
 
-const AUDIO_PUBLIC = false;
+const AUDIO_PUBLIC = true;
 const AUDIO_DIR = "audio/";
 (function readAudioSwitch() {
   try {
