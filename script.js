@@ -832,6 +832,10 @@ let currentTarget = null;
 let scoreRight = 0;
 let scoreWrong = 0;
 let isGameActive = false;
+let startTime = 0;
+let updateHandle = null;
+let finalTime = 0;
+let pausedByTab = false;
 let missedCounties = new Set();
 let forfeitedCount = 0;
 let currentRunIsRetryMissed = false;
@@ -958,7 +962,6 @@ function audioSrcFor(county) {
 function speakerKind(county) {
   if (!audioFeatureOn() || !county) return null;
   if (audioSrcFor(county)) return "recording";
-  if (audioBetaOn() && window.speechSynthesis) return "test";
   return null;
 }
 const SPEAKER_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9v6h4l5 4V5L7 9H3z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
@@ -1111,7 +1114,7 @@ function readStoredJson(key, fallback) {
 
 let countyProgress = readStoredJson("countyProgress", {});
 let countyMistakes = readStoredJson("countyMistakes", {});
-let gameSettings = readStoredJson("gameSettings", {
+const DEFAULT_SETTINGS = {
   darkMode: false,
   highContrast: false,
   soundVolume: 50,
@@ -1128,12 +1131,40 @@ let gameSettings = readStoredJson("gameSettings", {
   showStateInPrompt: true,
   revealAnswerAfterMistakes: true,
   bestKnownCount: 5
-});
-if (gameSettings.instantTypeCheck === undefined) gameSettings.instantTypeCheck = true;
-if (gameSettings.hideStatsByDefault === undefined) gameSettings.hideStatsByDefault = true;
-if (gameSettings.listByState === undefined) gameSettings.listByState = true;
-if (gameSettings.sortStatesAlphabetically === undefined) gameSettings.sortStatesAlphabetically = true;
-if (gameSettings.showStateInPrompt === undefined) gameSettings.showStateInPrompt = true;
+};
+let gameSettings = { ...DEFAULT_SETTINGS, ...readStoredJson("gameSettings", {}) };
+function saveSettings() { localStorage.setItem("gameSettings", JSON.stringify(gameSettings)); }
+
+// One row per simple setting control: which element, which gameSettings key,
+// and what extra work to do after it changes. Used both to fill the controls
+// from saved settings (applySettings) and to wire up their change handlers.
+const asCheckbox = { read: el => el.checked, write: (el, v) => { el.checked = v; } };
+const asNumber   = { read: el => Number(el.value), write: (el, v) => { el.value = v; } };
+const asSelect   = { read: el => parseInt(el.value, 10) || 2, write: (el, v) => { el.value = String(v); } };
+const SETTING_CONTROLS = [
+  { id: "toggle-dark", key: "darkMode", ...asCheckbox, after: () => {
+      localStorage.setItem("darkMode", JSON.stringify(gameSettings.darkMode));
+      applySettings();
+  } },
+  { id: "toggle-contrast", key: "highContrast", ...asCheckbox, after: () => applySettings() },
+  { id: "slider-sound", key: "soundVolume", event: "input", ...asNumber },
+  { id: "toggle-speedrun", key: "speedrunMode", ...asCheckbox },
+  { id: "toggle-instant-check", key: "instantTypeCheck", ...asCheckbox },
+  { id: "toggle-hide-stats-default", key: "hideStatsByDefault", ...asCheckbox, after: () => renderStatsPanel() },
+  { id: "toggle-list-by-state", key: "listByState", ...asCheckbox, after: () => renderCountyListPanel() },
+  { id: "toggle-sort-states-alpha", key: "sortStatesAlphabetically", ...asCheckbox, after: () => {
+      renderCountyCheckboxes(); renderStatsPanel(); applyMapDomOrder();
+  } },
+  { id: "toggle-scale-states-by-size", key: "scaleStatesBySize", ...asCheckbox, after: () => updateMapLayoutMode() },
+  { id: "toggle-dividers-for-few-states", key: "useDividersForFewStates", ...asCheckbox, after: () => updateMapLayoutMode() },
+  { id: "select-states-per-row", key: "statesPerRow", ...asSelect, after: () => updateMapGridColumns() },
+  { id: "toggle-require-diacritics", key: "requireDiacritics", ...asCheckbox, after: () => {
+      syncStAbbrevSettingUI(); refreshSpecialCharsBar();
+  } },
+  { id: "toggle-accept-st-abbrev", key: "acceptStAbbrev", ...asCheckbox },
+  { id: "toggle-show-state-in-prompt", key: "showStateInPrompt", ...asCheckbox, after: () => { if (isGameActive) refreshTargetPrompt(false); } },
+  { id: "toggle-reveal-answer", key: "revealAnswerAfterMistakes", ...asCheckbox },
+];
 if (gameSettings.revealAnswerAfterMistakes === undefined) gameSettings.revealAnswerAfterMistakes = true;
 if (gameSettings.scaleStatesBySize === undefined) gameSettings.scaleStatesBySize = false;
 if (gameSettings.useDividersForFewStates === undefined) gameSettings.useDividersForFewStates = true;
@@ -1220,6 +1251,7 @@ const inputBestKnownCount = document.getElementById("input-best-known-count");
 
 
 const progressCounter = document.getElementById("progress-counter");
+const gameStopwatch = document.getElementById("game-stopwatch");
 const targetPrompt = document.getElementById("target-prompt");
 const feedbackEl = document.getElementById("feedback");
 const typeInputBox = document.getElementById("type-input-box");
@@ -1781,6 +1813,7 @@ function openSettings(returnScreen, returnOverlay = null) {
 
 const modalSummary = document.getElementById("modal-summary");
 const summaryPercentage = document.getElementById("summary-percentage");
+const finalTimeElement = document.getElementById("final-time");
 const summaryGradeTitle = document.getElementById("summary-grade-title");
 const summaryMessage = document.getElementById("summary-message");
 const summaryMissedSection = document.getElementById("summary-missed-section");
@@ -1837,22 +1870,11 @@ const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)");
 
 
 function applySettings() {
-  if (toggleDark) toggleDark.checked = gameSettings.darkMode;
-  if (toggleContrast) toggleContrast.checked = gameSettings.highContrast;
-  if (sliderSound) sliderSound.value = gameSettings.soundVolume;
-  if (toggleSpeedrun) toggleSpeedrun.checked = gameSettings.speedrunMode;
-  if (toggleInstantCheck) toggleInstantCheck.checked = gameSettings.instantTypeCheck;
-  if (toggleHideStatsDefault) toggleHideStatsDefault.checked = gameSettings.hideStatsByDefault;
-  if (toggleListByState) toggleListByState.checked = gameSettings.listByState;
-  if (toggleSortStatesAlpha) toggleSortStatesAlpha.checked = gameSettings.sortStatesAlphabetically;
-  if (toggleScaleStatesBySize) toggleScaleStatesBySize.checked = gameSettings.scaleStatesBySize;
-  if (toggleDividersForFewStates) toggleDividersForFewStates.checked = gameSettings.useDividersForFewStates;
-  if (selectStatesPerRow) selectStatesPerRow.value = String(gameSettings.statesPerRow);
-  if (toggleRequireDiacritics) toggleRequireDiacritics.checked = gameSettings.requireDiacritics;
-  if (toggleAcceptStAbbrev) toggleAcceptStAbbrev.checked = gameSettings.acceptStAbbrev;
+  SETTING_CONTROLS.forEach(c => {
+    const el = document.getElementById(c.id);
+    if (el) c.write(el, gameSettings[c.key]);
+  });
   syncStAbbrevSettingUI();
-  if (toggleShowStateInPrompt) toggleShowStateInPrompt.checked = gameSettings.showStateInPrompt;
-  if (toggleRevealAnswerAfterMistakes) toggleRevealAnswerAfterMistakes.checked = gameSettings.revealAnswerAfterMistakes;
   if (inputBestKnownCount) inputBestKnownCount.value = String(gameSettings.bestKnownCount);
   updateBestKnownButtonLabel();
 
@@ -2673,103 +2695,15 @@ modeButtons.forEach(btn => {
 });
 
 
-if (toggleDark) {
-  toggleDark.addEventListener("change", (e) => {
-    gameSettings.darkMode = e.target.checked;
-    localStorage.setItem("darkMode", JSON.stringify(gameSettings.darkMode));
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    applySettings();
+SETTING_CONTROLS.forEach(c => {
+  const el = document.getElementById(c.id);
+  if (!el) return;
+  el.addEventListener(c.event || "change", () => {
+    gameSettings[c.key] = c.read(el);
+    saveSettings();
+    if (c.after) c.after();
   });
-}
-
-
-if (toggleContrast) {
-  toggleContrast.addEventListener("change", (e) => {
-    gameSettings.highContrast = e.target.checked;
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    applySettings();
-  });
-}
-
-
-if (sliderSound) {
-  sliderSound.addEventListener("input", (e) => {
-    gameSettings.soundVolume = Number(e.target.value);
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-  });
-}
-
-
-if (toggleSpeedrun) {
-  toggleSpeedrun.addEventListener("change", (e) => {
-    gameSettings.speedrunMode = e.target.checked;
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-  });
-}
-
-
-if (toggleInstantCheck) {
-  toggleInstantCheck.addEventListener("change", (e) => {
-    gameSettings.instantTypeCheck = e.target.checked;
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-  });
-}
-
-
-if (toggleHideStatsDefault) {
-  toggleHideStatsDefault.addEventListener("change", (e) => {
-    gameSettings.hideStatsByDefault = e.target.checked;
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    renderStatsPanel();
-  });
-}
-
-
-if (toggleListByState) {
-  toggleListByState.addEventListener("change", (e) => {
-    gameSettings.listByState = e.target.checked;
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    renderCountyListPanel();
-  });
-}
-
-
-if (toggleSortStatesAlpha) {
-  toggleSortStatesAlpha.addEventListener("change", (e) => {
-    gameSettings.sortStatesAlphabetically = e.target.checked;
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    renderCountyCheckboxes();
-    renderStatsPanel();
-    applyMapDomOrder();
-  });
-}
-
-
-if (toggleScaleStatesBySize) {
-  toggleScaleStatesBySize.addEventListener("change", (e) => {
-    gameSettings.scaleStatesBySize = e.target.checked;
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    updateMapLayoutMode();
-  });
-}
-
-
-if (toggleDividersForFewStates) {
-  toggleDividersForFewStates.addEventListener("change", (e) => {
-    gameSettings.useDividersForFewStates = e.target.checked;
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    updateMapLayoutMode();
-  });
-}
-
-
-if (selectStatesPerRow) {
-  selectStatesPerRow.addEventListener("change", (e) => {
-    gameSettings.statesPerRow = parseInt(e.target.value, 10) || 2;
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    updateMapGridColumns();
-  });
-}
+});
 
 
 function updateBestKnownButtonLabel() {
@@ -2781,7 +2715,7 @@ if (inputBestKnownCount) {
     const n = parseInt(inputBestKnownCount.value, 10);
     if (Number.isInteger(n) && n >= 1) {
       gameSettings.bestKnownCount = n;
-      localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
+      saveSettings();
       updateBestKnownButtonLabel();
       if (final) inputBestKnownCount.value = String(n);
     } else if (final) {
@@ -2794,42 +2728,15 @@ if (inputBestKnownCount) {
 }
 
 
-if (toggleRequireDiacritics) {
-  toggleRequireDiacritics.addEventListener("change", (e) => {
-    gameSettings.requireDiacritics = e.target.checked;
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    syncStAbbrevSettingUI();
-    refreshSpecialCharsBar();
-  });
-}
 
 function syncStAbbrevSettingUI() {
   if (toggleAcceptStAbbrev) toggleAcceptStAbbrev.disabled = !gameSettings.requireDiacritics;
   if (settingAcceptStAbbrev) settingAcceptStAbbrev.classList.toggle("is-inactive", !gameSettings.requireDiacritics);
 }
-if (toggleAcceptStAbbrev) {
-  toggleAcceptStAbbrev.addEventListener("change", (e) => {
-    gameSettings.acceptStAbbrev = e.target.checked;
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-  });
-}
 
 
-if (toggleShowStateInPrompt) {
-  toggleShowStateInPrompt.addEventListener("change", (e) => {
-    gameSettings.showStateInPrompt = e.target.checked;
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-    if (isGameActive) refreshTargetPrompt(false);
-  });
-}
 
 
-if (toggleRevealAnswerAfterMistakes) {
-  toggleRevealAnswerAfterMistakes.addEventListener("change", (e) => {
-    gameSettings.revealAnswerAfterMistakes = e.target.checked;
-    localStorage.setItem("gameSettings", JSON.stringify(gameSettings));
-  });
-}
 
 
 if (btnResetProgress) {
@@ -3799,6 +3706,7 @@ if (btnStartGame) {
 if (btnQuitGame) {
   btnQuitGame.addEventListener("click", () => {
     isGameActive = false;
+    stopStopwatch();
     if (modalSummary) modalSummary.classList.add("hidden");
     if (admireBar) admireBar.classList.add("hidden");
     showScreen("screen-home");
@@ -3844,6 +3752,7 @@ function giveUp() {
   targetPool = [];
   currentTarget = null;
   isGameActive = false;
+  stopStopwatch();
 
   if (typeInputBox) typeInputBox.classList.add("hidden");
   if (mcOptions) mcOptions.classList.add("hidden");
@@ -3910,10 +3819,12 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   originalTargetList = [...targetPool];
   scoreRight = 0;
   scoreWrong = 0;
+  startStopwatch();
   isGameActive = true;
   missedCounties.clear();
   forfeitedCount = 0;
   currentAttemptMistakes = 0;
+
   currentRunIsRetryMissed = isRetryMissedRun;
       ambiguousCountyNames = computeAmbiguousNames(getActiveCountiesPool());
 
@@ -3926,14 +3837,13 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   }
   hideHoverTooltip();
 
-
   if (btnToggleCountyList) {
     btnToggleCountyList.classList.toggle("hidden", selectedMode !== "type");
     btnToggleCountyList.textContent = "Show List";
   }
   if (countyListPanel) countyListPanel.classList.add("hidden");
   if (btnForfeitTarget) btnForfeitTarget.classList.toggle("hidden", selectedMode === "type");
-
+  if (gameStopwatch) gameStopwatch.classList.toggle("hidden", selectedMode === "type" || !gameSettings.speedrunMode);
 
   countyPaths.forEach(path => {
     path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered", "typing-highlight", "given-up-missed");
@@ -3953,6 +3863,58 @@ function updateProgressCounter() {
   const found = totalTargetsCount - targetPool.length - forfeitedCount;
   progressCounter.textContent = `${found}/${totalTargetsCount}`;
 }
+
+function startStopwatch(resume = false) {
+  if (resume) {
+    startTime = performance.now() - finalTime;
+  } else {
+    startTime = performance.now();
+    finalTime = 0;
+  }
+  if (updateHandle) cancelAnimationFrame(updateHandle);
+  function update() {
+    const elapsed = performance.now() - startTime;
+    finalTime = elapsed;
+    if (gameStopwatch) {
+      const minutes = Math.floor(elapsed / 60000);
+      const seconds = Math.floor((elapsed % 60000) / 1000);
+      const milliseconds = Math.floor(elapsed % 1000);
+      gameStopwatch.textContent = `${minutes}:${seconds.toString().padStart(2, "0")}.${milliseconds.toString().padStart(3, "0")}`;
+    }
+    updateHandle = requestAnimationFrame(update);
+  }
+  update();
+}
+
+function stopStopwatch() {
+  if (updateHandle) {
+    finalTime = performance.now() - startTime;
+    if (gameStopwatch) {
+      const minutes = Math.floor(finalTime / 60000);
+      const seconds = Math.floor((finalTime % 60000) / 1000);
+      const milliseconds = Math.floor(finalTime % 1000);
+      gameStopwatch.textContent = `${minutes}:${seconds.toString().padStart(2, "0")}.${milliseconds.toString().padStart(3, "0")}`;
+    }
+    cancelAnimationFrame(updateHandle);
+    updateHandle = null;
+  }
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && updateHandle) {
+    pausedByTab = true;
+    stopStopwatch();
+  }
+  if (!document.hidden) {
+    if (pausedByTab && isGameActive) {
+      pausedByTab = false;
+      startStopwatch(true);
+    }
+  }
+  else if (pausedByTab) {
+    pausedByTab = false;
+    startStopwatch(resume);
+  }
+});
 
 function renderCountyListPanel() {
   if (!countyListItems) return;
@@ -4187,6 +4149,7 @@ function pickNextTarget() {
 
   if (targetPool.length === 0) {
     isGameActive = false;
+    stopStopwatch();
     if (mcOptions) mcOptions.classList.add("hidden");
     showSummaryModal();
     return;
@@ -4576,6 +4539,12 @@ function bindCountyInteractivity(path) {
 
 countyPaths.forEach(bindCountyInteractivity);
 
+function formatTime(ms) {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  const milliseconds = Math.floor(ms % 1000);
+  return `${minutes}:${seconds.toString().padStart(2, "0")}.${milliseconds.toString().padStart(3, "0")}`;
+}
 
 function showSummaryModal() {
   if (!modalSummary) return;
@@ -4586,6 +4555,7 @@ function showSummaryModal() {
 
 
   if (summaryPercentage) summaryPercentage.textContent = `${accuracy}%`;
+  if (finalTimeElement) finalTimeElement.textContent = formatTime(finalTime), finalTimeElement.classList.toggle("hidden", selectedMode === "type" || !gameSettings.speedrunMode);
 
 
   if (summaryGradeTitle) {

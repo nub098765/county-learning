@@ -1587,7 +1587,18 @@ body.dark-mode #type-input {
 body.dark-mode .progress-counter {
  color: #7bc47f;
 }
-
+.game-stopwatch {
+ font-family: system-ui, -apple-system, sans-serif;
+ font-size: 1.1rem;
+ font-weight: 700;
+ letter-spacing: 0.5px;
+ font-variant-numeric: tabular-nums;
+ color: #4a7c59;
+ margin: 0 0 0.25rem 0;
+}
+body.dark-mode .game-stopwatch {
+ color: #7bc47f;
+}
 
 #target-prompt {
  font-family: 'Roboto Serif', Georgia, serif;
@@ -3216,3 +3227,24 @@ body.dark-mode .setting-item.setting-sub::before { border-color: #55524a; }
 .speak-btn.speak-test { border-style: dashed; }
 /* answered counties stay hoverable so their names show */
 .county.found{pointer-events:auto !important;}
+
+#final-time {
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #4a7c59;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  border-top: 3px solid #202020;
+  padding-top: 0.5rem;
+  text-align: center;
+}
+
+#summary-result {
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}

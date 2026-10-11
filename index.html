@@ -147,7 +147,7 @@
              <a href="#settings-group-specific-modes" class="toc-section-link">Specific Modes</a>
            </div>
            <ul class="toc-items" id="toc-items-specific-modes">
-             <li><a href="#setting-speedrun" class="toc-item-link">Speedrun Mode (Pin modes)</a></li>
+             <li><a href="#setting-speedrun" class="toc-item-link">Speedrun Mode</a></li>
              <li><a href="#setting-instant-check" class="toc-item-link">Instant Check (Type modes)</a></li>
              <li><a href="#setting-list-by-state" class="toc-item-link">Group Checklist by State (List mode)</a></li>
              <li><a href="#setting-require-diacritics" class="toc-item-link">Require Exact Spelling (Type modes)</a></li>
@@ -270,16 +270,15 @@
          </select>
        </div>
 
-
-       <h3 id="settings-group-specific-modes" class="settings-group-title">Specific Modes</h3>
-
        <div class="setting-item" id="setting-speedrun">
          <div class="setting-text">
-           <label for="toggle-speedrun">Speedrun Mode (Pin modes)</label>
-           <p class="setting-desc">Register a guess the instant you press down on a county, instead of waiting for you to release.</p>
+           <label for="toggle-speedrun">Speedrun Mode</label>
+           <p class="setting-desc">For all modes except List, add a stopwatch. For pin modes, register a guess the instant you press down on a county, instead of waiting for you to release.</p>
          </div>
          <input type="checkbox" id="toggle-speedrun">
        </div>
+
+       <h3 id="settings-group-specific-modes" class="settings-group-title">Specific Modes</h3>
 
 
        <div class="setting-item" id="setting-instant-check">
@@ -717,6 +716,7 @@
 
    <div class="prompt-box">
      <p id="progress-counter" class="progress-counter" aria-live="polite"></p>
+     <p id="game-stopwatch" class="game-stopwatch hidden" aria-hidden="true">0:00.000</p>
      <p id="target-prompt">Ready?</p>
      <p id="feedback" aria-live="polite"></p>
      <div id="mc-options" class="mc-options hidden" role="group" aria-label="Answer choices"></div>
@@ -940,7 +940,8 @@
 <div id="modal-summary" class="modal hidden">
  <div class="modal-content">
    <h2 id="summary-grade-title">Good job!</h2>
-   <div id="summary-percentage">100%</div>
+   <div id="summary-result"><div id="summary-percentage">100%</div>
+   <p id="final-time" class="final-time">0:00.000</p></div>
    <p id="summary-message">You've learned all the counties!</p>
    <div id="summary-missed-section" class="summary-missed-section hidden">
      <h3>What you missed</h3>
