@@ -4963,7 +4963,7 @@ if (btnAdmireHome) {
     const yes = document.querySelector('input[name="specific-counties"]:checked');
     const excluded = new Set(yes && yes.value === "yes" ? [...document.querySelectorAll(".county-checkbox:checked")].map(cb => cb.value) : []);
     try { await ensureStateMaps(activeStateKeys); }
-    catch (err) { msg.textContent = "Couldn't load the map data. Make sure the maps folder is next to index.html, then try again."; return; }
+    catch (err) { msg.textContent = "Couldn't load the map data."; return; }
     const ok = window.startStudyFromHome(chosen.mode, activeStateKeys.slice(), skip.checked, excluded);
     if (!ok) msg.textContent = `You've already learned every county here ${chosen.mode === "all" ? "in all three Learn modes" : "in " + ({ pin: "Pin", mc: "Multiple-Choice", type: "Type" })[chosen.mode]}. Untick \u201CSkip counties I've already learned\u201D to review them.`;
   }, true);
