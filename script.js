@@ -833,6 +833,7 @@ let scoreRight = 0;
 let scoreWrong = 0;
 let isGameActive = false;
 let startTime = 0;
+let lastRunWasNewBest = false;
 let updateHandle = null;
 let finalTime = 0;
 let pausedByTab = false;
@@ -1114,6 +1115,7 @@ function readStoredJson(key, fallback) {
 
 let countyProgress = readStoredJson("countyProgress", {});
 let countyMistakes = readStoredJson("countyMistakes", {});
+let perfectTimes = readStoredJson("perfectTimes", {});
 const DEFAULT_SETTINGS = {
   darkMode: false,
   highContrast: false,
@@ -1130,6 +1132,7 @@ const DEFAULT_SETTINGS = {
   acceptStAbbrev: true,
   showStateInPrompt: true,
   revealAnswerAfterMistakes: true,
+  showStopwatch: true,
   bestKnownCount: 5
 };
 let gameSettings = { ...DEFAULT_SETTINGS, ...readStoredJson("gameSettings", {}) };
@@ -1149,6 +1152,7 @@ const SETTING_CONTROLS = [
   { id: "toggle-contrast", key: "highContrast", ...asCheckbox, after: () => applySettings() },
   { id: "slider-sound", key: "soundVolume", event: "input", ...asNumber },
   { id: "toggle-speedrun", key: "speedrunMode", ...asCheckbox },
+  { id: "toggle-stopwatch", key: "showStopwatch", ...asCheckbox },
   { id: "toggle-instant-check", key: "instantTypeCheck", ...asCheckbox },
   { id: "toggle-hide-stats-default", key: "hideStatsByDefault", ...asCheckbox, after: () => renderStatsPanel() },
   { id: "toggle-list-by-state", key: "listByState", ...asCheckbox, after: () => renderCountyListPanel() },
@@ -1211,6 +1215,11 @@ function getOrderedStateKeys() {
 const screens = document.querySelectorAll(".screen");
 const btnGotoModes = document.getElementById("btn-goto-modes");
 const btnGotoSettings = document.getElementById("btn-goto-settings");
+const btnGotoRecords = document.getElementById("btn-goto-records");
+const recordsList = document.getElementById("records-list");
+const recordsEmpty = document.getElementById("records-empty");
+const recordsSort = document.getElementById("records-sort");
+const recordsTimesSort = document.getElementById("records-times-sort");
 const backButtons = document.querySelectorAll(".btn-back");
 const modeButtons = document.querySelectorAll(".btn-mode[data-mode]");
 
@@ -1234,6 +1243,7 @@ const toggleDark = document.getElementById("toggle-dark");
 const toggleContrast = document.getElementById("toggle-contrast");
 const sliderSound = document.getElementById("slider-sound");
 const toggleSpeedrun = document.getElementById("toggle-speedrun");
+const toggleStopwatch = document.getElementById("toggle-stopwatch");
 const toggleInstantCheck = document.getElementById("toggle-instant-check");
 const toggleHideStatsDefault = document.getElementById("toggle-hide-stats-default");
 const toggleListByState = document.getElementById("toggle-list-by-state");
@@ -1814,6 +1824,8 @@ function openSettings(returnScreen, returnOverlay = null) {
 const modalSummary = document.getElementById("modal-summary");
 const summaryPercentage = document.getElementById("summary-percentage");
 const finalTimeElement = document.getElementById("final-time");
+const bestTimeElement = document.getElementById("best-time");
+const recentTimesElement = document.getElementById("recent-times");
 const summaryGradeTitle = document.getElementById("summary-grade-title");
 const summaryMessage = document.getElementById("summary-message");
 const summaryMissedSection = document.getElementById("summary-missed-section");
@@ -3819,7 +3831,8 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   originalTargetList = [...targetPool];
   scoreRight = 0;
   scoreWrong = 0;
-  startStopwatch();
+  lastRunWasNewBest = false;
+  startStopwatch(isRetryMissedRun);
   isGameActive = true;
   missedCounties.clear();
   forfeitedCount = 0;
@@ -3843,7 +3856,7 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   }
   if (countyListPanel) countyListPanel.classList.add("hidden");
   if (btnForfeitTarget) btnForfeitTarget.classList.toggle("hidden", selectedMode === "type");
-  if (gameStopwatch) gameStopwatch.classList.toggle("hidden", selectedMode === "type" || !gameSettings.speedrunMode);
+  if (gameStopwatch) gameStopwatch.classList.toggle("hidden", selectedMode === "type" || !gameSettings.showStopwatch);
 
   countyPaths.forEach(path => {
     path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered", "typing-highlight", "given-up-missed");
@@ -3852,7 +3865,6 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
     path.setAttribute("role", "button");
     path.setAttribute("aria-label", "County path");
   });
-
 
   pickNextTarget();
 }
@@ -3899,22 +3911,167 @@ function stopStopwatch() {
     updateHandle = null;
   }
 }
+
+function bestTimeKey() {
+  return `${[...activeStateKeys].sort().join(",")}|${selectedMode}|${selectedCounties.length}`;
+}
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && updateHandle) {
     pausedByTab = true;
     stopStopwatch();
   }
+
   if (!document.hidden) {
     if (pausedByTab && isGameActive) {
-      pausedByTab = false;
       startStopwatch(true);
     }
-  }
-  else if (pausedByTab) {
     pausedByTab = false;
-    startStopwatch(resume);
   }
 });
+
+const RECORD_MODE_LABELS = {
+  pin: "Pin",
+  "pin-hard": "Flash",
+  mc: "Multiple Choice",
+  "type-hard": "Type",
+  "type-strict": "Verbatim"
+};
+
+const RECORD_MODE_CLASS = {
+  pin: "pin",
+  "pin-hard": "pin",
+  mc: "mc",
+  "type-hard": "type",
+  "type-strict": "type",
+  type: "list"
+};
+
+function parseRecordKey(key) {
+  const [states, mode, count] = key.split("|");
+  return {
+  mode,
+  stateNames: states.split(",").map(k => stateData[k]?.name || k).join(", "),
+  modeLabel: RECORD_MODE_LABELS[mode] || mode,
+  count: Number(count)
+};
+}
+function sortRuns(runs) {
+  const how = recordsTimesSort ? recordsTimesSort.value : "newest";
+  const copy = [...runs];
+  if (how === "fastest") return copy.sort((a, b) => a.time - b.time);
+  if (how === "oldest") return copy;
+  return copy.reverse();
+}
+
+function renderRecords() {
+  if (!recordsList) return;
+
+  const openKeys = new Set(
+    [...recordsList.querySelectorAll("details[open]")].map(d => d.dataset.key)
+  );
+  recordsList.replaceChildren();
+
+  const groups = new Map();
+  for (const [key, runs] of Object.entries(perfectTimes)) {
+    if (!runs || !runs.length) continue;
+    const info = parseRecordKey(key);
+    const stateKey = key.split("|")[0];
+    if (!groups.has(stateKey)) {
+      groups.set(stateKey, { stateNames: info.stateNames, sections: [], last: 0, total: 0 });
+    }
+    const g = groups.get(stateKey);
+    g.sections.push({ key, runs, ...info, best: Math.min(...runs.map(r => r.time)) });
+    g.last = Math.max(g.last, runs[runs.length - 1].date);
+    g.total += runs.length;
+  }
+
+  const groupList = [...groups.values()];
+  const sortBy = recordsSort ? recordsSort.value : "recent";
+  groupList.sort((a, b) => {
+    if (sortBy === "state") return a.stateNames.localeCompare(b.stateNames);
+    if (sortBy === "runs") return b.total - a.total || a.stateNames.localeCompare(b.stateNames);
+    return b.last - a.last;
+  });
+
+  if (recordsEmpty) recordsEmpty.classList.toggle("hidden", groupList.length > 0);
+
+  const modeOrder = Object.keys(RECORD_MODE_LABELS);
+
+  for (const g of groupList) {
+    g.sections.sort((a, b) => modeOrder.indexOf(a.mode) - modeOrder.indexOf(b.mode) || b.count - a.count);
+
+    const card = document.createElement("section");
+    card.className = "record-state-card";
+
+        const sameCount = new Set(g.sections.map(s => s.count)).size === 1;
+
+    const title = document.createElement("h3");
+    title.className = "record-state-title";
+    title.textContent = g.stateNames;
+    if (sameCount) {
+      const n = g.sections[0].count;
+      const countEl = document.createElement("span");
+      countEl.className = "record-count";
+      countEl.textContent = `${n} ${n === 1 ? "county" : "counties"}`;
+      title.append(countEl);
+    }
+    card.append(title);
+
+    for (const s of g.sections) {
+      const sec = document.createElement("details");
+      sec.className = "record-section";
+      sec.dataset.key = s.key;
+      sec.open = openKeys.has(s.key);
+
+      const summary = document.createElement("summary");
+
+      const meta = document.createElement("div");
+      meta.className = "record-meta";
+      const mode = document.createElement("span");
+      mode.className = "record-mode " + (RECORD_MODE_CLASS[s.mode] || "");
+      mode.textContent = s.modeLabel;
+      const size = document.createElement("span");
+      size.className = "record-count";
+      size.textContent = `${s.count} ${s.count === 1 ? "county" : "counties"}`;
+      meta.append(mode);
+      if (!sameCount) meta.append(size);
+
+      const bestEl = document.createElement("span");
+      bestEl.className = "record-best";
+      bestEl.textContent = formatTime(s.best);
+
+      summary.append(meta, bestEl);
+
+      const list = document.createElement("ul");
+      list.className = "record-runs";
+      for (const run of sortRuns(s.runs)) {
+        const li = document.createElement("li");
+        if (run.time === s.best) li.classList.add("is-best");
+        const when = document.createElement("span");
+        when.textContent = new Date(run.date).toLocaleString([], { dateStyle: "medium", timeStyle: "medium" });
+        const time = document.createElement("span");
+        time.textContent = formatTime(run.time);
+        li.append(when, time);
+        list.append(li);
+      }
+
+      sec.append(summary, list);
+      card.append(sec);
+    }
+
+    recordsList.append(card);
+  }
+}
+
+if (recordsSort) recordsSort.addEventListener("change", renderRecords);
+if (recordsTimesSort) recordsTimesSort.addEventListener("change", renderRecords);
+
+if (btnGotoRecords) {
+  btnGotoRecords.addEventListener("click", () => {
+    renderRecords();
+    showScreen("screen-records");
+  });
+}
 
 function renderCountyListPanel() {
   if (!countyListItems) return;
@@ -4151,6 +4308,16 @@ function pickNextTarget() {
     isGameActive = false;
     stopStopwatch();
     if (mcOptions) mcOptions.classList.add("hidden");
+    if (scoreWrong === 0 && !currentRunIsRetryMissed && forfeitedCount === 0) {
+  const key = bestTimeKey();
+  perfectTimes[key] = perfectTimes[key] || [];
+  const previousBest = perfectTimes[key].length
+    ? Math.min(...perfectTimes[key].map(r => r.time))
+    : null;
+  lastRunWasNewBest = previousBest !== null && finalTime < previousBest;
+  perfectTimes[key].push({ time: finalTime, date: Date.now() });
+  localStorage.setItem("perfectTimes", JSON.stringify(perfectTimes));
+}
     showSummaryModal();
     return;
   }
@@ -4555,7 +4722,26 @@ function showSummaryModal() {
 
 
   if (summaryPercentage) summaryPercentage.textContent = `${accuracy}%`;
-  if (finalTimeElement) finalTimeElement.textContent = formatTime(finalTime), finalTimeElement.classList.toggle("hidden", selectedMode === "type" || !gameSettings.speedrunMode);
+  if (finalTimeElement) finalTimeElement.textContent = formatTime(finalTime), finalTimeElement.classList.toggle("hidden", selectedMode === "type" || !gameSettings.showStopwatch);
+
+  const runs = perfectTimes[bestTimeKey()] || [];
+const hideTimes = selectedMode === "type" || !gameSettings.showStopwatch || runs.length === 0;
+
+if (bestTimeElement) {
+  bestTimeElement.classList.toggle("hidden", hideTimes);
+  if (!hideTimes) {
+    const best = Math.min(...runs.map(r => r.time));
+    bestTimeElement.textContent = lastRunWasNewBest ? "New best!" : `Best: ${formatTime(best)}`;
+  }
+}
+
+if (recentTimesElement) {
+  recentTimesElement.classList.toggle("hidden", hideTimes);
+  if (!hideTimes) {
+    recentTimesElement.textContent =
+      "Recent: " + runs.slice(-5).reverse().map(r => formatTime(r.time)).join("  ·  ");
+  }
+}
 
 
   if (summaryGradeTitle) {

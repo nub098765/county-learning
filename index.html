@@ -44,6 +44,7 @@
    <div class="home-top-actions">
      <button type="button" class="icon-btn" data-open-report aria-label="Report a bug" title="Report a bug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="14.2" rx="5" ry="6.3"/><path d="M9.6 8.4a2.4 2.4 0 0 1 4.8 0M12 8v12.4M10 6.4 8.3 4M14 6.4 15.7 4M7 11.5H3.5M7.2 15.5H4M7.9 19.2l-2.4 2M17 11.5h3.5M16.8 15.5H20M16.1 19.2l2.4 2"/></svg></button>
      <button type="button" id="btn-goto-settings" class="icon-btn" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+     <button type="button" id="btn-goto-records" class="icon-btn" aria-label="Records" title="Records"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h11M4 18h6"/></svg></button>
    </div>
    <div id="home-layout" class="home-layout no-mode">
      <div class="home-left">
@@ -104,10 +105,30 @@
  </section>
 
 
-
+<section id="screen-records" class="screen">
+  <button type="button" class="btn-back" data-target="screen-home">Back to home</button>
+  <h2>Records</h2>
+  <p class="records-intro">Your fastest perfect runs. Only games with no wrong guesses are saved, and Retry Missed runs don't count. Click a mode to see every run.</p>
+  <p id="records-empty" class="records-empty">No records yet. Finish a game with no mistakes to set one.</p>
+  <div class="records-toolbar">
+  <label for="records-sort">Sort states</label>
+<select id="records-sort">
+  <option value="recent">Recently played</option>
+  <option value="state">State (A–Z)</option>
+  <option value="runs">Most played</option>
+</select>
+  <label for="records-times-sort">Sort times</label>
+  <select id="records-times-sort">
+    <option value="newest">Newest first</option>
+    <option value="oldest">Oldest first</option>
+    <option value="fastest">Fastest first</option>
+  </select>
+</div>
+  <div id="records-list"></div>
+</section>
 
  <section id="screen-settings" class="screen">
-   <button type="button" class="btn-back settings-back-top">Back to Home</button>
+   <button type="button" class="btn-back settings-back-top">Back to home</button>
    <h2>Settings</h2>
 
    <div class="settings-layout">
@@ -133,7 +154,8 @@
              <a href="#settings-group-in-game" class="toc-section-link">In-Game</a>
            </div>
            <ul class="toc-items" id="toc-items-in-game">
-             <li><a href="#setting-sort-states-alpha" class="toc-item-link">Sort States Alphabetically</a></li>
+             <li><a href="#setting-stopwatch" class="toc-item-link">Stopwatch</a></li>
+              <li><a href="#setting-sort-states-alpha" class="toc-item-link">Sort States Alphabetically</a></li>
              <li><a href="#setting-show-state-in-prompt" class="toc-item-link">Show State in Prompt</a></li>
              <li><a href="#setting-reveal-answer" class="toc-item-link">Reveal Answer After Mistakes</a></li>
              <li><a href="#setting-scale-states-by-size" class="toc-item-link">Scale States by Size</a></li>
@@ -147,7 +169,7 @@
              <a href="#settings-group-specific-modes" class="toc-section-link">Specific Modes</a>
            </div>
            <ul class="toc-items" id="toc-items-specific-modes">
-             <li><a href="#setting-speedrun" class="toc-item-link">Speedrun Mode</a></li>
+             <li><a href="#setting-speedrun" class="toc-item-link">Speedrun Mode (Pin modes)</a></li>
              <li><a href="#setting-instant-check" class="toc-item-link">Instant Check (Type modes)</a></li>
              <li><a href="#setting-list-by-state" class="toc-item-link">Group Checklist by State (List mode)</a></li>
              <li><a href="#setting-require-diacritics" class="toc-item-link">Require Exact Spelling (Type modes)</a></li>
@@ -214,10 +236,18 @@
 
        <h3 id="settings-group-in-game" class="settings-group-title">In-Game</h3>
 
+       <div class="setting-item" id="setting-speedrun">
+         <div class="setting-text">
+           <label for="toggle-stopwatch">Stopwatch</label>
+           <p class="setting-desc">Show a stopwatch during the game.</p>
+         </div>
+         <input type="checkbox" id="toggle-stopwatch">
+       </div>
+
        <div class="setting-item" id="setting-sort-states-alpha">
          <div class="setting-text">
            <label for="toggle-sort-states-alpha">Sort States Alphabetically</label>
-           <p class="setting-desc">Show states in A-Z order everywhere they're grouped or laid out: the setup screen's exclusion checklist and progress tables, and the maps shown during the game.</p>
+           <p class="setting-desc">Show states in A-Z order everywhere they're grouped or laid out: the home screen's exclusion checklist and progress tables, and the maps shown during the game.</p>
          </div>
          <input type="checkbox" id="toggle-sort-states-alpha">
        </div>
@@ -270,16 +300,15 @@
          </select>
        </div>
 
+       <h3 id="settings-group-specific-modes" class="settings-group-title">Specific Modes</h3>
+
        <div class="setting-item" id="setting-speedrun">
          <div class="setting-text">
-           <label for="toggle-speedrun">Speedrun Mode</label>
-           <p class="setting-desc">For all modes except List, add a stopwatch. For pin modes, register a guess the instant you press down on a county, instead of waiting for you to release.</p>
+           <label for="toggle-speedrun">Speedrun Mode (Pin modes)</label>
+           <p class="setting-desc">Register a guess the instant you press down on a county, instead of waiting for you to release.</p>
          </div>
          <input type="checkbox" id="toggle-speedrun">
        </div>
-
-       <h3 id="settings-group-specific-modes" class="settings-group-title">Specific Modes</h3>
-
 
        <div class="setting-item" id="setting-instant-check">
          <div class="setting-text">
@@ -940,8 +969,12 @@
 <div id="modal-summary" class="modal hidden">
  <div class="modal-content">
    <h2 id="summary-grade-title">Good job!</h2>
-   <div id="summary-result"><div id="summary-percentage">100%</div>
-   <p id="final-time" class="final-time">0:00.000</p></div>
+   <div id="summary-result">
+    <div id="summary-percentage">100%</div>
+    <p id="final-time" class="final-time">0:00.000</p>
+  </div>
+  <p id="best-time" class="hidden"></p>
+<p id="recent-times" class="hidden"></p>
    <p id="summary-message">You've learned all the counties!</p>
    <div id="summary-missed-section" class="summary-missed-section hidden">
      <h3>What you missed</h3>

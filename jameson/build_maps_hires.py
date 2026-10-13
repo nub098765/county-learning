@@ -87,11 +87,8 @@ from shapely.geometry import Polygon, MultiPolygon
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 
+
 W = 16000  # output viewBox width, in integer units
-
-# the states the game currently builds
-PLAYABLE = ["44", "15", "33", "02", "06", "48", "55", "01", "04", "39", "10", "12"]
-
 # fixed projections where a "local Albers" would be wrong or awkward
 FIXED_CRS = {
     "02": "EPSG:3338",    # Alaska Albers
@@ -222,6 +219,21 @@ def polygons_of(g):
     return [p for p in shapely.get_parts(g) if isinstance(p, Polygon) and not p.is_empty]
 
 
+INCLUDE_LAKES = {
+    "iliamna", "okeechobee", "pontchartrain", "maurepas", "salvador",
+    "of the woods", "mille lacs", "leech", "winnibigoshish", "red", "upper red", "lower red", "rainy",
+    "champlain", "oneida", "cayuga", "seneca", "mattamuskeet", "great salt", "winnebago",
+}
+
+
+def is_wanted_lake(name):
+    """True only for the inland lakes in INCLUDE_LAKES ("Lk"/"Lake" and word order are ignored)."""
+    if not re.search(r"\b(Lk|Lake)\b", name, re.I):
+        return False
+    core = re.sub(r"\b(Lk|Lake)\b", "", name, flags=re.I)
+    return " ".join(core.lower().split()) in INCLUDE_LAKES
+
+
 def tiger_lakes(grp, year, crs, min_m2):
     """Big INLAND lakes and reservoirs (Okeechobee, Winnebago, ...) from the Census water files.
 
@@ -237,7 +249,7 @@ def tiger_lakes(grp, year, crs, min_m2):
         url = f"https://www2.census.gov/geo/tiger/TIGER{year}/AREAWATER/tl_{year}_{geoid}_areawater.zip"
         if fetch(url, dest):
             d = gpd.read_file(dest)
-            d = d[d["MTFCC"].isin(["H2030", "H2040"])]          # lakes/ponds and reservoirs only
+            d = d[d["MTFCC"].isin(["H2030", "H2040", "H2051", "H3010", "H3020"]) & d["FULLNAME"].fillna("").map(is_wanted_lake)]   # only the lakes in INCLUDE_LAKES, under any Census tag
             if len(d):
                 frames.append(d)
         if n % 20 == 0:
@@ -334,7 +346,7 @@ def read_land(path, fips, state_bounds):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--states", default="playable", help="comma list of state FIPS, 'playable' or 'all'")
+    ap.add_argument("--states", default="all", help="comma list of state FIPS, or 'all'")
     ap.add_argument("--tolerance-m", type=float, default=8.0)
     ap.add_argument("--min-island-m2", type=float, default=3000.0)
     ap.add_argument("--ak-min-island-m2", type=float, default=50000.0)
@@ -358,7 +370,7 @@ def main():
     year = re.search(r"tl_(\d{4})_us_county", tl[-1]).group(1)
 
     counties = gpd.read_file(tl[-1])
-    want = None if a.states == "all" else (PLAYABLE if a.states == "playable" else a.states.split(","))
+    want = None if a.states == "all" else a.states.split(",")
     if want:
         counties = counties[counties.STATEFP.isin(want)]
     counties = counties.to_crs(4326)

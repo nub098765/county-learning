@@ -46,7 +46,7 @@ FIPS = {"01": "Alabama", "02": "Alaska", "04": "Arizona", "05": "Arkansas", "06"
         "46": "South Dakota", "47": "Tennessee", "48": "Texas", "49": "Utah", "50": "Vermont", "51": "Virginia",
         "53": "Washington", "54": "West Virginia", "55": "Wisconsin", "56": "Wyoming",
         # territories (the names match the shapes on the US map picker in index.html)
-        "60": "American Samoa", "69": "Northern Mariana Islands", "72": "Puerto Rico", "78": "U.S. Virgin Islands"}
+        "60": "American Samoa", "69": "Northern Mariana Islands", "72": "Puerto Rico", "78": "United States Virgin Islands"}
 POSTAL = {"Alabama": "al", "Alaska": "ak", "Arizona": "az", "Arkansas": "ar", "California": "ca", "Colorado": "co",
           "Connecticut": "ct", "Delaware": "de", "District of Columbia": "dc", "Florida": "fl", "Georgia": "ga",
           "Hawaii": "hi", "Idaho": "id", "Illinois": "il", "Indiana": "in", "Iowa": "ia", "Kansas": "ks",
@@ -57,7 +57,7 @@ POSTAL = {"Alabama": "al", "Alaska": "ak", "Arizona": "az", "Arkansas": "ar", "C
           "Oregon": "or", "Pennsylvania": "pa", "Rhode Island": "ri", "South Carolina": "sc",
           "South Dakota": "sd", "Tennessee": "tn", "Texas": "tx", "Utah": "ut", "Vermont": "vt",
           "Virginia": "va", "Washington": "wa", "West Virginia": "wv", "Wisconsin": "wi", "Wyoming": "wy",
-          "American Samoa": "as", "Northern Mariana Islands": "mp", "Puerto Rico": "pr", "U.S. Virgin Islands": "vi"}
+          "American Samoa": "as", "Northern Mariana Islands": "mp", "Puerto Rico": "pr", "United States Virgin Islands": "vi"}
 
 
 # County spellings that are fixed by hand: state FIPS -> {the Census spelling: how the site should spell it}.

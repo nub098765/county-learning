@@ -3248,3 +3248,88 @@ body.dark-mode .setting-item.setting-sub::before { border-color: #55524a; }
   margin-left: auto;
   margin-right: auto;
 }
+
+#best-time {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #4a7c59;
+  margin: 0 0 0.25rem 0;
+  text-align: center;
+}
+
+#recent-times {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin: 0 0 0.75rem 0;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+#records-list { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
+.records-empty { opacity: 0.7; }
+
+.records-toolbar { display: grid; grid-template-columns: auto auto; justify-content: start; align-items: center; gap: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.85rem; }.records-toolbar label { opacity: 0.7; }
+.records-toolbar select {
+  font: inherit;
+  font-size: 0.85rem;
+  color: inherit;
+  background: #fbfaf6;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+}
+body.dark-mode .records-toolbar select {
+  background: #242420;
+  border-color: #3f3f38;
+  color: #eee;
+  color-scheme: dark;
+}
+
+.record-state-card {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  background: #fafaf7;
+  text-align: left;
+}
+body.dark-mode .record-state-card { background: #242420; border-color: #444; }
+.record-state-title { margin: 0 0 0.4rem; font-size: 1.15rem; }
+
+.record-section { border-top: 1px solid rgba(128, 128, 128, 0.25); padding: 0.55rem 0; }
+.record-section:last-child { padding-bottom: 0; }
+.record-section summary { cursor: pointer; display: flex; align-items: center; gap: 0.75rem; }
+.record-section summary::after { content: "▾"; opacity: 0.5; transition: transform 0.15s; }
+.record-section[open] summary::after { transform: rotate(180deg); }
+
+.record-meta { display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; font-size: 0.85rem; }
+.record-mode { --mc: #4a7c59; color: var(--mc); font-weight: 700; }
+.record-mode.pin  { --mc: #3b6ea5; }
+.record-mode.type { --mc: #6a4c93; }
+.record-mode.list { --mc: #c98a2d; }
+.record-mode.mc   { --mc: #4caf50; }
+body.dark-mode .record-mode      { --mc: #7bc47f; }
+body.dark-mode .record-mode.pin  { --mc: #6fa3d8; }
+body.dark-mode .record-mode.type { --mc: #a682c9; }
+body.dark-mode .record-mode.list { --mc: #e0ab5c; }
+body.dark-mode .record-mode.mc   { --mc: #6cc36a; }
+.record-count { opacity: 0.7; }
+.record-best { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; color: #4a7c59; }
+body.dark-mode .record-best { color: #7bc47f; }
+
+.record-runs {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.record-runs li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.25rem 0; }
+.record-runs li span:first-child { opacity: 0.6; }
+.record-runs li.is-best span:last-child { color: #4a7c59; font-weight: 700; }
+body.dark-mode .record-runs li.is-best span:last-child { color: #7bc47f; }
+.record-state-title .record-count { font-size: 0.85rem; font-weight: 400; margin-left: 0.6rem; }
+
+.records-intro { opacity: 0.75; font-size: 0.8rem; line-height: 1.45; max-width: 36rem; margin: 0 auto 1rem; }
+#screen-records .btn-back { margin: 0 0 0.75rem; }
+#screen-records h2 { margin: 0 0 0.5rem; }
