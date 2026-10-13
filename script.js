@@ -748,6 +748,26 @@ const stateData = {
   }
 };
 
+function usesCountyEquivalents(stateKey) {
+  return ["alaska", "louisiana", "connecticut", "virginia", "district_of_columbia", "puerto_rico",
+          "guam", "american_samoa", "northern_mariana_islands", "united_states_virgin_islands"].includes(stateKey);
+}
+function countyWord(stateKey, n) {
+  const one = n === 1;
+  return usesCountyEquivalents(stateKey) ? (one ? "county equivalent" : "county equivalents") : (one ? "county" : "counties");
+}
+
+function unitWord(plural) {
+  const keys = [...activeStateKeys];
+  const eq = keys.some(usesCountyEquivalents);
+  return eq ? (plural ? "county equivalents" : "county equivalent") : (plural ? "counties" : "county");
+}
+
+function applyUnitWords() {
+  document.querySelectorAll("[data-unit]").forEach(el => { el.textContent = unitWord(el.dataset.unit === "plural"); });
+  const s = document.getElementById("county-search");
+  if (s) s.placeholder = `Search ${unitWord(true)}…`;
+}
 
 const CALLOUT_ROOM = { virginia: { top: 800, bottom: 800, right: 160 } };
 function withCalloutRoom(key, viewBox) {
@@ -787,7 +807,7 @@ function withCalloutRoom(key, viewBox) {
       row.className = "state-row";
       row.id = "state-" + m.key;
       row.dataset.state = m.key;
-      row.innerHTML = `<span class="state-name">${esc(m.name)}</span> <span class="state-count">${m.counties.length} counties</span>`;
+      row.innerHTML = `<span class="state-name">${esc(m.name)}</span> <span class="state-count">${m.counties.length} ${countyWord(m.key, m.counties.length)}</span>`;
       const playable = [...rowsHolder.querySelectorAll(".state-row:not(.disabled)")];
       const next = playable.find(r => (r.querySelector(".state-name")?.textContent || "").localeCompare(m.name) > 0);
       if (next) rowsHolder.insertBefore(row, next);
@@ -1133,7 +1153,10 @@ const DEFAULT_SETTINGS = {
   showStateInPrompt: true,
   revealAnswerAfterMistakes: true,
   showStopwatch: true,
-  bestKnownCount: 5
+  bestKnownCount: 5,
+  learnCount: 5,
+  showHoverNames: true,
+  autoScrollToState: true
 };
 let gameSettings = { ...DEFAULT_SETTINGS, ...readStoredJson("gameSettings", {}) };
 function saveSettings() { localStorage.setItem("gameSettings", JSON.stringify(gameSettings)); }
@@ -1168,6 +1191,9 @@ const SETTING_CONTROLS = [
   { id: "toggle-accept-st-abbrev", key: "acceptStAbbrev", ...asCheckbox },
   { id: "toggle-show-state-in-prompt", key: "showStateInPrompt", ...asCheckbox, after: () => { if (isGameActive) refreshTargetPrompt(false); } },
   { id: "toggle-reveal-answer", key: "revealAnswerAfterMistakes", ...asCheckbox },
+  { id: "select-learn-count", key: "learnCount", ...asSelect },
+  { id: "toggle-hover-names", key: "showHoverNames", ...asCheckbox },
+  { id: "toggle-auto-scroll", key: "autoScrollToState", ...asCheckbox },
 ];
 if (gameSettings.revealAnswerAfterMistakes === undefined) gameSettings.revealAnswerAfterMistakes = true;
 if (gameSettings.scaleStatesBySize === undefined) gameSettings.scaleStatesBySize = false;
@@ -1679,37 +1705,37 @@ const infoDemoCheck = document.getElementById("info-demo-check");
 const INFO_MODE_CONFIG = {
   pin: {
     title: "How to Play: Pin",
-    intro: "Click (or tap) the county you're asked to find. Once you find it, it stays filled in on the map.",
+    intro: "Click (or tap) the ${unitWord(false)} you're asked to find. Once you find it, it stays filled in on the map.",
     demo: "pin",
     word: "Sonoma",
   },
   "pin-hard": {
     title: "How to Play: Flash",
-    intro: "Click (or tap) the county you're asked to find. It flashes briefly, then goes back to blank.",
+    intro: "Click (or tap) the ${unitWord(false)} you're asked to find. It flashes briefly, then goes back to blank.",
     demo: "pin-hard",
     word: "Sonoma",
   },
   mc: {
     title: "How to Play: Multiple-Choice",
-    intro: "A county lights up on the map. Pick its name from the options (or press 1-4). Wrong picks count against you.",
+    intro: "A ${unitWord(false)} lights up on the map. Pick its name from the options (or press 1-4). Wrong picks count against you.",
     demo: "mc",
     word: "Sonoma",
   },
   type: {
     title: "How to Play: List",
-    intro: "Type any county's name, in any order, and see how many you can list.",
+    intro: "Type any ${unitWord(false)}'s name, in any order, and see how many you can list.",
     demo: "list",
     word: "Sonoma",
   },
   "type-hard": {
     title: "How to Play: Type",
-    intro: "A county lights up on the map. Type its name to guess it.",
+    intro: "A ${unitWord(false)} lights up on the map. Type its name to guess it.",
     demo: "type-hard",
     word: "Sonoma",
   },
   "type-strict": {
     title: "How to Play: Verbatim",
-    intro: "A county lights up on the map. Type its name, then press Enter to submit. Wrong guesses count against you.",
+    intro: "A ${unitWord(false)} lights up on the map. Type its name, then press Enter to submit. Wrong guesses count against you.",
     demo: "type-strict",
     word: "Sonoma",
   },
@@ -2051,6 +2077,7 @@ setTimeout(() => {
     }).sort((a, b) => a.name.localeCompare(b.name));
     renderPicked(picked, entries);
     document.getElementById("screen-setup").classList.toggle("no-selection", activeStateKeys.length === 0);
+    applyUnitWords();
   };
   const list = document.querySelector("#screen-setup .states-list");
   if (list) new MutationObserver(refresh).observe(list, { subtree: true, attributes: true, attributeFilter: ["class"] });
@@ -2060,9 +2087,12 @@ setTimeout(() => {
 
 (function initStudy() {
   const $ = id => document.getElementById(id);
-  const BATCH = 5, KEY = "studyLearned";
+  const KEY = "studyLearned";
+  const batchSize = () => Math.min(8, Math.max(4, parseInt(gameSettings.learnCount, 10) || 5));
   const selected = new Set();
   let counties = [], start = 0, batch = [], quizSet = [], typeSet = [], pinSet = [], i = 0, phase = "learn", score = 0, typeScore = 0, pinScore = 0, answered = false;
+  const unit = plural => counties.some(c => usesCountyEquivalents(c.stateKey))
+  ? (plural ? "county equivalents" : "county equivalent") : (plural ? "counties" : "county");
   let studyMode = "all";
   let homeExcluded = new Set();
   const roundLog = { quiz: [], type: [], pin: [] };
@@ -2107,7 +2137,7 @@ setTimeout(() => {
     const chosen = studyStates().filter(([k]) => selected.has(k));
     renderPicked($("study-picked"), chosen.map(([k, s]) => ({
       name: s.name,
-      text: `${s.counties.length} ${k === "alaska" ? "boroughs & census areas" : "counties"}`,
+      text: `${s.counties.length} ${countyWord(k, s.counties.length)}`,
       n: s.counties.length
     })).sort((a, b) => a.name.localeCompare(b.name)));
     const openLists = (renderPick.openLists = renderPick.openLists || new Set());
@@ -2162,7 +2192,7 @@ setTimeout(() => {
     if (selected.size === 0) {
       reason = "Select at least one state to study.";
     } else if (!studyPool().length) {
-      reason = note = `You've already learned every county in your selection ${studyMode === "all" ? "in all three Learn modes" : "in " + MODE_NAME[studyMode]}. Untick \"Skip counties I've already learned\" to review them.`;
+      reason = note = `You've already learned every ${unitWord(false)} in your selection ${studyMode === "all" ? "in all three Learn modes" : "in " + MODE_NAME[studyMode]}. Untick \"Skip ${unit(true)} I've already learned\" to review them.`;
     }
     btn.disabled = !!reason;
     if (reason) btn.title = reason; else btn.removeAttribute("title");
@@ -2202,7 +2232,7 @@ setTimeout(() => {
         }));
         studyTip.textContent = getPlainName(county);
       }
-      studyTip.classList.remove("hidden");
+      if (gameSettings.showHoverNames !== false) studyTip.classList.remove("hidden"); else hideStudyTip();
       const w = studyTip.offsetWidth, h = studyTip.offsetHeight, pad = 14;
       let x = e.clientX + pad, y = e.clientY + pad + 4;
       if (x + w > window.innerWidth - 8) x = e.clientX - w - pad;
@@ -2259,7 +2289,7 @@ setTimeout(() => {
     }
     svg.setAttribute("class", "locator-map" + (pin ? " pin-mode" : "") + (hover ? " study-hover" : ""));
     ["width", "height", "style"].forEach(a => svg.removeAttribute(a));
-    svg.setAttribute("aria-label", pin ? `Map of ${stateData[county.stateKey].name}` : `Map of ${stateData[county.stateKey].name} with a county highlighted`);
+    svg.setAttribute("aria-label", pin ? `Map of ${stateData[county.stateKey].name}` : `Map of ${stateData[county.stateKey].name} with a ${unitWord(false)} highlighted`);
     holder.appendChild(svg);
     if (pin) {
       svg.querySelectorAll(".county").forEach(el => {
@@ -2324,11 +2354,11 @@ setTimeout(() => {
     const learn = phase === "learn", typing = phase === "type", pinning = phase === "pin";
     const list = learn ? batch : typing ? typeSet : pinning ? pinSet : quizSet;
     const c = list[i];
-    $("study-progress").textContent = `${learn ? "Study" : typing ? "Type" : pinning ? "Pin" : "Quiz"}: ${i + 1} of ${list.length} (counties ${start + 1}-${start + batch.length} of ${counties.length})`;
+    $("study-progress").textContent = `${learn ? "Study" : typing ? "Type" : pinning ? "Pin" : "Quiz"}: ${i + 1} of ${list.length} (${unit(true)} ${start + 1}-${start + batch.length} of ${counties.length})`;
     drawMap(c, pinning, learn);
     const studyStateEl = $("study-state");
     if (studyStateEl) studyStateEl.textContent = stateData[c.stateKey]?.name || "";
-    $("study-name").textContent = learn ? getPlainName(c) : typing ? "Type the name of the highlighted county." : pinning ? `Click ${getPlainName(c)} on the map.` : "Which county is highlighted?";
+    $("study-name").textContent = learn ? getPlainName(c) : typing ? `Type the name of the highlighted ${unitWord(false)}.` : pinning ? `Click ${getPlainName(c)} on the map.` : `Which ${unitWord(false)} is highlighted?`;
     if (learn || pinning) appendSpeaker($("study-name"), c);
     $("study-feedback").textContent = "";
     const ch = $("study-choices");
@@ -2563,28 +2593,32 @@ setTimeout(() => {
       return sec;
     }));
     rings.forEach(m => addRing(m.svg, m.targets));
-    if (start + BATCH < counties.length) addBtn(`Next ${Math.min(BATCH, counties.length - start - BATCH)} counties`, () => { replayFrom = snapshotRound(); start += BATCH; beginBatch(true); }, "btn-primary");
+    if (start + batchSize() < counties.length) addBtn(`Next ${Math.min(batchSize(), counties.length - start - batchSize())} counties`, () => { replayFrom = snapshotRound(); start += batchSize(); beginBatch(true); }, "btn-primary");
     if (seq().includes("pin")) addBtn("Pin again", replay(startPin));
     if (seq().includes("quiz")) addBtn("Quiz again", replay(startQuiz));
     if (seq().includes("type")) addBtn("Type again", replay(startType));
   }
   function results() { showSummary(); }
 
-  function practiceOrder() {
-    const order = shuffle(batch), lastLearned = batch[batch.length - 1];
-    if (order.length > 1 && order[0] === lastLearned) {
+  const lastOfPhase = () => {
+    const set = ({ quiz: quizSet, type: typeSet, pin: pinSet })[phase];
+    return set && set.length ? set[set.length - 1] : batch[batch.length - 1];
+  };
+  function practiceOrder(prev) {
+    const order = shuffle(batch);
+    if (order.length > 1 && order[0] === prev) {
       const j = 1 + Math.floor(Math.random() * (order.length - 1));
       [order[0], order[j]] = [order[j], order[0]];
     }
     return order;
   }
-  function startQuiz() { phase = "quiz"; quizSet = practiceOrder(); i = 0; score = 0; roundLog.quiz = []; render(); }
-  function startPin() { phase = "pin"; pinSet = practiceOrder(); i = 0; pinScore = 0; roundLog.pin = []; render(); }
-  function startType() { phase = "type"; typeSet = practiceOrder(); i = 0; typeScore = 0; roundLog.type = []; render(); }
+  function startQuiz() { const prev = lastOfPhase(); phase = "quiz"; quizSet = practiceOrder(prev); i = 0; score = 0; roundLog.quiz = []; render(); }
+  function startPin() { const prev = lastOfPhase(); phase = "pin"; pinSet = practiceOrder(prev); i = 0; pinScore = 0; roundLog.pin = []; render(); }
+  function startType() { const prev = lastOfPhase(); phase = "type"; typeSet = practiceOrder(prev); i = 0; typeScore = 0; roundLog.type = []; render(); }
 
   function beginBatch(keepBackToResults) {
     if (!keepBackToResults) replayFrom = null;
-    batch = counties.slice(start, start + BATCH);
+    batch = counties.slice(start, start + batchSize());
     i = 0; phase = "learn";
     render();
   }
@@ -2657,7 +2691,7 @@ setTimeout(() => {
     if (!$("screen-study").classList.contains("active") || $("study-run").classList.contains("hidden")) return;
     if (!sumEl.classList.contains("hidden") || !resumeModal.classList.contains("hidden")) return;
     const t = e.target;
-    if (t && t.closest && t.closest("button, a, input, select, textarea, [role='button']")) return;
+    if (t && t.closest && t.closest("button, a, input, select, textarea, [role='button']") && !(answered && t.closest("#study-choices"))) return;
     const next = $("study-next");
     if (next.classList.contains("hidden") || next.classList.contains("study-pending")) return;
     e.preventDefault();
@@ -3161,7 +3195,7 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
   circle.setAttribute("data-name", countyName);
   circle.setAttribute("tabindex", "0");
   circle.setAttribute("role", "button");
-  circle.setAttribute("aria-label", `${countyName} County (click here — the real county outline is very small)`);
+  circle.setAttribute("aria-label", `${countyName} ${unitWord(false)} (click here — the real ${unitWord(false)} outline is very small)`);
   targetGroup.appendChild(circle);
 
   countyPaths = document.querySelectorAll(".county");
@@ -3676,7 +3710,7 @@ function updateSetupPlayButton() {
     const specificRadio = document.querySelector('input[name="specific-counties"]:checked');
     const isSpecificYes = specificRadio ? specificRadio.value === "yes" : false;
     if (isSpecificYes && document.querySelectorAll(".county-checkbox:checked").length < 1) {
-      blockedReason = "Select at least one county to play, or choose \"No\" to play them all.";
+      blockedReason = `Select at least one ${unitWord(false)} to play, or choose "No" to play them all.`;
     }
   }
 
@@ -3780,7 +3814,7 @@ function giveUp() {
 if (btnGiveUp) {
   btnGiveUp.addEventListener("click", () => {
     if (!isGameActive) return;
-    if (confirm("Give up? Every remaining county will be revealed as missed.")) {
+    if (confirm(`Give up? Every remaining ${unitWord(false)} will be revealed as missed.`)) {
       giveUp();
     }
   });
@@ -3865,7 +3899,7 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
     path.setAttribute("role", "button");
     path.setAttribute("aria-label", "County path");
   });
-
+  currentTarget = null;
   pickNextTarget();
 }
 
@@ -4159,7 +4193,7 @@ function refreshTargetPrompt(forceReveal) {
   if (!targetPrompt || !currentTarget) return;
 
   if (selectedMode === "type") {
-    targetPrompt.innerHTML = `<span class="find-label">Find any county</span>`;
+    targetPrompt.innerHTML = `<span class="find-label">Find any ${unitWord(false)}</span>`;
     return;
   }
 
@@ -4175,7 +4209,7 @@ function refreshTargetPrompt(forceReveal) {
     } else {
       const stateName = gameSettings.showStateInPrompt ? getStateNameForCounty(currentTarget) : "";
       targetPrompt.innerHTML = `
-        <span class="find-label">${selectedMode === "mc" ? "Which county is highlighted?" : "Type the highlighted county"}</span>
+        <span class="find-label">${selectedMode === "mc" ? `Which ${unitWord(false)} is highlighted?` : `Type the highlighted ${unitWord(false)}`}</span>
         ${statePromptHTML(stateName)}
       `;
     }
@@ -4219,7 +4253,6 @@ function recordConfusionByTypedName(targetId, typed, pool) {
   if (hit) recordConfusion(targetId, hit.id);
 }
 
-/* ---------- Similarity between counties ---------- */
 let nameFreq = null;
 function countyNameFreq(name) {
   if (!nameFreq) {
@@ -4267,7 +4300,13 @@ function renderMcOptions() {
   const target = currentTarget;
   const avoid = new Set([...mcRecent, ...mcLastShown]);
   avoid.delete(target.id);
-  const picks = pickConfusable(target, getActiveCountiesPool(), 3, avoid);
+  const allActive = getActiveCountiesPool();
+  let picks = pickConfusable(target, allActive.filter(c => c.stateKey === target.stateKey), 3, avoid);
+  if (picks.length < 3) {   // tiny states (DC, Delaware...) borrow the rest from the other selected states
+    const used = new Set([target.name, ...picks.map(c => c.name)]);
+    const rest = allActive.filter(c => c.stateKey !== target.stateKey && !used.has(c.name));
+    picks = picks.concat(pickConfusable(target, rest, 3 - picks.length, avoid));
+  }
   mcLastShown = new Set([target.id, ...picks.map(c => c.id)]);
   const choices = mcShuffle([target, ...picks]);
   const oneState = choices.every(c => c.stateKey === target.stateKey);
@@ -4294,6 +4333,18 @@ document.addEventListener("keydown", (e) => {
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= 4) { const b = mcOptions.querySelectorAll(".mc-option")[n - 1]; if (b && !b.disabled) b.click(); }
 });
+
+let scrollToTargetTimer = 0;
+function scrollToTargetState() {
+  if (!gameSettings.autoScrollToState || !isGameActive || !currentTarget || selectedMode === "type" || activeStateKeys.length < 2) return;
+  const el = getCountyElements(currentTarget.id)[0];
+  const box = el && el.closest(".map-box");
+  if (!box) return;
+  const r = box.getBoundingClientRect(), vh = window.innerHeight;
+  const visible = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+  if (visible >= Math.min(r.height, vh) * 0.6) return;     // that state is already mostly on screen
+  box.scrollIntoView({ behavior: "smooth", block: "center" });
+}
 
 function pickNextTarget() {
   currentAttemptMistakes = 0;
@@ -4333,6 +4384,8 @@ function pickNextTarget() {
 
 
   refreshTargetPrompt(false);
+  clearTimeout(scrollToTargetTimer);
+  scrollToTargetTimer = setTimeout(scrollToTargetState, 350);
 
   if (SINGLE_TARGET_TYPE_MODES.has(selectedMode)) {
     getCountyElements(currentTarget.id).forEach(el => el.classList.add("typing-highlight"));
@@ -4434,7 +4487,7 @@ function acceptTypedMatches(matchedCounties) {
       feedbackEl.textContent = `Correct! That's ${getPlainName(matchedCounties[0])}.`;
     } else {
       feedbackEl.textContent = matchedCounties.length > 1
-        ? `Correct! That matched ${matchedCounties.length} counties.`
+        ? `Correct! That matched ${matchedCounties.length} ${unitWord(true)}.`
         : "Correct!";
     }
     feedbackEl.className = "feedback-message success";
@@ -4635,7 +4688,7 @@ if (specialCharsBar) {
 
 
 function showHoverTooltip(text, x, y) {
-  if (!hoverTooltip) return;
+  if (!hoverTooltip || gameSettings.showHoverNames === false) return;
   hoverTooltip.textContent = text;
   hoverTooltip.style.left = `${x}px`;
   hoverTooltip.style.top = `${y}px`;
@@ -4764,9 +4817,9 @@ if (recentTimesElement) {
     if (summaryMessage) {
       const verb = selectedMode === "type" ? "listed" : "learned";
       if (activeStateNames.length === 1) {
-        summaryMessage.textContent = `You've ${verb} all the counties in ${activeStateNames[0]}! Good job!`;
+      summaryMessage.textContent = `You've ${verb} all the ${unitWord(true)} in ${activeStateNames[0]}! Good job!`;;
       } else {
-        summaryMessage.textContent = `You've ${verb} all the counties across ${activeStateNames.length} states! Good job!`;
+        summaryMessage.textContent = `You've ${verb} all the ${unitWord(true)} across ${activeStateNames.length} states! Good job!`;
       }
     }
 
@@ -4799,7 +4852,7 @@ if (recentTimesElement) {
     });
   } else {
     if (summaryMessage) {
-      summaryMessage.textContent = `You missed ${missedArray.length} county target${missedArray.length > 1 ? 's' : ''}. What would you like to do?`;
+    summaryMessage.textContent = `You missed ${missedArray.length} ${unitWord(false)} target${missedArray.length > 1 ? 's' : ''}. What would you like to do?`;;
     }
     if (summaryMissedSection && summaryMissedList) {
       const byState = {};
@@ -4965,8 +5018,19 @@ if (btnAdmireHome) {
     try { await ensureStateMaps(activeStateKeys); }
     catch (err) { msg.textContent = "Couldn't load the map data."; return; }
     const ok = window.startStudyFromHome(chosen.mode, activeStateKeys.slice(), skip.checked, excluded);
-    if (!ok) msg.textContent = `You've already learned every county here ${chosen.mode === "all" ? "in all three Learn modes" : "in " + ({ pin: "Pin", mc: "Multiple-Choice", type: "Type" })[chosen.mode]}. Untick \u201CSkip counties I've already learned\u201D to review them.`;
+    if (!ok) msg.textContent = `You've already learned every ${unit(true)} here ${chosen.mode === "all" ? "in all three Learn modes" : "in " + ({ pin: "Pin", mc: "Multiple-Choice", type: "Type" })[chosen.mode]}. Untick \u201CSkip ${unit(true)} I've already learned\u201D to review them.`;
   }, true);
 })();
 
+});
+
+["type-input", "study-input"].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  ["paste", "drop"].forEach(ev => el.addEventListener(ev, e => e.preventDefault()));
+});
+
+document.querySelectorAll(".state-row[data-state] .state-count").forEach(el => {
+  const n = parseInt(el.textContent, 10);
+  if (n) el.textContent = `${n} ${countyWord(el.closest(".state-row").dataset.state, n)}`;
 });

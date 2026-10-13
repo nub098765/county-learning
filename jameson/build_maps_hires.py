@@ -234,6 +234,27 @@ def is_wanted_lake(name):
     return " ".join(core.lower().split()) in INCLUDE_LAKES
 
 
+CONNECT_NAME = re.compile(r"\b(Bay|Bays|Harbor|Harbour|Hbr|Inlet|Sea|Sound|Snd|Passage|Narrows|Cove|Arm)\b", re.I)
+
+
+# lakes whose bays and channels are separate Census polygons that must be cut too (else the islands bloat).
+# Kept to Champlain on purpose: doing this for every lake (Okeechobee, ...) swallowed huge areas of marsh.
+FLOOD_LAKES = {"champlain"}
+CLOSE_LAKES = {"okeechobee"}   # lakes that get the seam-closing step (see tiger_lakes)
+CLOSE_M = 60                   # metres
+BIG_UNNAMED_M2 = 20e6     # an unnamed lake polygon counts as part of a touching wanted lake only if it is at least 20 km2
+
+
+def is_flood_lake(name):
+    core = re.sub(r"\b(Lk|Lake)\b", "", name, flags=re.I)
+    return is_wanted_lake(name) and " ".join(core.lower().split()) in FLOOD_LAKES
+
+
+def is_connector(name):
+    """A NAMED bay / sound / inlet / sea (never unnamed water): cut only if it touches a FLOOD_LAKES lake."""
+    return bool(CONNECT_NAME.search(name.strip()))
+
+
 def tiger_lakes(grp, year, crs, min_m2):
     """Big INLAND lakes and reservoirs (Okeechobee, Winnebago, ...) from the Census water files.
 
@@ -249,7 +270,17 @@ def tiger_lakes(grp, year, crs, min_m2):
         url = f"https://www2.census.gov/geo/tiger/TIGER{year}/AREAWATER/tl_{year}_{geoid}_areawater.zip"
         if fetch(url, dest):
             d = gpd.read_file(dest)
-            d = d[d["MTFCC"].isin(["H2030", "H2040", "H2051", "H3010", "H3020"]) & d["FULLNAME"].fillna("").map(is_wanted_lake)]   # only the lakes in INCLUDE_LAKES, under any Census tag
+            fn = d["FULLNAME"].fillna("")
+            # the wanted lakes, under any Census tag, PLUS the bays / sounds / unnamed arms of water that
+            # touch them (Missisquoi Bay, Malletts Bay, the Inland Sea ... are separate Census polygons; if
+            # they are not cut too, the islands in Lake Champlain come out bloated, joined by land)
+            # The Census splits a big lake into one polygon per county and leaves SOME pieces with no name at
+            # all (Lake Okeechobee: 3 of its 8 pieces, 538 km2). So also keep the big unnamed lake polygons;
+            # below, only the ones that touch a wanted lake are used.
+            big = d["AWATER"].astype(float) >= BIG_UNNAMED_M2 if "AWATER" in d.columns else d.geometry.area > 0
+            d = d[(d["MTFCC"].isin(["H2030", "H2040", "H2051", "H3010", "H3020"]) & fn.map(is_wanted_lake))
+                  | (d["MTFCC"].isin(["H2030", "H2051", "H2053"]) & fn.map(is_connector))
+                  | (d["MTFCC"].isin(["H2030", "H2040"]) & (fn.str.strip() == "") & big)]
             if len(d):
                 frames.append(d)
         if n % 20 == 0:
@@ -257,6 +288,29 @@ def tiger_lakes(grp, year, crs, min_m2):
     if not frames:
         return None
     water = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), crs=frames[0].crs).to_crs(crs)
+    wnames = water["FULLNAME"].fillna("").str.strip().tolist()
+    wgeoms = [make_valid(g) for g in water.geometry]
+    wtree = STRtree(wgeoms)
+    inc = {i for i, nm in enumerate(wnames) if is_wanted_lake(nm)}        # every wanted lake itself
+    frontier = list(inc)                  # every wanted lake absorbs the big unnamed pieces that touch it
+    while frontier:                       # (and those pieces chain on to the next big unnamed piece)
+        nxt = []
+        for i in frontier:
+            for j in wtree.query(wgeoms[i], predicate="intersects"):
+                if j not in inc and not wnames[j].strip():
+                    inc.add(j); nxt.append(j)
+        frontier = nxt
+    frontier = [i for i in inc if is_flood_lake(wnames[i])]                # only these also pull in their bays
+    while frontier:                       # named bays / sounds that touch such a lake (directly or via another bay)
+        nxt = []
+        for i in frontier:
+            for j in wtree.query(wgeoms[i], predicate="intersects"):
+                if j not in inc and is_connector(wnames[j]):
+                    inc.add(j); nxt.append(j)
+        frontier = nxt
+    water = water.iloc[sorted(inc)].reset_index(drop=True)
+    if not len(water):
+        return None
     names = water["FULLNAME"].fillna("").str.strip().tolist()
     keep = [i for i, nm in enumerate(names) if not LAKE_NAME.match(nm)]
     geoms = [make_valid(water.geometry.iloc[i]) for i in keep]
@@ -269,8 +323,13 @@ def tiger_lakes(grp, year, crs, min_m2):
         return None
     tree = STRtree(geoms)
     report = []
-    for p in lakes:
+    for k, p in enumerate(lakes):
         idx = tree.query(p, predicate="intersects")
+        # Okeechobee only: the Census cuts it into one piece per county, and the seams between the pieces leave
+        # thin slivers of land inside the lake. Grow the lake by CLOSE_M metres and shrink it back to close them.
+        # (Anything wider than 2 x CLOSE_M, i.e. every real island, is untouched. Other lakes are not changed.)
+        if any(re.sub(r"\b(Lk|Lake)\b", "", names[i], flags=re.I).strip().lower() in CLOSE_LAKES for i in idx):
+            lakes[k] = p = p.buffer(CLOSE_M).buffer(-CLOSE_M)
         best = max(idx, key=lambda i: geoms[i].area)
         report.append((p.area, names[best] or "(unnamed)"))
     report.sort(reverse=True)

@@ -67,11 +67,11 @@
        <button id="btn-start-game" class="btn-launch" disabled title="Select at least one state to play.">Play</button>
        <p id="home-msg" class="study-feedback" aria-live="polite"></p>
        <div class="home-options">
-         <label id="home-skip-wrap" class="study-skip hidden"><input type="checkbox" id="home-skip-learned" checked> Skip counties I've already learned</label>
+      <label id="home-skip-wrap" class="study-skip hidden"><input type="checkbox" id="home-skip-learned" checked> Skip <span data-unit="plural">counties</span> I've already learned</label> 
          <div id="county-options-panel" class="county-panel hidden">
-     <p class="plain-prompt">Would you like to exclude any counties?</p>
+       <p class="plain-prompt">Would you like to exclude any <span data-unit="plural">counties</span>?</p>
      <div class="radio-group">
-       <label><input type="radio" name="specific-counties" value="no" checked> No (play all counties)</label>
+       <label><input type="radio" name="specific-counties" value="no" checked> No (play all <span data-unit="plural">counties</span>)</label>
        <label><input type="radio" name="specific-counties" value="yes"> Yes</label>
      </div>
 
@@ -85,7 +85,7 @@
        </div>
     
        <input type="search" id="county-search" class="list-search" placeholder="Search counties…" aria-label="Search counties to exclude" autocomplete="off" spellcheck="false">
-       <p id="county-search-empty" class="list-search-empty hidden">No counties match your search.</p>
+       <p id="county-search-empty" class="list-search-empty hidden">No <span data-unit="plural">counties</span> match your search.</p>
      </div>
    </div>
        </div>
@@ -161,6 +161,9 @@
              <li><a href="#setting-scale-states-by-size" class="toc-item-link">Scale States by Size</a></li>
              <li><a href="#setting-dividers-for-few-states" class="toc-item-link">Use Dividers for Few States</a></li>
              <li><a href="#setting-states-per-row" class="toc-item-link">States Per Row</a></li>
+              <li><a href="#setting-hover-names" class="toc-item-link">Show Names on Hover</a></li>
+             <li><a href="#setting-learn-count" class="toc-item-link">Counties Per Learn Round</a></li>
+             <li><a href="#setting-auto-scroll" class="toc-item-link">Auto-Scroll to Next State</a></li>
            </ul>
          </li>
          <li class="toc-section">
@@ -298,6 +301,36 @@
            <option value="3">3</option>
            <option value="4">4</option>
          </select>
+       </div>
+
+        <div class="setting-item" id="setting-hover-names">
+         <div class="setting-text">
+           <label for="toggle-hover-names">Show Names on Hover</label>
+           <p class="setting-desc">Show a county's name when you hover over it. Turn this off to practice without hints.</p>
+         </div>
+         <input type="checkbox" id="toggle-hover-names">
+       </div>
+
+       <div class="setting-item" id="setting-learn-count">
+         <div class="setting-text">
+           <label for="select-learn-count">Counties Per Learn Round</label>
+           <p class="setting-desc">How many counties Learn mode gives you in each round.</p>
+         </div>
+         <select id="select-learn-count">
+           <option value="4">4</option>
+           <option value="5">5</option>
+           <option value="6">6</option>
+           <option value="7">7</option>
+           <option value="8">8</option>
+         </select>
+       </div>
+
+       <div class="setting-item" id="setting-auto-scroll">
+         <div class="setting-text">
+           <label for="toggle-auto-scroll">Auto-Scroll to Next State</label>
+           <p class="setting-desc">When several states are on screen, scroll to the state of the next county you need to find.</p>
+         </div>
+         <input type="checkbox" id="toggle-auto-scroll">
        </div>
 
        <h3 id="settings-group-specific-modes" class="settings-group-title">Specific Modes</h3>

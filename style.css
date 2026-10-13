@@ -2659,6 +2659,9 @@ body.dark-mode .us-map .us-sep { stroke: #a9a9a2; }
 body.dark-mode .us-map text { fill: #888; }
 body.dark-mode .us-map text.built { fill: #dbe8f5; }
 body.dark-mode .us-map text.selected { fill: #fff; }
+.us-map text.selected { fill: #000; font-weight: 800; }
+.us-map text.callout.selected { fill: #a24a00; font-weight: 800; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+body.dark-mode .us-map text.callout.selected { fill: #ffb162; stroke: #222; }
 .us-picked { margin-bottom: 0.8rem; font-size: 0.9rem; color: #666;
   height: 4.3rem; overflow-y: auto; }
 body.dark-mode .us-picked { color: #aaa; }
