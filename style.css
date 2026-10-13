@@ -1943,8 +1943,8 @@ body.dark-mode .info-tips summary {
 
 
 .site-credits {
- position: fixed;
- bottom: 0.6rem;
+ position: absolute;
+ top: 0.6rem;
  right: 0.85rem;
  font-family: system-ui, -apple-system, sans-serif;
  font-size: 0.65rem;
@@ -3336,3 +3336,6 @@ body.dark-mode .record-runs li.is-best span:last-child { color: #7bc47f; }
 .records-intro { opacity: 0.75; font-size: 0.8rem; line-height: 1.45; max-width: 36rem; margin: 0 auto 1rem; }
 #screen-records .btn-back { margin: 0 0 0.75rem; }
 #screen-records h2 { margin: 0 0 0.5rem; }
+
+.county.correct.just-found { fill: #8fd17f !important; }
+body.high-contrast .county.correct.just-found { fill: #66ff66 !important; }

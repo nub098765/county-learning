@@ -976,8 +976,11 @@ function indexAudioManifest() {
 function audioSrcFor(county) {
   if (!audioShared || !county) return null;
   const slug = audioSlug(county.name);
-  if (audioByState[county.stateKey] && audioByState[county.stateKey].has(slug)) return `${AUDIO_DIR}${county.stateKey}/${slug}.${audioExt}`;
-  if (audioShared.has(slug)) return `${AUDIO_DIR}${slug}.${audioExt}`;
+  const swap = s => /^saint(e?)-/.test(s) ? s.replace(/^saint(e?)-/, "st$1-") : s.replace(/^st(e?)-/, "saint$1-");
+  for (const s of [slug, swap(slug)]) {
+    if (audioByState[county.stateKey] && audioByState[county.stateKey].has(s)) return `${AUDIO_DIR}${county.stateKey}/${s}.${audioExt}`;
+    if (audioShared.has(s)) return `${AUDIO_DIR}${s}.${audioExt}`;
+  }
   return null;
 }
 function speakerKind(county) {
@@ -2107,7 +2110,7 @@ setTimeout(() => {
   const nextPhaseAfter = p => seq()[seq().indexOf(p) + 1] || null;
   const firstPhase = () => seq()[0];
   const afterLabel = p => {
-    const n = p === "learn" ? firstPhase() : nextPhaseAfter(p);
+    const n = p === "learn" ? firstPhase() : (replayOnly ? null : nextPhaseAfter(p));
     if (!n) return "See results";
     return (p === "learn" ? "Start " : "Continue to ") + PHASE_TITLE[n];
   };
@@ -2485,9 +2488,9 @@ setTimeout(() => {
     b.type = "button"; b.addEventListener("click", fn); $("study-choices").appendChild(b); return b;
   };
 
-  let replayFrom = null;
+  let replayFrom = null, replayOnly = false;
   const snapshotRound = () => ({ quiz: roundLog.quiz.slice(), type: roundLog.type.slice(), pin: roundLog.pin.slice(), score, typeScore, pinScore, start, batch: batch.slice() });
-  const replay = fn => () => { replayFrom = snapshotRound(); fn(); };
+  const replay = fn => () => { replayFrom = snapshotRound(); replayOnly = true; fn(); };
   const replayBackBtn = el("button", "study-replay-back hidden", "Back to results");
   replayBackBtn.type = "button";
   replayBackBtn.addEventListener("click", () => {
@@ -2564,7 +2567,7 @@ setTimeout(() => {
   }
 
   function showSummary() {
-    replayFrom = null;
+    replayFrom = null, replayOnly = false;
     clearRun();
     $("study-progress").textContent = "Round complete";
     $("study-name").textContent = "";
@@ -2617,6 +2620,7 @@ setTimeout(() => {
   function startType() { const prev = lastOfPhase(); phase = "type"; typeSet = practiceOrder(prev); i = 0; typeScore = 0; roundLog.type = []; render(); }
 
   function beginBatch(keepBackToResults) {
+    replayOnly = false;
     if (!keepBackToResults) replayFrom = null;
     batch = counties.slice(start, start + batchSize());
     i = 0; phase = "learn";
@@ -2679,7 +2683,7 @@ setTimeout(() => {
     } else if (answered) {
       const list = phase === "quiz" ? quizSet : phase === "pin" ? pinSet : typeSet;
       if (i < list.length - 1) { i++; render(); }
-      else if (nextPhaseAfter(phase)) startPhase(nextPhaseAfter(phase));
+      else if (!replayOnly && nextPhaseAfter(phase)) startPhase(nextPhaseAfter(phase));
       else showSummary();
     }
   });
@@ -3536,7 +3540,7 @@ function openLocator(countyId) {
       if (!target) return;
       const r = target.getBoundingClientRect();
       const svgRect = svg.getBoundingClientRect();
-      if (!svgRect.width || Math.max(r.width, r.height) > svgRect.width * 0.08) return;
+      if (!svgRect.width || Math.max(r.width, r.height) > svgRect.width * 0.03) return;
       const inv = svg.getScreenCTM().inverse();
       const pt = svg.createSVGPoint();
       pt.x = r.left; pt.y = r.top;
@@ -4502,7 +4506,11 @@ function acceptTypedMatches(matchedCounties) {
       el.style.pointerEvents = "none";
     });
   });
-
+  if (selectedMode === "type") {
+    document.querySelectorAll(".county.just-found").forEach(el => el.classList.remove("just-found"));
+    matchedCounties.forEach(c => getCountyElements(c.id).forEach(el => el.classList.add("just-found")));
+  }
+  
   const matchedIds = new Set(matchedCounties.map(c => c.id));
   targetPool = targetPool.filter(c => !matchedIds.has(c.id));
   pickNextTarget();

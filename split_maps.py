@@ -168,6 +168,11 @@ def main():
             problems.append(f"{fips}: unknown FIPS"); print(f"!! {fips}: unknown state code, skipped"); continue
         name, st = FIPS[fips], data[fips]
         counties = st["counties"]
+        def spell_saints(n):
+            return re.sub(r"^Ste\.? ", "Sainte ", re.sub(r"^St\.? ", "Saint ", n))
+        counties = [{**c, "name": spell_saints(c["name"]), "namelsad": spell_saints(c["namelsad"])} for c in counties]
+
+        
         fixes = {re.sub(r"[^a-z]", "", k.lower()): v for k, v in NAME_FIXES.get(fips, {}).items()}
         if fixes:
             fixed = []
