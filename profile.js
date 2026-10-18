@@ -713,9 +713,9 @@
         try { await navigator.clipboard.writeText(url.href); say("Link copied."); } catch (e) { say(url.href); }
       }, true));
     }
-    if (session && me && wantedName && wantedName !== me.username) items.push(link("My profile", "profile.html"));
     if (!session && wantedName) items.push(link("Sign in", "profile.html"));
     if (session) items.push(btn("Sign out", () => sb.auth.signOut(), true));
+    if (session && me && wantedName && wantedName !== me.username) items.push(link("My profile", "profile.html"));
     box.replaceChildren(...items);
   }
 
