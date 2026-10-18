@@ -1,0 +1,609 @@
+(function () {
+  "use strict";
+  const SUPABASE_URL = "https://jgwhnidtjnuufdjcmqdv.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impnd2huaWR0am51dWZkamNtcWR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxOTE4MDgsImV4cCI6MjEwNzc2NzgwOH0.SsIHfT9TFvAYthQbwcD_Ee6W9T9a8yqlD2HfiAbcgCk";
+  const MODES = ["pin", "pin-hard", "mc", "type", "type-hard", "type-strict"];
+  const MODE_LABEL = { pin: "Pin", "pin-hard": "Flash", mc: "Multiple-Choice", type: "List", "type-hard": "Identify", "type-strict": "Verbatim" };
+  const MODE_LETTER = { pin: "P", "pin-hard": "F", mc: "MC", type: "L", "type-hard": "I", "type-strict": "V" };
+  const MAX_POINTS = 300000;
+
+  const $ = id => document.getElementById(id);
+  const mk = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
+  const say = t => { $("p-msg").textContent = t || ""; };
+  const show = (id, on) => $(id).classList.toggle("hidden", !on);
+
+  if (!window.supabase) { say("Couldn't load the sign-in service. Check your connection and reload."); return; }
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const wantedName = new URLSearchParams(location.search).get("u");   // profile.html?u=name shows that player
+  let session = null, me = null;
+
+  /* ---------- the map ---------- */
+  const MODE_COLOR = { pin: "#3b82f6", "pin-hard": "#8b5cf6", mc: "#f59e0b", type: "#14b8a6", "type-hard": "#ec4899", "type-strict": "#ef4444" };
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  function buildMap(tiles) {
+    const byName = {};
+    tiles.forEach(t => { byName[t.name] = t; });
+    const fills = [];
+    let pinned = null;
+
+    const wrap = mk("div", "pmap");
+    const holder = mk("div", "pmap-holder");
+    holder.innerHTML = window.US_MAP_SVG || "";
+    const svg = holder.querySelector("svg");
+    if (!svg) return mk("p", "info-intro", "Map file missing (us-map.js).");
+    svg.classList.add("us-map");
+
+       // the map's own state labels: keep the abbreviation, add the count next to it
+    const labels = [...svg.querySelectorAll(".us-labels text")];
+    labels.forEach(l => { l.dataset.abbr = l.textContent; });
+    const boxes = [...svg.querySelectorAll(".us-box")];
+
+    const showMode = mode => {
+      fills.forEach(({ t, r }) => {
+        const x = mode ? t.per.find(q => q.m === mode) : null;
+        r.style.fill = mode ? MODE_COLOR[mode] : "";
+        r.style.transform = x ? `scaleY(${t.total ? x.d / t.total : 0})` : "";
+      });
+      labels.forEach(l => {
+        const t = byName[l.dataset.name];
+        const x = mode && t ? t.per.find(q => q.m === mode) : null;
+        l.textContent = l.dataset.abbr;       
+        l.removeAttribute("transform");                // back to just "TX"
+        if (!x) return;
+        const b = parseFloat(l.style.fontSize) || 12;         // the abbreviation's size
+        const count = `${x.d}/${t.total}`;
+        const isCallout = l.classList.contains("callout");
+        const isTerr = l.style.textAnchor === "start";        // PR, VI, MP, AS, GU sit in the corner of their box
+
+        // where the pair is centered: the label itself, or the middle of the territory's box
+        let cx = l.getAttribute("x");
+        if (isTerr) {
+          const lx = parseFloat(cx), ly = parseFloat(l.getAttribute("y"));
+          const box = boxes.find(r => Math.abs(parseFloat(r.getAttribute("x")) - (lx - 3.1)) < 1 &&
+                                      Math.abs(parseFloat(r.getAttribute("y")) - (ly - 4.5)) < 1.5);
+          if (box) cx = parseFloat(box.getAttribute("x")) + parseFloat(box.getAttribute("width")) / 2;
+        }
+
+        const mkSpan = (txt, size, dy) => {
+          const s = document.createElementNS(SVGNS, "tspan");
+          s.textContent = txt;
+          s.style.fontSize = size + "px";
+          if (isTerr) s.style.textAnchor = "middle";
+          if (dy !== null) { s.setAttribute("x", cx); s.setAttribute("dy", dy); }
+          return s;
+        };
+
+        l.textContent = "";
+        if (isCallout) {
+          // the small states on the right have no room below, so the count goes beside the name
+          l.append(mkSpan(l.dataset.abbr, b, null), mkSpan(" " + count, b * 0.75, null));
+        } else {
+          const c = isTerr ? b * 0.85 : Math.max(b * 0.6, 8);   // count size, never tiny
+          const first = isTerr ? 4 : -c * 0.55;                  // territories drop below their border line
+             l.append(mkSpan(l.dataset.abbr, b, first), mkSpan(count, c, b * 0.15 + c * 0.85 + 1));
+             if (!isTerr) {
+               // measure the two lines together and center that block on the label's original spot
+               const bb = l.getBBox();
+               const ox = parseFloat(l.getAttribute("x")), oy = parseFloat(l.getAttribute("y"));
+               l.setAttribute("transform", `translate(${ox - (bb.x + bb.width / 2)}, ${oy - (bb.y + bb.height / 2)})`);
+             }
+        }
+      });
+      svg.classList.toggle("by-mode", !!mode);
+    };
+
+    // getBBox needs the svg to be on the page, so set the overlays up a frame later
+    requestAnimationFrame(() => {
+      svg.querySelectorAll("path.us-st").forEach((p, i) => {
+        const t = byName[p.dataset.name];
+        if (!t) { console.warn("profile map: no data for", p.dataset.name); return; }
+        p.classList.toggle("gold", t.full === MODES.length);
+        const b = p.getBBox();
+        let defs = svg.querySelector("defs");
+        if (!defs) { defs = document.createElementNS(SVGNS, "defs"); svg.insertBefore(defs, svg.firstChild); }
+        const cp = document.createElementNS(SVGNS, "clipPath");
+        cp.id = "pm-clip-" + i;
+        const c = p.cloneNode(false);
+        ["id", "class", "transform"].forEach(a => c.removeAttribute(a));
+        cp.appendChild(c);
+        defs.appendChild(cp);
+
+        const g = document.createElementNS(SVGNS, "g");
+        const tr = p.getAttribute("transform");
+        if (tr) g.setAttribute("transform", tr);
+        g.setAttribute("clip-path", `url(#${cp.id})`);
+        g.setAttribute("pointer-events", "none");
+        const r = document.createElementNS(SVGNS, "rect");
+        r.setAttribute("x", b.x); r.setAttribute("y", b.y);
+        r.setAttribute("width", b.width); r.setAttribute("height", b.height);
+        r.setAttribute("class", "pmap-fill");
+        g.appendChild(r);
+        p.after(g);
+        fills.push({ t, r });
+      });
+      showMode(pinned);
+    });
+
+    const key = mk("div", "pmap-key");
+    const staticItem = (color, label) => {
+      const s = mk("span", "pmap-key-item static");
+      const sw = mk("span", "pmap-swatch"); sw.style.background = color;
+      s.append(sw, label); return s;
+    };
+    const legendRow = mk("div", "pmap-key-row");
+    legendRow.append(staticItem("var(--pm-done)", "All 6 modes done"), staticItem("var(--pm-track)", "Not yet"));    const buttons = MODES.map(m => {
+      const b = mk("button", "pmap-key-item"); b.type = "button";
+      const sw = mk("span", "pmap-swatch"); sw.style.background = MODE_COLOR[m];
+      b.append(sw, MODE_LABEL[m]);
+      b.addEventListener("mouseenter", () => showMode(m));
+      b.addEventListener("focus", () => showMode(m));
+      b.addEventListener("mouseleave", () => showMode(pinned));
+      b.addEventListener("blur", () => showMode(pinned));
+      b.addEventListener("click", () => {            // click/tap pins it (needed on phones)
+        pinned = pinned === m ? null : m;
+        buttons.forEach((x, i) => x.setAttribute("aria-pressed", String(MODES[i] === pinned)));
+        showMode(pinned);
+      });
+      return b;
+    });
+    const modeRow = mk("div", "pmap-key-row");
+    modeRow.append(...buttons);
+    key.append(legendRow, modeRow);
+
+    wrap.append(key, holder);
+    return wrap;
+  }
+
+     /* ---------- how points work (opens from the button in the top corner) ---------- */
+  // each state's name colours from the points sheet: [background, text]
+  const STATE_STYLE = {"Alabama":["00491C","D9EAD3"],"Alaska":["6DFEFE","674EA7"],"American Samoa":["767576","E6CCE6"],"Arizona":["8A9CC6","E3E9FC"],"Arkansas":["BEC86F","990000"],"California":["FB85FD","351C75"],"Colorado":["00856D","D0E0E3"],"Connecticut":["FFC0C1","4C1130"],"Delaware":["0000A1","FFE599"],"District of Columbia":["670011","9FC5E8"],"Florida":["E4F73A","38761D"],"Georgia":["FF553D","FFF8ED"],"Guam":["5050F5","C9DAF8"],"Hawaii":["4FEEA5","674EA7"],"Idaho":["F7CE00","7F6000"],"Illinois":["FFF281","1155CC"],"Indiana":["D4AA77","990000"],"Iowa":["E7FFA9","7F6000"],"Kansas":["B0E8B5","85200C"],"Kentucky":["1897B4","CFE2F3"],"Louisiana":["803499","EAD1DC"],"Maine":["FB9163","FFF2CC"],"Maryland":["FC2E5B","FFF2CC"],"Massachusetts":["CD70FF","F0D4FF"],"Michigan":["95DF15","274E13"],"Minnesota":["FFC294","434343"],"Mississippi":["7F0E54","D5A6BD"],"Missouri":["17C5E4","0000A1"],"Montana":["C6DBE8","A61C00"],"Nebraska":["C11A36","CFE2F3"],"Nevada":["FFE7BC","666666"],"New Hampshire":["FF3DA8","420027"],"New Jersey":["5D4033","F9CB9C"],"New Mexico":["F1AB13","990000"],"New York":["FF8181","783F04"],"North Carolina":["006597","F4CCCC"],"North Dakota":["6C5BCA","FFE599"],"Northern Mariana Islands":["44FF00","7F6000"],"Ohio":["FFA33B","FFF2CC"],"Oklahoma":["A15F39","F4CCCC"],"Oregon":["BD6E63","FCD7D0"],"Pennsylvania":["D6C040","1C4587"],"Puerto Rico":["FBD573","CC0000"],"Rhode Island":["008A28","CFE2F3"],"South Carolina":["68CAD5","134F5C"],"South Dakota":["87CAF3","1155CC"],"Tennessee":["F05400","FCE5CD"],"Texas":["798830","FFF2CC"],"United States Minor Outlying Islands":["C3C3C3","666666"],"United States Virgin Islands":["C62FD0","EAD1DC"],"Utah":["F0781D","FFDBB7"],"Vermont":["0089F1","D9EAD3"],"Virginia":["B390DB","EFE8FF"],"Washington":["87B9A3","1C4587"],"West Virginia":["355850","FCE5CD"],"Wisconsin":["E9BAF5","741B47"],"Wyoming":["8C607E","FCE5CD"]};
+  const MULT_BG = { 0: "#F4CCCC", 1: "#FFF2CC", 2: "#D9EAD3", 3: "#CFE2F3", 4: "#D9D2E9" };
+  const POINT_HEAD = {   // mode header colours from the sheet: [background, text]
+    pin: ["#6FA3D8", "#1c1c1a"], "pin-hard": ["#6FA3D8", "#fff"], mc: ["#6CC36A", "#fff"],
+    type: ["#E0AB5C", "#1c1c1a"], "type-hard": ["#A682C9", "#1c1c1a"], "type-strict": ["#A682C9", "#fff"]
+  };
+
+  let pointsData = null;
+  async function loadPointsData() {
+    if (pointsData) return pointsData;
+    const [s, wt] = await Promise.all([
+      sb.from("state_multipliers").select("state_key, name, multiplier, county_count").order("name"),
+      sb.from("mode_weights").select("mode, weight")
+    ]);
+    const err = s.error || wt.error;
+    if (err) throw new Error(err.message);
+    const w = {};
+    (wt.data || []).forEach(r => { w[r.mode] = r.weight; });
+    pointsData = { rows: s.data || [], w };
+    return pointsData;
+  }
+
+  function pointsTable({ rows, w }) {
+    const cell = (tag, text, bg, fg, cls) => {
+      const n = mk(tag, cls || "", String(text));
+      if (bg) n.style.background = bg;
+      if (fg) n.style.color = fg;
+      return n;
+    };
+    const fmt = n => n.toLocaleString();
+    const dark = "#1c1c1a";
+
+    const hr = mk("tr");
+    hr.append(
+      cell("th", "STATE", "#D9D2E9", dark, "pp-state"),
+      cell("th", "# OF COUNTIES", "#EFEFEF", dark),
+      cell("th", "STATE-SPECIFIC MULTIPLIER", "#EFEFEF", dark),
+      ...MODES.map(m => cell("th", `${MODE_LABEL[m].toUpperCase()} (${w[m] || 0})`, POINT_HEAD[m][0], POINT_HEAD[m][1])),
+      cell("th", "HIGHEST POSSIBLE SCORE", "#081B39", "#fff"));
+    const thead = mk("thead");
+    thead.append(hr);
+
+    const totals = MODES.map(() => 0);
+    let totalCounties = 0, grand = 0;
+    const tbody = mk("tbody");
+    rows.forEach(s => {
+      const st = STATE_STYLE[s.name];
+      const per = MODES.map(m => s.county_count * s.multiplier * (w[m] || 0));
+      const max = per.reduce((a, b) => a + b, 0);
+      per.forEach((v, i) => { totals[i] += v; });
+      totalCounties += s.county_count;
+      grand += max;
+      const tr = mk("tr");
+      tr.append(
+        cell("td", s.name, st && "#" + st[0], st && "#" + st[1], "pp-state"),
+        cell("td", s.county_count),
+        cell("td", s.multiplier, MULT_BG[s.multiplier], dark),
+        ...per.map(v => cell("td", fmt(v))),
+        cell("td", fmt(max)));
+      tbody.append(tr);
+    });
+
+    const tuc = Math.max(0, MAX_POINTS - grand);   // the Ultimate Challenge is worth whatever is left of the total
+    const blanks = n => Array.from({ length: n }, () => cell("td", ""));
+    const footRow = (label, labelBg, labelFg, fillers, value, valueBg, valueFg) => {
+      const tr = mk("tr", "pp-total");
+      tr.append(cell("td", label, labelBg, labelFg, "pp-state"), ...fillers, cell("td", value, valueBg, valueFg));
+      return tr;
+    };
+    const tfoot = mk("tfoot");
+    tfoot.append(
+      footRow("Total", "#081B39", "#fff", [cell("td", fmt(totalCounties)), cell("td", ""), ...totals.map(v => cell("td", fmt(v)))], fmt(grand)),
+      footRow("The Ultimate Challenge", "#CE4E2C", "#fff", blanks(8), fmt(tuc), "#F4CCCC", dark),
+      footRow("Highest possible score", "#081B39", "#fff", blanks(8), fmt(grand + tuc), "#081B39", "#fff"));
+
+    const table = mk("table", "pp-table");
+    table.append(thead, tbody, tfoot);
+
+        return table;
+  }
+
+  async function openPoints() {
+    if ($("pp-overlay")) return;
+    const overlay = mk("div", "pp-overlay");
+    overlay.id = "pp-overlay";
+    const card = mk("div", "pp-card");
+    const top = mk("div", "pp-top");
+    const close = mk("button", "pp-close", "Close");
+    close.type = "button";
+    top.append(mk("p", "pp-note", "Every county you find earns its state's multiplier × the mode's weight. Each cell is the most that state can give you in that mode."), close);
+    const body = mk("div", "pp-body", "Loading…");
+    card.append(top, body);
+    overlay.append(card);
+    document.body.append(overlay);
+    const onKey = e => { if (e.key === "Escape") shut(); };
+    const shut = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
+    document.addEventListener("keydown", onKey);
+    close.addEventListener("click", shut);
+    overlay.addEventListener("click", e => { if (e.target === overlay) shut(); });
+    try { body.replaceChildren(pointsTable(await loadPointsData())); }
+    catch (e) { body.textContent = "Couldn't load the points table: " + e.message; }
+  }
+
+    // shrink long state names until they fit on two lines
+   /* ---------- medals ---------- */
+  const TIER = n => n >= MODES.length ? "gold" : n >= 3 ? "silver" : n >= 1 ? "bronze" : "locked";
+  const TIER_RING = { gold: "#d4a017", silver: "#b8c0cc", bronze: "#b0703c", locked: "rgba(128,128,128,.55)" };
+  const svgEl = (tag, attrs) => { const n = document.createElementNS(SVGNS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+
+    // American Samoa is drawn as islands far apart, so its badge shows just Tutuila (plus little Aunu'u beside it).
+  // The rule keeps only shapes that sit left of x = 750 on the map, which is Tutuila; Manu'a, Swains and Rose are farther right.
+  const BADGE_ONLY = {
+    "American Samoa": shape => {
+      const nums = shape.match(/-?\d+\.?\d*/g).map(Number);
+      let maxX = -Infinity;
+      for (let i = 0; i < nums.length; i += 2) maxX = Math.max(maxX, nums[i]);
+      return maxX < 750;
+    }
+  };
+  // Hand-picked, high-detail outlines for badges where the home-screen map is too coarse
+  const SHAPE_OVERRIDE = window.SHAPE_EXTRA || {};   // detailed outlines from dc-shape.js
+  let stateShapes = null;
+  function shapeFor(name) {
+    if (SHAPE_OVERRIDE[name]) return SHAPE_OVERRIDE[name];
+    if (!stateShapes) {
+      stateShapes = {};
+      const t = document.createElement("div");
+      t.innerHTML = window.US_MAP_SVG || "";
+           t.querySelectorAll("path.us-st").forEach(p => {
+        const n = p.dataset.name;
+        let d = p.getAttribute("d");
+        const keep = BADGE_ONLY[n];
+        if (keep) d = (d.match(/M[^M]*/g) || []).filter(keep).join("");
+        stateShapes[n] = (stateShapes[n] || "") + d;   // joins a state's pieces; BADGE_ONLY trims the ones listed above
+      });
+    }
+    return stateShapes[name] || null;
+  }
+
+  function discSvg(ringColor, locked) {
+    const svg = svgEl("svg", { viewBox: "0 0 100 100", class: "medal-disc" });
+    svg.append(
+      svgEl("circle", { cx: 50, cy: 50, r: 46, class: "medal-face" }),
+      svgEl("circle", locked
+        ? { cx: 50, cy: 50, r: 46, fill: "none", stroke: ringColor, "stroke-width": 3, "stroke-dasharray": "3 5" }
+        : { cx: 50, cy: 50, r: 46, fill: "none", stroke: ringColor, "stroke-width": 5 }));
+    return svg;
+  }
+
+    // the round badge: tier ring with the state's shape inside
+  function badgeSvg(t) {
+    const tier = TIER(t.full), locked = tier === "locked";
+    const st = STATE_STYLE[t.name];
+    const svg = discSvg(TIER_RING[tier], locked);
+    const d = shapeFor(t.name);
+    if (d) {
+      const inner = svgEl("svg", { x: 20, y: 20, width: 60, height: 60, viewBox: "0 0 100 100", preserveAspectRatio: "xMidYMid meet", class: "medal-shape" });
+      inner.append(svgEl("path", {
+        d, "fill-rule": "evenodd", "vector-effect": "non-scaling-stroke", "stroke-width": 1,
+        fill: locked ? "none" : "#" + (st ? st[0] : "888888"),
+        stroke: locked ? "currentColor" : "rgba(0,0,0,.45)"
+      }));
+      svg.append(inner);
+    }
+    return svg;
+  }
+
+  function stateMedal(t) {
+    const tier = TIER(t.full);
+    const el = mk("div", "medal clickable " + tier);
+    el.tabIndex = 0;
+    el.setAttribute("role", "button");
+    el.setAttribute("aria-label", `${t.name}: see details`);
+    const pips = mk("div", "medal-pips");
+    t.per.forEach(x => { const p = mk("span", "medal-pip" + (x.full ? " on" : "")); p.style.setProperty("--c", MODE_COLOR[x.m]); pips.append(p); });
+    el.append(badgeSvg(t), mk("div", "medal-name", t.name), pips);
+    el.addEventListener("click", () => openStateDetail(t));
+    el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openStateDetail(t); } });
+    return el;
+  }
+
+  // the screen that opens when you click a state's badge
+  function openStateDetail(t) {
+    const tier = TIER(t.full);
+    const TIER_LABEL = { gold: "Gold", silver: "Silver", bronze: "Bronze", locked: "Not started" };
+    const doneAll = t.per.reduce((a, x) => a + x.d, 0), totalAll = t.total * MODES.length;
+    const pct = totalAll ? Math.round((doneAll / totalAll) * 100) : 0;
+
+    const overlay = mk("div", "modal");
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", t.name + " details");
+    const card = mk("div", "modal-content sd-card");
+
+    const onKey = e => { if (e.key === "Escape") close(); };
+    const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
+    document.addEventListener("keydown", onKey);
+    overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+
+    const x = mk("button", "sd-close", "×");
+    x.type = "button";
+    x.setAttribute("aria-label", "Close");
+    x.addEventListener("click", close);
+
+    const badge = badgeSvg(t);
+    badge.classList.add("sd-badge");
+
+    const rows = mk("div", "sd-rows");
+    t.per.forEach(r => {
+      const row = mk("div", "sd-row" + (r.full ? " full" : ""));
+      const label = mk("span", "sd-mode");
+      const dot = mk("span", "sd-dot");
+      dot.style.background = MODE_COLOR[r.m];
+      label.append(dot, MODE_LABEL[r.m]);
+      const bar = mk("div", "sd-bar"), fill = mk("div", "sd-bar-fill");
+      fill.style.width = (t.total ? (r.d / t.total) * 100 : 0) + "%";
+      fill.style.background = MODE_COLOR[r.m];
+      bar.append(fill);
+      row.append(label, bar, mk("span", "sd-count", (r.full ? "\u2713 " : "") + r.d + "/" + t.total));
+      rows.append(row);
+    });
+
+    const foot = mk("div", "sd-foot",
+      `${Math.round(t.pts).toLocaleString()} of ${Math.round(t.maxPts).toLocaleString()} points from this state` +
+      ` \u00b7 \u00d7${Number(t.mult)} multiplier`);
+
+    card.append(
+      x, badge,
+      mk("h2", "sd-title", t.name),
+      mk("div", "sd-sub", `${TIER_LABEL[tier]} \u00b7 ${t.full} of ${MODES.length} modes complete`),
+      mk("div", "sd-pct", pct + "%"),
+      mk("div", "sd-pct-label", `${doneAll} of ${totalAll} done`),
+      rows, foot);
+    overlay.append(card);
+    document.body.append(overlay);
+    fitShapes(overlay);
+    x.focus();
+  }
+
+  function badgeMedal(a) {
+    const el = mk("div", "medal achievement " + (a.earned ? "gold" : "locked"));
+    el.title = a.label + (a.sub ? " — " + a.sub : "");
+    const svg = discSvg(a.earned ? a.color : TIER_RING.locked, !a.earned);
+    const fillColor = a.earned ? a.color : "currentColor";
+    if (a.icon === "flame") {
+      svg.append(svgEl("path", { d: "M50 22 C58 34 71 41 67 58 C65 69 58 76 50 76 C42 76 35 69 33 58 C31 50 37 45 41 39 C43 45 46 47 50 45 C53 39 51 31 50 22 Z", fill: fillColor }));
+    } else {
+      const g = String(a.glyph);
+      const t = svgEl("text", { x: 50, y: 50, "text-anchor": "middle", "dominant-baseline": "central", class: "medal-glyph", fill: fillColor, "font-size": g.length >= 4 ? 20 : g.length === 3 ? 24 : 30 });
+      t.textContent = g;
+      svg.append(t);
+    }
+    el.append(svg, mk("div", "medal-name", a.label), mk("div", "medal-sub", a.sub || ""));
+    return el;
+  }
+
+  // size each state's silhouette to its own outline (needs the medals to be on the page)
+  function fitShapes(root) {
+    root.querySelectorAll("svg.medal-shape").forEach(s => {
+      try {
+        const b = s.querySelector("path").getBBox();
+        const pad = Math.max(b.width, b.height) * 0.04;
+        s.setAttribute("viewBox", `${b.x - pad} ${b.y - pad} ${b.width + 2 * pad} ${b.height + 2 * pad}`);
+      } catch (e) { /* not drawn yet */ }
+    });
+  }
+
+  // shrink long names until they fit on two lines
+  function fitNames(root) {
+    root.querySelectorAll(".medal-name").forEach(el => {
+      el.style.fontSize = "";
+      let size = parseFloat(getComputedStyle(el).fontSize);
+      const lines = () => el.offsetHeight / (parseFloat(getComputedStyle(el).lineHeight) || size * 1.2);
+      while (lines() > 2.2 && size > 8) { size -= 0.5; el.style.fontSize = size + "px"; }
+    });
+  }
+  
+  /* ---------- the profile itself ---------- */
+  async function showProfile(userId) {
+    const view = $("p-view");
+    view.replaceChildren(mk("p", "info-intro", "Loading…"));
+    show("p-view", true);
+    const [who, prog, states, weights] = await Promise.all([
+      sb.from("leaderboard").select("id, username, points, has_tuc").eq("id", userId).maybeSingle(),
+      sb.from("user_state_mode").select("state_key, mode, done").eq("user_id", userId),
+      sb.from("state_multipliers").select("state_key, name, multiplier, county_count").order("name"),
+      sb.from("mode_weights").select("mode, weight")
+    ]);
+    const err = who.error || prog.error || states.error || weights.error;
+    if (err || !who.data) {
+      view.replaceChildren(mk("p", "info-intro", err ? "Couldn't load the profile: " + err.message : "That profile wasn't found."));
+      return;
+    }
+
+    const w = {};
+    (weights.data || []).forEach(r => { w[r.mode] = r.weight; });
+    const done = {};
+    (prog.data || []).forEach(r => { (done[r.state_key] = done[r.state_key] || {})[r.mode] = r.done; });
+    const tiles = (states.data || []).map(s => {
+      const total = s.county_count;
+      const per = MODES.map(m => {
+        const d = Math.min((done[s.state_key] || {})[m] || 0, total);
+        return { m, d, full: d >= total, pts: d * s.multiplier * (w[m] || 0) };
+      });
+      return {
+        name: s.name, total, per, full: per.filter(x => x.full).length, pts: per.reduce((a, x) => a + x.pts, 0),
+        mult: s.multiplier, maxPts: total * s.multiplier * MODES.reduce((a, m) => a + (w[m] || 0), 0)
+      };
+    });
+    const pts = Number(who.data.points) || 0;
+
+    const head = mk("div", "profile-head");
+    const bar = mk("div", "profile-bar"), fill = mk("div", "profile-bar-fill");
+    fill.style.width = Math.max(1.5, Math.min(100, (pts / MAX_POINTS) * 100)) + "%";
+    bar.append(fill);
+    const pct = (pts / MAX_POINTS) * 100;
+    const pctText = pts > 0 && pct < 0.1 ? "<0.1%" : pct.toFixed(1).replace(/\.0$/, "") + "%";
+    const ptsEl = mk("div", "profile-points", pts.toLocaleString());
+    ptsEl.append(mk("span", "profile-points-max", " / " + MAX_POINTS.toLocaleString()));
+    head.append(mk("div", "profile-avatar", who.data.username.slice(0, 1).toUpperCase()),
+                mk("h2", "profile-name", who.data.username), ptsEl, bar,
+                mk("div", "profile-pct", pctText));
+    if (who.data.has_tuc) head.querySelector(".profile-avatar").classList.add("tuc");
+
+    const gold = tiles.filter(t => t.full === MODES.length).length;
+    const modeDone = m => tiles.every(t => t.per.find(x => x.m === m).full);
+    const achievements = [
+      { label: "The Ultimate Challenge", sub: "Beat it", icon: "flame", color: "#CE4E2C", earned: !!who.data.has_tuc },
+      { label: "First gold", sub: "A state in all 6 modes", glyph: "★", color: "#d4a017", earned: gold >= 1 },
+      { label: "Five gold", sub: "5 states in all 6 modes", glyph: "★5", color: "#d4a017", earned: gold >= 5 },
+      ...[[1000, "1K"], [10000, "10K"], [50000, "50K"], [150000, "150K"], [300000, "300K"]]
+        .map(([n, g]) => ({ label: n.toLocaleString() + " points", sub: "", glyph: g, color: "#6FA3D8", earned: pts >= n })),
+      ...MODES.map(m => ({ label: MODE_LABEL[m] + " master", sub: "Every state done", glyph: MODE_LETTER[m], color: MODE_COLOR[m], earned: modeDone(m) }))
+    ].sort((a, b) => b.earned - a.earned);
+
+    const byPts = (a, b) => b.full - a.full || b.pts - a.pts || a.name.localeCompare(b.name);
+    const stateOrder = [
+      ...tiles.filter(t => t.full > 0).sort(byPts),
+      ...tiles.filter(t => t.full === 0).sort((a, b) => a.name.localeCompare(b.name))
+    ];
+
+    const shelf = (title, items) => {
+      const s = mk("section");
+      const g = mk("div", "medal-grid");
+      g.append(...items);
+      s.append(mk("h3", "profile-section-title", title), g);
+      return s;
+    };
+    const sections = mk("div", "profile-sections");
+    sections.append(
+      shelf(`Achievements · ${achievements.filter(a => a.earned).length} of ${achievements.length}`, achievements.map(badgeMedal)),
+      shelf(`States · ${tiles.filter(t => t.full > 0).length} of ${tiles.length}`, stateOrder.map(stateMedal)));
+
+    view.replaceChildren(head, buildMap(tiles), sections);
+    fitShapes(view);
+    fitNames(view);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitShapes(view); fitNames(view); });
+  }
+
+  async function showProfileByName(name) {
+    const r = await sb.from("profiles").select("id, username").eq("username", name).maybeSingle();
+    if (r.error || !r.data) { say(r.error ? "Couldn't look that player up: " + r.error.message : `There's no player named "${name}".`); return; }
+    await showProfile(r.data.id);
+  }
+
+  /* ---------- the buttons in the top corner ---------- */
+  function renderActions() {
+    const box = $("p-actions");
+    const btn = (label, fn, secondary) => { const b = mk("button", secondary ? "btn-secondary" : "", label); b.type = "button"; b.addEventListener("click", fn); return b; };
+    const link = (label, href) => { const a = mk("a", "profile-link", label); a.href = href; return a; };
+    const items = [];
+    items.push(btn("How points work", openPoints, true));
+    const viewing = wantedName || (me && me.username);
+    if (viewing) {
+      items.push(btn("Copy link", async () => {
+        const url = new URL("profile.html", location.href); url.search = "?u=" + encodeURIComponent(viewing);
+        try { await navigator.clipboard.writeText(url.href); say("Link copied."); } catch (e) { say(url.href); }
+      }, true));
+    }
+    if (session && me && wantedName && wantedName !== me.username) items.push(link("My profile", "profile.html"));
+    if (!session && wantedName) items.push(link("Sign in", "profile.html"));
+    if (session) items.push(btn("Sign out", () => sb.auth.signOut(), true));
+    box.replaceChildren(...items);
+  }
+
+  /* ---------- deciding what to show ---------- */
+  let busy = false, again = false;
+  async function route() {
+    if (busy) { again = true; return; }
+    busy = true;
+    try {
+      say("");
+      const { data } = await sb.auth.getSession();
+      session = data.session; me = null;
+      if (session) {
+        const r = await sb.from("profiles").select("id, username").eq("id", session.user.id).maybeSingle();
+        me = r.data;
+      }
+      show("p-out", false); show("p-name", false); show("p-view", false);
+      if (wantedName) await showProfileByName(wantedName);
+      else if (!session) show("p-out", true);
+      else if (!me) show("p-name", true);
+      else await showProfile(me.id);
+      renderActions();
+    } finally {
+      busy = false;
+      if (again) { again = false; route(); }
+    }
+  }
+
+  /* ---------- sign in / create account / username ---------- */
+  const FAKE_DOMAIN = "example.com";   // nobody is ever emailed; this only gives Supabase something that looks like an address
+  const toEmail = s => (s.includes("@") ? s : s.toLowerCase() + "@" + FAKE_DOMAIN);   // typing a real email still works for older accounts
+  let signingUp = false;
+  const creds = () => ({ user: $("p-email").value.trim(), password: $("p-password").value });
+
+  $("p-signup").addEventListener("click", async () => {
+    const { user, password } = creds();
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(user)) { say("Username: 3–20 letters, numbers or underscores."); return; }
+    if (password.length < 6) { say("Password must be at least 6 characters."); return; }
+    signingUp = true;
+    try {
+      const { data, error } = await sb.auth.signUp({ email: toEmail(user), password });
+      if (error) { say(/already|registered/i.test(error.message) ? "That username is taken." : error.message); return; }
+      if (!data.session) { say("Couldn't sign you in. In Supabase, is “Confirm email” turned off?"); return; }
+      const ins = await sb.from("profiles").insert({ id: data.user.id, username: user });
+      if (ins.error) { say(ins.error.code === "23505" ? "That username is taken." : "Couldn't save the username: " + ins.error.message); return; }
+    } finally { signingUp = false; }
+    route();
+  });
+
+  $("p-signin").addEventListener("click", async () => {
+    const { user, password } = creds();
+    if (!user || !password) { say("Enter your username and password."); return; }
+    const { error } = await sb.auth.signInWithPassword({ email: toEmail(user), password });
+    say(error ? (error.message === "Invalid login credentials" ? "Wrong username or password." : error.message) : "");
+  });
+  ["p-email", "p-password"].forEach(id => $(id).addEventListener("keydown", e => { if (e.key === "Enter") $("p-signin").click(); }));
+  $("p-save-name").addEventListener("click", async () => {
+    const username = $("p-username").value.trim();
+    const { error } = await sb.from("profiles").insert({ id: session.user.id, username });
+    if (error) { say(error.code === "23505" ? "That username is taken." : "Use 3–20 letters, numbers or underscores."); return; }
+    route();
+  });
+  $("p-username").addEventListener("keydown", e => { if (e.key === "Enter") $("p-save-name").click(); });
+
+  sb.auth.onAuthStateChange(evt => { if (!signingUp && (evt === "SIGNED_IN" || evt === "SIGNED_OUT")) route(); });
+  route();
+})();

@@ -41,10 +41,18 @@
 
 
  <section id="screen-home" class="screen active">
+  <div id="site-credits" class="site-credits">
+  Made by nub098765<br>
+  Idea and playtesting by mellohihellohi<br>
+  Coastlines &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a><br>County boundaries: U.S. Census Bureau
+</div>
    <div class="home-top-actions">
      <button type="button" class="icon-btn" data-open-report aria-label="Report a bug" title="Report a bug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="14.2" rx="5" ry="6.3"/><path d="M9.6 8.4a2.4 2.4 0 0 1 4.8 0M12 8v12.4M10 6.4 8.3 4M14 6.4 15.7 4M7 11.5H3.5M7.2 15.5H4M7.9 19.2l-2.4 2M17 11.5h3.5M16.8 15.5H20M16.1 19.2l2.4 2"/></svg></button>
-     <button type="button" id="btn-goto-settings" class="icon-btn" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
      <button type="button" id="btn-goto-records" class="icon-btn" aria-label="Records" title="Records"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h11M4 18h6"/></svg></button>
+     <button type="button" id="btn-goto-county-list" class="icon-btn" aria-label="All counties" title="All counties"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11"/></svg></button>
+     <button type="button" id="btn-leaderboard" class="icon-btn" aria-label="Leaderboard" title="Leaderboard">🏆</button>
+     <button type="button" id="btn-account" class="icon-btn" aria-label="Account" title="Account">👤</button>
+     <button type="button" id="btn-goto-settings" class="icon-btn" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
    </div>
    <div id="home-layout" class="home-layout no-mode">
      <div class="home-left">
@@ -61,13 +69,14 @@
        <h1>Countellect</h1>
        <p class="subtitle">How would you like to learn the US, county by county?</p>
        <div class="home-columns">
-         <div class="home-col"><h2>Play</h2><div class="mode-options"><button type="button" class="btn-mode mode-pin" data-home-mode="pin" aria-pressed="false"><strong>Pin</strong><span>Click the county you are given; once found, it stays filled.</span></button><button type="button" class="btn-mode mode-pin" data-home-mode="pin-hard" aria-pressed="false"><strong>Flash</strong><span>Click the county you are given; once found, it flashes briefly.</span></button><button type="button" class="btn-mode mode-mc" data-home-mode="mc" aria-pressed="false"><strong>Multiple-Choice</strong><span>Pick the highlighted county's name from four options.</span></button><button type="button" class="btn-mode mode-list" data-home-mode="type" aria-pressed="false"><strong>List</strong><span>Type any county, in any order, and see how many you can list.</span></button><button type="button" class="btn-mode mode-type" data-home-mode="type-hard" aria-pressed="false"><strong>Type</strong><span>Type the name of a specific highlighted county.</span></button><button type="button" class="btn-mode mode-type" data-home-mode="type-strict" aria-pressed="false"><strong>Verbatim</strong><span>Type the name of a specific highlighted county. You must press Enter to submit, and wrong guesses count against you.</span></button></div></div>
-         <div class="home-col"><h2>Learn</h2><div class="mode-options"><button type="button" class="btn-mode mode-pin" data-home-learn="pin" aria-pressed="false"><strong>Pin</strong><span>Learn five at a time, then click each county on the map.</span></button><button type="button" class="btn-mode mode-mc" data-home-learn="mc" aria-pressed="false"><strong>Multiple-Choice</strong><span>Learn five at a time, then pick the right name from four options.</span></button><button type="button" class="btn-mode mode-type" data-home-learn="type" aria-pressed="false"><strong>Type</strong><span>Learn five at a time, then type each county's name.</span></button><button type="button" class="btn-mode mode-all" data-home-learn="all" aria-pressed="false"><strong>All</strong><span>Learn five at a time, then multiple-choice, typing, and pinning.</span></button></div></div>
+         <div class="home-col"><h2>Play</h2><div class="mode-options"><button type="button" class="btn-mode mode-pin" data-home-mode="pin" aria-pressed="false"><strong>Pin</strong><span>Click the county you are given; once found, it stays filled.</span></button><button type="button" class="btn-mode mode-pin" data-home-mode="pin-hard" aria-pressed="false"><strong>Flash</strong><span>Click the county you are given; once found, it flashes briefly.</span></button><button type="button" class="btn-mode mode-mc" data-home-mode="mc" aria-pressed="false"><strong>Multiple-Choice</strong><span>Pick the highlighted county's name from four options.</span></button><button type="button" class="btn-mode mode-list" data-home-mode="type" aria-pressed="false"><strong>List</strong><span>Type any county, in any order, and see how many you can list.</span></button><button type="button" class="btn-mode mode-type" data-home-mode="type-hard" aria-pressed="false"><strong>Identify</strong><span>Click a county, then type its name.</span></button><button type="button" class="btn-mode mode-type" data-home-mode="type-strict" aria-pressed="false"><strong>Verbatim</strong><span>Type the name of a specific highlighted county. You must press Enter to submit, and wrong guesses count against you.</span></button></div></div>
+         <div class="home-col"><h2>Learn</h2><div class="mode-options"><button type="button" class="btn-mode mode-pin" data-home-learn="pin" aria-pressed="false"><strong>Pin</strong><span>Learn five at a time, then click each county on the map.</span></button><button type="button" class="btn-mode mode-mc" data-home-learn="mc" aria-pressed="false"><strong>Multiple-Choice</strong><span>Learn five at a time, then pick the right name from four options.</span></button><button type="button" class="btn-mode mode-type" data-home-learn="type" aria-pressed="false"><strong>Type</strong><span>Learn five at a time, then type each county's name.</span></button><button type="button" class="btn-mode mode-all" data-home-learn="all" aria-pressed="false"><strong>All</strong><span>Learn five at a time, then multiple-choice, typing, and pinning.</span><button type="button" class="btn-mode mode-list" data-home-learn="review" aria-pressed="false"><strong>Review</strong><span>Hover over counties to see their names. No quiz, no score.</span></button></button></div></div>
        </div>
        <button id="btn-start-game" class="btn-launch" disabled title="Select at least one state to play.">Play</button>
+       <button type="button" class="btn-ultimate" data-home-mode="tuc" aria-pressed="false">The Ultimate Challenge</button>
        <p id="home-msg" class="study-feedback" aria-live="polite"></p>
        <div class="home-options">
-      <label id="home-skip-wrap" class="study-skip hidden"><input type="checkbox" id="home-skip-learned" checked> Skip <span data-unit="plural">counties</span> I've already learned</label> 
+      <label id="home-skip-wrap" class="study-skip hidden"><input type="checkbox" id="home-skip-learned" checked> <span>Skip <span data-unit="plural">counties</span> I've already learned</span></label>
          <div id="county-options-panel" class="county-panel hidden">
        <p class="plain-prompt">Would you like to exclude any <span data-unit="plural">counties</span>?</p>
      <div class="radio-group">
@@ -130,6 +139,7 @@
  <section id="screen-settings" class="screen">
    <button type="button" class="btn-back settings-back-top">Back to home</button>
    <h2>Settings</h2>
+   <p id="tuc-settings-banner" class="tuc-settings-banner hidden" role="note">You're in The Ultimate Challenge. Settings it controls are grayed out and locked until you leave the run.</p>
 
    <div class="settings-layout">
      <nav class="settings-toc" aria-label="Settings sections">
@@ -172,6 +182,7 @@
              <a href="#settings-group-specific-modes" class="toc-section-link">Specific Modes</a>
            </div>
            <ul class="toc-items" id="toc-items-specific-modes">
+             <li><a href="#setting-show-county-list" class="toc-item-link">Show County List (List mode)</a></li>
              <li><a href="#setting-speedrun" class="toc-item-link">Speedrun Mode (Pin modes)</a></li>
              <li><a href="#setting-instant-check" class="toc-item-link">Instant Check (Type modes)</a></li>
              <li><a href="#setting-list-by-state" class="toc-item-link">Group Checklist by State (List mode)</a></li>
@@ -280,7 +291,6 @@
          <input type="checkbox" id="toggle-scale-states-by-size">
        </div>
 
-
        <div class="setting-item" id="setting-dividers-for-few-states">
          <div class="setting-text">
            <label for="toggle-dividers-for-few-states">Use Dividers for Few States</label>
@@ -334,6 +344,14 @@
        </div>
 
        <h3 id="settings-group-specific-modes" class="settings-group-title">Specific Modes</h3>
+
+       <div class="setting-item" id="setting-show-county-list">
+         <div class="setting-text">
+           <label for="toggle-show-county-list">Show County List (List mode)</label>
+           <p class="setting-desc">Show the "Show List" button in List mode, which opens a checklist of every county you still need to find. Turn this off to play from memory.</p>
+         </div>
+         <input type="checkbox" id="toggle-show-county-list">
+       </div>
 
        <div class="setting-item" id="setting-speedrun">
          <div class="setting-text">
@@ -402,8 +420,8 @@
        <span>Type any county, in any order, and see how many you can list.</span>
      </button>
      <button class="btn-mode mode-type" data-mode="type-hard">
-       <strong>Type</strong>
-       <span>Type the name of a specific highlighted county.</span>
+       <strong>Identify</strong>
+       <span>Click a county, then type its name.</span>
      </button>
      <button class="btn-mode mode-type" data-mode="type-strict">
        <strong>Verbatim</strong>
@@ -888,7 +906,9 @@
 
 
 <aside id="county-list-panel" class="county-list-panel hidden">
-  <h3>Counties</h3>
+  <button type="button" id="county-list-close" class="county-list-close" aria-label="Close the list">×</button>
+  <h3 id="county-list-title">Counties</h3>
+  <select id="county-list-state-select" class="hidden" aria-label="Choose a state's list"></select>
   <table id="county-list-items"><tbody></tbody></table>
 </aside>
 
@@ -905,6 +925,16 @@
     <div id="locator-map-holder" class="locator-map-holder"></div>
     <button type="button" id="btn-locator-close" class="btn-secondary">Close</button>
   </div>
+</div>
+<div id="modal-tuc-intro" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="tuc-intro-title">
+ <div class="modal-content info-modal-content">
+   <h2 id="tuc-intro-title">The Ultimate Challenge</h2>
+   <p id="tuc-intro-text" class="info-intro"></p>
+   <div class="modal-actions">
+     <button type="button" id="btn-tuc-intro-never" class="btn-secondary">Don't show this again</button>
+     <button type="button" id="btn-tuc-intro-ok" class="btn-primary">Okay</button>
+   </div>
+ </div>
 </div>
 
 <div id="modal-info" class="modal hidden">
@@ -997,7 +1027,18 @@
    </form>
  </div>
 </div>
-
+<div id="modal-county-list" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="county-list-title">
+ <div class="modal-content county-list-modal-content">
+   <h2 id="county-list-title">All County Equivalents</h2>
+   <input type="search" id="all-counties-search" class="county-list-search" placeholder="Search counties or states…" autocomplete="off">
+      <label class="county-list-option"><input type="checkbox" id="all-counties-include-state" checked> Include state names in search</label>
+   <p id="all-counties-count" class="county-list-count"></p>
+   <ul id="all-counties-list" class="all-counties-list"></ul>
+   <div class="modal-actions">
+     <button type="button" id="btn-county-list-close" class="btn-secondary">Close</button>
+   </div>
+ </div>
+</div>
 
 <div id="modal-summary" class="modal hidden">
  <div class="modal-content">
@@ -1022,15 +1063,12 @@
 
 
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="account.js"></script>
 <script src="maps/manifest.js"></script>
 <script src="maps/manifest-extra.js"></script>
 <script src="script.js"></script>
 <script src="report.js"></script>
-<div id="site-credits" class="site-credits">
-  Made by nub098765<br>
-  Idea and playtesting by mellohihellohi<br>
-  Coastlines &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>; county boundaries: U.S. Census Bureau
-</div>
 
 
 </body>

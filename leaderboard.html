@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leaderboard · Countellect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Serif:opsz,wght@8..144,300;400;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="geonerds.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-container wide-settings profile-page">
+  <div class="lb-wrap">
+    <div class="profile-topbar">
+      <a class="profile-link" href="index.html">← Back to game</a>
+      <div class="profile-actions"><a class="profile-link" href="profile.html">My profile</a></div>
+    </div>
+
+    <h2>Leaderboard</h2>
+    <p id="lb-note" class="info-intro"></p>
+
+    <div class="lb-search">
+      <input type="search" id="lb-search" placeholder="Search players" maxlength="20" autocomplete="off" autocapitalize="off" aria-label="Search players">
+    </div>
+
+    <table class="lb-table" id="lb-table">
+      <thead><tr><th>#</th><th>Player</th><th>Points</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p id="lb-msg" class="info-intro"></p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+  try {
+    var saved = localStorage.getItem("darkMode");
+    var dark = saved !== null ? JSON.parse(saved) : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (dark) document.body.classList.add("dark-mode");
+  } catch (e) {}
+</script>
+</body>
+</html>

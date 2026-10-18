@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile · Countellect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Serif:opsz,wght@8..144,300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="geonerds.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-container wide-settings profile-page">
+  <div class="profile-topbar">
+    <a class="profile-link" href="index.html">← Back to game</a>
+    <div id="p-actions" class="profile-actions"></div>
+  </div>
+
+  <div id="p-out" class="profile-form hidden">
+    <h2>Sign in</h2>
+    <p class="info-intro">Sign in to save your points and show up on the leaderboard.</p>
+    <input type="text" id="p-email" placeholder="Username" maxlength="20" autocomplete="username" autocapitalize="off">
+    <input type="password" id="p-password" placeholder="Password (6+ characters)" autocomplete="current-password">
+    <div class="profile-form-buttons">
+      <button type="button" id="p-signin" class="btn-primary">Sign in</button>
+      <button type="button" id="p-signup" class="btn-secondary">Create account</button>
+    </div>
+  </div>
+
+  <div id="p-name" class="profile-form hidden">
+    <h2>Pick a username</h2>
+    <p class="info-intro">3–20 letters, numbers or underscores. Other players will see it.</p>
+    <input type="text" id="p-username" maxlength="20" autocomplete="off">
+    <div class="profile-form-buttons"><button type="button" id="p-save-name" class="btn-primary">Save</button></div>
+  </div>
+
+  <div id="p-view" class="hidden"></div>
+  <p id="p-msg" class="info-intro"></p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="dc-shape.js"></script>
+<script src="us-map.js"></script>
+<script src="profile.js"></script>
+<script>
+  /* same dark-mode choice as the game */
+  try {
+    var saved = localStorage.getItem("darkMode");
+    var dark = saved !== null ? JSON.parse(saved) : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (dark) document.body.classList.add("dark-mode");
+  } catch (e) {}
+</script>
+</body>
+</html>

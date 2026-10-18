@@ -171,7 +171,16 @@ def main():
         def spell_saints(n):
             return re.sub(r"^Ste\.? ", "Sainte ", re.sub(r"^St\.? ", "Saint ", n))
         counties = [{**c, "name": spell_saints(c["name"]), "namelsad": spell_saints(c["namelsad"])} for c in counties]
-
+        # An independent city that shares its name with a county in the same state (Baltimore, St. Louis,
+        # Richmond...) gets "City" on the end, so the two don't read the same.
+        name_counts = {}
+        for c in counties:
+            name_counts[c["name"]] = name_counts.get(c["name"], 0) + 1
+        def add_city(c):
+            if name_counts[c["name"]] > 1 and c["namelsad"].lower().endswith(" city"):
+                return {**c, "name": c["name"] + " City", "namelsad": c["namelsad"][:-5] + " City"}
+            return c
+        counties = [add_city(c) for c in counties]
         
         fixes = {re.sub(r"[^a-z]", "", k.lower()): v for k, v in NAME_FIXES.get(fips, {}).items()}
         if fixes:

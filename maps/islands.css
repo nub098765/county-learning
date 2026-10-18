@@ -1,0 +1,17 @@
+/* The U.S. Minor Outlying Islands globe. Everything with an isl- class is decoration; the islands themselves use your normal .county styles. */
+.isl-ocean  { fill: #cfe3ee; stroke: #8fb1c4; stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.isl-grid   { fill: none; stroke: #ffffff; stroke-opacity: 0.6; stroke-width: 0.8px; vector-effect: non-scaling-stroke; }
+.isl-land   { fill: #bdb8a6; stroke: none; }
+.isl-leader { fill: none; stroke: #2b4c32; stroke-width: 1.25px; vector-effect: non-scaling-stroke; }
+.isl-dot    { fill: #2b4c32; }
+.isl-bubble { fill: #f1f7fa; stroke: #2b4c32; stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.isl-islet  { fill: #8f9a6e; stroke: #2b4c32; stroke-width: 0.5px; vector-effect: non-scaling-stroke; }
+#svg-us-minor-outlying-islands .county { stroke-width: 0.6px; }
+
+body.dark-mode .isl-ocean  { fill: #1b2a33; stroke: #3e5a6a; }
+body.dark-mode .isl-grid   { stroke: #ffffff; stroke-opacity: 0.1; }
+body.dark-mode .isl-land   { fill: #35352f; }
+body.dark-mode .isl-leader { stroke: #8fbf8a; }
+body.dark-mode .isl-dot    { fill: #8fbf8a; }
+body.dark-mode .isl-bubble { fill: #22333d; stroke: #8fbf8a; }
+body.dark-mode .isl-islet  { fill: #7c8a5c; stroke: #bfe0b8; }
