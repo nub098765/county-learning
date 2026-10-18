@@ -835,14 +835,14 @@ let selectedMode = "pin";
 const TYPE_MODES = new Set(["type", "type-hard", "type-strict", "mc"]);
 const SINGLE_TARGET_TYPE_MODES = new Set(["type-hard", "type-strict", "mc"]);
 const REVEAL_ANSWER_AFTER_MISTAKES = 3;
-const MODE_LIST = ["pin", "pin-hard", "mc", "type", "type-hard", "type-strict"];
+const MODE_LIST = ["pin", "pin-hard", "mc", "type", "type-strict", "type-hard"];
 const MODE_LABELS = {
   pin: "Pin",
   "pin-hard": "Flash",
   mc: "Multiple-Choice",
   type: "List",
   "type-hard": "Identify",
-  "type-strict": "Verbatim",
+  "type-strict": "Type",
 };
 let activeStateKeys = [];
 let selectedCounties = [];
@@ -1410,7 +1410,10 @@ const SETTING_CONTROLS = [
   { id: "toggle-accept-st-abbrev", key: "acceptStAbbrev", ...asCheckbox },
   { id: "toggle-show-state-in-prompt", key: "showStateInPrompt", ...asCheckbox, after: () => { if (isGameActive) refreshTargetPrompt(false); } },
   { id: "toggle-reveal-answer", key: "revealAnswerAfterMistakes", ...asCheckbox },
-  { id: "select-learn-count", key: "learnCount", ...asSelect },
+  { id: "select-learn-count", key: "learnCount", ...asSelect, after: () => {
+      const r = document.getElementById("home-learn-count"), o = document.getElementById("home-learn-count-out");
+      if (r) r.value = gameSettings.learnCount; if (o) o.textContent = gameSettings.learnCount;
+  } },
   { id: "toggle-hover-names", key: "showHoverNames", ...asCheckbox },
   { id: "toggle-auto-scroll", key: "autoScrollToState", ...asCheckbox },
 ];
@@ -1512,6 +1515,85 @@ const feedbackEl = document.getElementById("feedback");
 const typeInputBox = document.getElementById("type-input-box");
 const mcOptions = document.getElementById("mc-options");
 const typeInput = document.getElementById("type-input");
+const DESIGNATIONS = ["County", "Parish", "Borough", "Census Area", "Planning Region", "Independent City", "Municipality", "Island", "District", "Atoll", "District of Columbia", "Guam", "United States Minor Outlying Island"];
+// The Ultimate Challenge designation picker: a triangle that opens a list drawn by the game itself.
+// Behaves like a form field: .value, .disabled, .classList, .focus()
+const tucDesig = (() => {
+  const wrap = document.getElementById("tuc-desig");
+  const btn = document.getElementById("tuc-desig-btn");
+  const label = document.getElementById("tuc-desig-label");
+  const list = document.getElementById("tuc-desig-list");
+  if (!wrap || !btn || !label || !list) return null;
+  let value = "", disabled = false, active = -1;
+  const opts = DESIGNATIONS.map((d, i) => {
+    const li = document.createElement("li");
+    li.className = "desig-opt"; li.setAttribute("role", "option"); li.textContent = d;
+    li.addEventListener("pointerdown", e => e.preventDefault());          // keep focus where it is
+    li.addEventListener("click", () => choose(d));
+    list.append(li);
+    return li;
+  });
+  const isOpen = () => !list.classList.contains("hidden");
+  const mark = i => {
+    active = i;
+    opts.forEach((o, j) => o.classList.toggle("active", j === i));
+    if (i >= 0) opts[i].scrollIntoView({ block: "nearest" });
+  };
+  function open() {
+    if (disabled) return;
+    list.classList.remove("hidden");
+    btn.setAttribute("aria-expanded", "true");
+    mark(Math.max(0, DESIGNATIONS.indexOf(value)));
+  }
+  function close() {
+    list.classList.add("hidden");
+    btn.setAttribute("aria-expanded", "false");
+    mark(-1);
+  }
+  function setValue(v) {
+    value = v || "";
+    label.textContent = value;
+    btn.classList.toggle("has-value", !!value);
+    opts.forEach((o, j) => o.classList.toggle("chosen", DESIGNATIONS[j] === value));
+  }
+  function choose(d) {
+    setValue(d);
+    close();
+    if (typeInput && !typeInput.disabled) typeInput.focus({ preventScroll: true });   // straight back to typing; Enter submits
+  }
+  btn.addEventListener("click", () => { if (isOpen()) close(); else open(); });
+  btn.addEventListener("keydown", e => {
+    if (disabled) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!isOpen()) { open(); return; }
+      mark((active + (e.key === "ArrowDown" ? 1 : -1) + opts.length) % opts.length);
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (isOpen() && active >= 0) choose(DESIGNATIONS[active]); else open();
+    } else if (e.key === "Escape") {
+      if (isOpen()) { e.preventDefault(); close(); }
+    } else if (e.key === "Tab") {
+      close();
+    } else if (e.key.length === 1 && /\S/.test(e.key)) {              // type a letter to jump
+      const k = e.key.toLowerCase();
+      const from = isOpen() ? active + 1 : 0;
+      const hit = DESIGNATIONS.findIndex((d, i) => i >= from && d.toLowerCase().startsWith(k));
+      const any = hit >= 0 ? hit : DESIGNATIONS.findIndex(d => d.toLowerCase().startsWith(k));
+      if (any >= 0) { if (!isOpen()) open(); mark(any); }
+    }
+  });
+  document.addEventListener("pointerdown", e => { if (isOpen() && !wrap.contains(e.target)) close(); });
+  return {
+    get value() { return value; },
+    set value(v) { setValue(v); },
+    get disabled() { return disabled; },
+    set disabled(b) { disabled = !!b; btn.disabled = disabled; if (disabled) close(); },
+    classList: wrap.classList,
+    focus() { btn.focus(); },
+    open
+  };
+})();
 const btnQuitGame = document.getElementById("btn-quit-game");
 const btnGiveUp = document.getElementById("btn-give-up");
 const btnForfeitTarget = document.getElementById("btn-forfeit-target");
@@ -1972,7 +2054,7 @@ const INFO_MODE_CONFIG = {
     word: "Sonoma",
   },
   "type-strict": {
-    title: "How to Play: Verbatim",
+    title: "How to Play: Type",
     intro: "A county lights up on the map. Type its name, then press Enter to submit. Wrong guesses count against you.",
     demo: "type-strict",
     word: "Sonoma",
@@ -2248,6 +2330,7 @@ function showScreen(screenId) {
     activeScreen.focus();
   }
   exitMapZoom();
+  if (screenId !== "screen-game") clearReviewPins();
   if (countyListPanel && screenId !== "screen-game") {
     countyListPanel.classList.add("hidden");
   }
@@ -3083,21 +3166,32 @@ function syncStAbbrevSettingUI() {
 
 
 if (btnResetProgress) {
-btnResetProgress.addEventListener("click", () => {
-  if (confirm("Are you sure you want to reset all saved progress and mistakes?")) {
-    countyProgress = {};
-    countyMistakes = {};
-    statsHiddenOverride = {};
-    localStorage.removeItem("countyProgress");
-    localStorage.removeItem("studyLearned");
-    localStorage.removeItem(STUDY_KEY);
-    localStorage.removeItem("countyMistakes");
-    renderStateListUI();
-    renderCountyCheckboxes();
-    renderStatsPanel();
-    if (suggestionBox) suggestionBox.classList.add("hidden");
-    alert("Progress and mistake history reset successfully!");
+btnResetProgress.addEventListener("click", async () => {
+  const signedIn = !!(window.accountIsSignedIn && window.accountIsSignedIn());
+  const ask = signedIn
+    ? "Are you sure you want to reset all saved progress and mistakes?\n\nYou're signed in, so this also deletes your points, badges and leaderboard standing. It can't be undone."
+    : "Are you sure you want to reset all saved progress and mistakes?";
+  if (!confirm(ask)) return;
+
+  // clear the account first; if that fails, change nothing so the game and the profile stay in step
+  const acct = window.resetAccountProgress ? await window.resetAccountProgress() : { ok: true };
+  if (!acct.ok) {
+    alert("Couldn't reset your account progress, so nothing was changed. " + (acct.message || "Try again in a moment."));
+    return;
   }
+
+  countyProgress = {};
+  countyMistakes = {};
+  statsHiddenOverride = {};
+  localStorage.removeItem("countyProgress");
+  localStorage.removeItem("studyLearned");
+  localStorage.removeItem(STUDY_KEY);
+  localStorage.removeItem("countyMistakes");
+  renderStateListUI();
+  renderCountyCheckboxes();
+  renderStatsPanel();
+  if (suggestionBox) suggestionBox.classList.add("hidden");
+  alert("Progress and mistake history reset successfully!");
 });
 }
 
@@ -3128,6 +3222,48 @@ document.querySelectorAll(".toc-section-link, .toc-item-link").forEach(link => {
   });
 });
 
+/* ===== Settings: search box, folding groups, and the sidebar opening a folded group when you jump into it ===== */
+(function () {
+  const main = document.querySelector(".settings-main");
+  const search = document.getElementById("settings-search");
+  const none = document.getElementById("settings-no-results");
+  const groups = [...document.querySelectorAll(".settings-group")];
+  if (!main || !search) return;
+
+  const setOpen = (g, open) => {
+    g.classList.toggle("collapsed", !open);
+    g.querySelector(".settings-group-toggle").setAttribute("aria-expanded", String(open));
+  };
+  groups.forEach(g => g.querySelector(".settings-group-toggle").addEventListener("click", () => setOpen(g, g.classList.contains("collapsed"))));
+
+  // runs before the sidebar's own scroll handler, so the target is visible by the time it scrolls
+  const toc = document.querySelector(".settings-toc");
+  if (toc) toc.addEventListener("click", e => {
+    const a = e.target.closest("a[href^='#']");
+    if (!a) return;
+    const target = document.getElementById(a.getAttribute("href").slice(1));
+    const g = target && target.closest(".settings-group");
+    if (g) setOpen(g, true);
+  }, true);
+
+  function runSearch() {
+    const q = search.value.trim().toLowerCase();
+    main.classList.toggle("searching", !!q);
+    let total = 0;
+    groups.forEach(g => {
+      const rows = [...g.querySelectorAll(".setting-item")];
+      const hit = rows.map(r => !q || r.textContent.toLowerCase().includes(q));
+      rows.forEach((r, i) => { if (hit[i] && r.classList.contains("setting-sub") && i > 0) hit[i - 1] = true; });   // a sub-setting brings its parent along
+      rows.forEach((r, i) => r.classList.toggle("search-hidden", !hit[i]));
+      const shown = hit.filter(Boolean).length;
+      total += shown;
+      g.classList.toggle("search-empty", !!q && shown === 0);
+    });
+    if (none) none.classList.toggle("hidden", !q || total > 0);
+  }
+  search.addEventListener("input", runSearch);
+  search.addEventListener("keydown", e => { if (e.key === "Escape" && search.value) { search.value = ""; runSearch(); } });
+})();
 
 function renderStateListUI() {
   Object.keys(stateData).forEach(stateKey => {
@@ -4185,16 +4321,46 @@ if (btnForfeitTarget) {
 
 let reviewMode = false;
 
-function reviewTap(pathEl) {   // tap/click support, so touch screens work too
+const reviewPinned = new Map();   // county id -> { label, glow }
+
+function clearReviewPins() {
+  reviewPinned.forEach(p => { p.tip.remove(); p.glow.forEach(g => g.remove()); });
+  reviewPinned.clear();
+}
+
+function reviewTap(pathEl) {      // click or tap: freeze the name tooltip where it is; click the county again to remove it
   const id = pathEl.dataset.countyId || pathEl.id;
   const county = findCountyById(id);
-  const name = county ? getPlainName(county) : (pathEl.getAttribute("data-name") || "");
-  const r = pathEl.getBoundingClientRect();
-  showHoverGlow(pathEl);
-  showHoverTooltip(name, r.left + r.width / 2, r.top);
+  if (!county) return;
+  const hit = reviewPinned.get(id);
+  if (hit) { hit.tip.remove(); hit.glow.forEach(g => g.remove()); reviewPinned.delete(id); return; }
+
+  const tip = document.createElement("div");
+  tip.className = "county-hover-tooltip pinned";
+  tip.textContent = getPlainName(county);
+  let x, y;
+  if (hoverTooltip && !hoverTooltip.classList.contains("hidden")) {
+    x = parseFloat(hoverTooltip.style.left); y = parseFloat(hoverTooltip.style.top);     // exactly where the live tooltip is
+  } else {                                                                              // touch screens have no hover tooltip
+    const r = pathEl.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top;
+  }
+  tip.style.left = (x + window.scrollX) + "px";     // page coordinates, so it scrolls with the map
+  tip.style.top = (y + window.scrollY) + "px";
+  document.body.appendChild(tip);
+
+  const glow = getCountyElements(id).filter(p => p.parentNode).map(part => {
+    const c = part.cloneNode(true);
+    ["id", "tabindex", "role", "aria-label", "data-county-id", "data-name"].forEach(a => c.removeAttribute(a));
+    c.setAttribute("class", "play-glow");
+    c.style.pointerEvents = "none";
+    part.parentNode.appendChild(c);
+    return c;
+  });
+  reviewPinned.set(id, { tip, glow });
 }
 
 function enterReviewMode() {
+  clearReviewPins();
   reviewMode = true;
   isGameActive = false;
   stopStopwatch();
@@ -4233,6 +4399,8 @@ function startReview() {
 
 function initGame(countiesToPlay, isRetryMissedRun = false) {
   reviewMode = false;
+  if (typeInput) { typeInput.disabled = false; typeInput.placeholder = "Type a county name…"; }
+  if (tucDesig) { tucDesig.disabled = false; tucDesig.value = ""; tucDesig.classList.add("hidden"); }
   [btnGiveUp, btnGameSettings].forEach(b => b && b.classList.remove("hidden"));
   targetPool = [...countiesToPlay];
   totalTargetsCount = targetPool.length;
@@ -4344,8 +4512,9 @@ const RECORD_MODE_LABELS = {
   pin: "Pin",
   "pin-hard": "Flash",
   mc: "Multiple Choice",
+  type: "List",
+  "type-strict": "Type",
   "type-hard": "Identify",
-  "type-strict": "Verbatim",
   "tuc": "Ultimate Challenge"
 };
 
@@ -4934,7 +5103,15 @@ function markStateIfDone(stateKey) {
 
 function handleCountyClick(pathEl) {
   if (reviewMode) { reviewTap(pathEl); return; }
-  if (isGameActive && (selectedMode === "tuc" || selectedMode === "type-hard")) { tucPick(pathEl); return; }
+  if (isGameActive && (selectedMode === "tuc" || selectedMode === "type-hard")) {
+    if (tucSelected) {   // finish naming this one first
+      if (feedbackEl) { feedbackEl.textContent = "Name this one first."; feedbackEl.className = "feedback-message"; }
+      if (typeInput) typeInput.focus({ preventScroll: true });
+      return;
+    }
+    tucPick(pathEl);
+    return;
+  }
   if (!isGameActive || !currentTarget) return;
   if (TYPE_MODES.has(selectedMode)) return;
   if (pathEl.classList.contains("given-up-missed") || pathEl.classList.contains("found")) return;
@@ -5143,8 +5320,41 @@ function tucFullName(c) {
   if (s === "missouri") return /\sCity$/.test(n) ? n.replace(/ City$/, " city") : n + " County";
   if (s === "nevada") return n === "Carson City" ? n : n + " County";
   if (s === "puerto_rico") return n + " Municipio";
-  if (["district_of_columbia", "guam", "american_samoa", "northern_mariana_islands", "united_states_virgin_islands"].includes(s)) return n;
+  if (s === "american_samoa") return /island|atoll/i.test(n) ? n : n.replace(/\s+District$/i, "") + " District";
+  if (s === "united_states_virgin_islands") return /\sIsland$/i.test(n) ? n : n + " Island";
+  if (s === "northern_mariana_islands") return /\sMunicipality$/i.test(n) ? n : n + " Municipality";
+  if (["district_of_columbia", "guam"].includes(s)) return n;
   return n + " County";
+}
+
+// the dropdown choice that goes with each place: one of the 13 options in the select
+function tucDesignation(c) {
+  const n = c.name, s = c.stateKey, id = c.id || "";
+  if (s === "louisiana") return "Parish";
+  if (s === "connecticut") return "Planning Region";
+  if (s === "alaska") {
+    if (AK_CENSUS_AREAS.has(n)) return "Census Area";
+    if (n === "Anchorage" || n === "Skagway") return "Municipality";
+    return "Borough";                                       // Juneau, Sitka, Wrangell, Yakutat count as Borough
+  }
+  if (s === "virginia") return (VA_TWIN_CITIES.has(n) || VA_CITY_BASES.has(n)) ? "Independent City" : "County";
+  if (s === "maryland") return n === "Baltimore City" ? "Independent City" : "County";
+  if (s === "missouri") return /\sCity$/.test(n) ? "Independent City" : "County";
+  if (s === "nevada") return n === "Carson City" ? "Independent City" : "County";
+  if (s === "puerto_rico" || s === "northern_mariana_islands") return "Municipality";
+  if (s === "united_states_virgin_islands") return "Island";
+  if (s === "american_samoa") return /swains/i.test(id) ? "Island" : /rose/i.test(id) ? "Atoll" : "District";
+  if (s === "guam") return "Guam";
+  if (s === "district_of_columbia") return "District of Columbia";
+  return "County";
+}
+
+// the name you type, without the designation ("Fairfax City" -> "Fairfax", "Eastern District" -> "Eastern")
+function tucBase(c) {
+  const d = tucDesignation(c);
+  if (d === "Independent City") return c.stateKey === "nevada" ? c.name : c.name.replace(/\s+city$/i, "");   // Carson City really is named "Carson City"
+  if (["Island", "Atoll", "District", "Municipality"].includes(d)) return c.name.replace(/\s+(District|Island|Atoll|Municipality|Municipio)$/i, "");
+  return c.name;
 }
 
 function tucNorm(s) {      // keeps accents and the okina on purpose. "St." and "Saint" are NOT interchangeable: type it exactly
@@ -5152,17 +5362,19 @@ function tucNorm(s) {      // keeps accents and the okina on purpose. "St." and 
     .replace(/\s+/g, " ").trim();
 }
 
-function tucAccepts(c, typedRaw) {
-  const t = tucNorm(typedRaw), full = tucNorm(tucFullName(c));
-  if (t === full) return true;
-  return !TUC_REQUIRE_COUNTY_WORD && full.endsWith(" county") && t === tucNorm(c.name);
+function tucAccepts(c, typedRaw, chosen) {
+  if (chosen !== tucDesignation(c)) return false;                       // the designation always has to be right
+  const t = tucNorm(typedRaw);
+  if (tucDesignation(c) === "Independent City") return t === tucNorm(tucBase(c));   // "Fairfax", never "Fairfax City"
+  return t === tucNorm(tucBase(c)) || t === tucNorm(c.name) || t === tucNorm(tucFullName(c));
 }
 
 function tucWaitForPick() {
   tucSelected = null;
   currentTarget = null;
   document.querySelectorAll(".county.typing-highlight").forEach(el => el.classList.remove("typing-highlight"));
-  if (typeInputBox) { typeInputBox.classList.remove("hidden"); typeInputBox.classList.add("tuc-waiting"); }
+  if (typeInput) { typeInput.value = ""; typeInput.disabled = true; typeInput.placeholder = "Click a county first"; }
+  if (tucDesig) { tucDesig.value = ""; tucDesig.disabled = true; tucDesig.classList.toggle("hidden", selectedMode !== "tuc"); }
   refreshSpecialCharsBar();
   if (targetPrompt) targetPrompt.innerHTML = `<span class="find-label">Click a ${unitWord(false)}, then name it</span>`;
 }
@@ -5180,17 +5392,30 @@ function tucPick(pathEl) {
   tucSelected = county;
   currentTarget = county;
   getCountyElements(county.id).forEach(el => { el.classList.add("typing-highlight"); if (el.parentNode) el.parentNode.appendChild(el); });
-  if (targetPrompt) targetPrompt.innerHTML = `<span class="find-label">${selectedMode === "tuc" ? "Type its full name." : "Type its name."}</span>`;
+  if (targetPrompt) targetPrompt.innerHTML = `<span class="find-label">${selectedMode === "tuc" ? "Type its name." : "Type its name."}</span>`;
   if (feedbackEl) { feedbackEl.textContent = ""; feedbackEl.className = "feedback-message"; }
   if (typeInputBox) typeInputBox.classList.remove("hidden", "tuc-waiting");
   refreshSpecialCharsBar();
-  if (typeInput) { typeInput.value = ""; typeInput.focus(); }
+  if (typeInput) {
+  if (tucDesig) { tucDesig.disabled = false; tucDesig.value = ""; tucDesig.classList.toggle("hidden", selectedMode !== "tuc"); }
+    typeInput.disabled = false;
+    typeInput.placeholder = "Type its name";
+    typeInput.value = "";
+    typeInput.focus({ preventScroll: true });
+    setTimeout(() => typeInput.focus({ preventScroll: true }), 0);
+  }
 }
 
 function tucSubmit() {
   if (!isGameActive || !tucSelected || !typeInput || !tucNorm(typeInput.value)) return;
   const c = tucSelected;
-  if (!tucAccepts(c, typeInput.value)) { tucFail(c, typeInput.value); return; }
+  if (tucDesig && !tucDesig.value) {                       // you have to pick one; this isn't a miss, it just won't submit
+    if (feedbackEl) { feedbackEl.textContent = "Pick what it is first."; feedbackEl.className = "feedback-message"; }
+    tucDesig.open();
+    return;
+  }
+  if (!tucAccepts(c, typeInput.value, tucDesig ? tucDesig.value : "")) { tucFail(c, typeInput.value); return; }
+  if (tucDesig) tucDesig.value = "";
   scoreRight++;
   playSound("correct");
   const dark = document.body.classList.contains("dark-mode");
@@ -5203,6 +5428,7 @@ function tucSubmit() {
   if (feedbackEl) { feedbackEl.textContent = `Correct! ${tucFullName(c)}.`; feedbackEl.className = "feedback-message success"; }
   targetPool = targetPool.filter(x => x.id !== c.id);
   typeInput.value = "";
+  markStateIfDone(c.stateKey);   
   pickNextTarget();                                      // no state-done outline either: that would be a progress hint
 }
 
@@ -5234,7 +5460,7 @@ function tucLockEverything() {
 
 if (typeInput) {
   typeInput.addEventListener("input", () => {
-    if (selectedMode !== "type-strict" && selectedMode !== "tuc" && gameSettings.instantTypeCheck) tryAutoMatchTypedInput();
+    if (selectedMode !== "type-strict" && selectedMode !== "type-hard" && selectedMode !== "tuc" && gameSettings.instantTypeCheck) tryAutoMatchTypedInput();
   });
   typeInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -5625,7 +5851,7 @@ function enableAdmireBar() {
 
 
   if (btnAdmireRetry) {
-    if (missedCounties.size > 0) {
+    if (missedCounties.size > 0 && selectedMode !== "tuc") {
       btnAdmireRetry.classList.remove("hidden");
     } else {
       btnAdmireRetry.classList.add("hidden");
@@ -5679,20 +5905,26 @@ function tucIntroWanted() {
   try { return localStorage.getItem(TUC_INTRO_KEY) !== "1"; } catch (e) { return true; }
 }
 
+function startTucNow() {
+  const play = document.getElementById("btn-start-game");
+  if (play && !play.disabled) play.click();
+}
+
 function showTucIntro() {
-  if (!modalTucIntro || !tucIntroWanted()) return;
+  if (!modalTucIntro || !tucIntroWanted()) { startTucNow(); return; }
   if (tucIntroText) tucIntroText.textContent = INFO_MODE_CONFIG.tuc.intro;
   modalTucIntro.classList.remove("hidden");
   if (btnTucIntroOk) btnTucIntroOk.focus();
 }
 
-function closeTucIntro(dontShowAgain) {
+function closeTucIntro(dontShowAgain, go) {
   if (dontShowAgain) { try { localStorage.setItem(TUC_INTRO_KEY, "1"); } catch (e) {} }
   if (modalTucIntro) modalTucIntro.classList.add("hidden");
+  if (go) startTucNow();
 }
 
-if (btnTucIntroOk) btnTucIntroOk.addEventListener("click", () => closeTucIntro(false));
-if (btnTucIntroNever) btnTucIntroNever.addEventListener("click", () => closeTucIntro(true));
+if (btnTucIntroOk) btnTucIntroOk.addEventListener("click", () => closeTucIntro(false, true));
+if (btnTucIntroNever) btnTucIntroNever.addEventListener("click", () => closeTucIntro(true, true));
 if (modalTucIntro) modalTucIntro.addEventListener("click", e => { if (e.target === modalTucIntro) closeTucIntro(false); });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && modalTucIntro && !modalTucIntro.classList.contains("hidden")) closeTucIntro(false);
@@ -5704,11 +5936,24 @@ document.addEventListener("keydown", e => {
   if (!layout) return;
   if (appContainer) appContainer.classList.add("wide-picker");
   const start = $("btn-start-game"), msg = $("home-msg"), skipWrap = $("home-skip-wrap"), skip = $("home-skip-learned");
+  const learnWrap = $("home-learn-count-wrap"), learnRange = $("home-learn-count"), learnOut = $("home-learn-count-out");
+  const syncLearnSlider = () => {
+    const n = Math.min(8, Math.max(4, parseInt(gameSettings.learnCount, 10) || 5));
+    learnRange.value = n; learnOut.textContent = n;
+  };
+  learnRange.addEventListener("input", () => {
+    gameSettings.learnCount = parseInt(learnRange.value, 10);
+    learnOut.textContent = learnRange.value;
+    saveSettings();
+    const sel = $("select-learn-count"); if (sel) sel.value = learnRange.value;
+  });
+  syncLearnSlider();
   const playBtns = [...layout.querySelectorAll("[data-home-mode]")];
   const learnBtns = [...layout.querySelectorAll("[data-home-learn]")];
   let chosen = null;
 
   function updateSkip() {
+    learnWrap.classList.toggle("hidden", !(chosen && chosen.kind === "learn" && chosen.mode !== "review"));
     skipWrap.classList.toggle("hidden", !(chosen && chosen.kind === "learn" && chosen.mode !== "review" && activeStateKeys.length > 0));
     msg.textContent = "";
   }

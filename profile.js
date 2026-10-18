@@ -2,9 +2,9 @@
   "use strict";
   const SUPABASE_URL = "https://jgwhnidtjnuufdjcmqdv.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impnd2huaWR0am51dWZkamNtcWR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxOTE4MDgsImV4cCI6MjEwNzc2NzgwOH0.SsIHfT9TFvAYthQbwcD_Ee6W9T9a8yqlD2HfiAbcgCk";
-  const MODES = ["pin", "pin-hard", "mc", "type", "type-hard", "type-strict"];
-  const MODE_LABEL = { pin: "Pin", "pin-hard": "Flash", mc: "Multiple-Choice", type: "List", "type-hard": "Identify", "type-strict": "Verbatim" };
-  const MODE_LETTER = { pin: "P", "pin-hard": "F", mc: "MC", type: "L", "type-hard": "I", "type-strict": "V" };
+  const MODES = ["pin", "pin-hard", "mc", "type", "type-strict", "type-hard"];
+  const MODE_LABEL = { pin: "Pin", "pin-hard": "Flash", mc: "Multiple-Choice", type: "List", "type-strict": "Type", "type-hard": "Identify" };
+  const MODE_LETTER = { pin: "P", "pin-hard": "F", mc: "MC", type: "L", "type-strict": "T", "type-hard": "I" };
   const MAX_POINTS = 300000;
 
   const $ = id => document.getElementById(id);
@@ -305,6 +305,16 @@
     return svg;
   }
 
+    // the home map is a conic projection, so every state is drawn tilted. This turns each one back upright.
+  const STATE_LON = {Alabama:-86.8, Arizona:-111.7, Arkansas:-92.4, California:-119.5, Colorado:-105.5, Connecticut:-72.7,
+    Delaware:-75.5, "District of Columbia":-77.0, Florida:-82.4, Georgia:-83.4, Idaho:-114.6, Illinois:-89.2, Indiana:-86.3,
+    Iowa:-93.5, Kansas:-98.4, Kentucky:-85.3, Louisiana:-92.0, Maine:-69.2, Maryland:-76.8, Massachusetts:-71.8,
+    Michigan:-84.5, Minnesota:-94.3, Mississippi:-89.7, Missouri:-92.5, Montana:-110.0, Nebraska:-99.8, Nevada:-116.6,
+    "New Hampshire":-71.6, "New Jersey":-74.5, "New Mexico":-106.1, "New York":-75.5, "North Carolina":-79.4,
+    "North Dakota":-100.5, Ohio:-82.8, Oklahoma:-97.5, Oregon:-120.6, Pennsylvania:-77.8, "Rhode Island":-71.5,
+    "South Carolina":-80.9, "South Dakota":-100.2, Tennessee:-86.3, Texas:-99.3, Utah:-111.7, Vermont:-72.7, Virginia:-78.8,
+    Washington:-120.5, "West Virginia":-80.6, Wisconsin:-89.9, Wyoming:-107.5};
+  const tiltOf = name => (name in STATE_LON && !SHAPE_OVERRIDE[name]) ? 0.6029 * (STATE_LON[name] + 96) : 0;
     // the round badge: tier ring with the state's shape inside
   function badgeSvg(t) {
     const tier = TIER(t.full), locked = tier === "locked";
@@ -313,11 +323,15 @@
     const d = shapeFor(t.name);
     if (d) {
       const inner = svgEl("svg", { x: 20, y: 20, width: 60, height: 60, viewBox: "0 0 100 100", preserveAspectRatio: "xMidYMid meet", class: "medal-shape" });
-      inner.append(svgEl("path", {
+      const tilt = tiltOf(t.name);
+      const g = svgEl("g", {});
+      g.append(svgEl("path", {
         d, "fill-rule": "evenodd", "vector-effect": "non-scaling-stroke", "stroke-width": 1,
         fill: locked ? "none" : "#" + (st ? st[0] : "888888"),
-        stroke: locked ? "currentColor" : "rgba(0,0,0,.45)"
+        stroke: locked ? "currentColor" : "none",                 // no outline once it's coloured (locked ones keep a faint one so you can see them)
+        ...(tilt ? { transform: `rotate(${tilt})` } : {})
       }));
+      inner.append(g);
       svg.append(inner);
     }
     return svg;
@@ -416,7 +430,7 @@
   function fitShapes(root) {
     root.querySelectorAll("svg.medal-shape").forEach(s => {
       try {
-        const b = s.querySelector("path").getBBox();
+        const b = s.querySelector("g").getBBox();
         const pad = Math.max(b.width, b.height) * 0.04;
         s.setAttribute("viewBox", `${b.x - pad} ${b.y - pad} ${b.width + 2 * pad} ${b.height + 2 * pad}`);
       } catch (e) { /* not drawn yet */ }

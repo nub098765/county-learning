@@ -7,6 +7,8 @@
 
   window.reportCompletion = () => {};
   window.reportTucComplete = () => {};
+  window.accountIsSignedIn = () => false;
+  window.resetAccountProgress = async () => ({ ok: true, signedIn: false });
 
   const openBtn = document.getElementById("btn-account");
   if (openBtn) openBtn.addEventListener("click", () => { location.href = "profile.html"; });
@@ -78,6 +80,24 @@
     await sb.from("tuc_completions").upsert({ user_id: session.user.id }, { onConflict: "user_id", ignoreDuplicates: true });
   };
 
+    // Reset progress: wipe this account's saved completions. Points, badges and the leaderboard are all worked out from them.
+  window.accountIsSignedIn = () => !!(session && profile);
+  window.resetAccountProgress = async () => {
+    if (!session || !profile) return { ok: true, signedIn: false };
+    clearTimeout(timer);
+    queue = [];                                   // anything still waiting to upload would otherwise come straight back
+    const uid = session.user.id;
+    const a = await sb.from("completions").delete().eq("user_id", uid);
+    const b = await sb.from("tuc_completions").delete().eq("user_id", uid);
+    if (a.error || b.error) return { ok: false, signedIn: true, message: (a.error || b.error).message };
+    // the server can refuse a delete without raising an error, so check that the rows are really gone
+    const left = await sb.from("completions").select("county_id", { count: "exact", head: true }).eq("user_id", uid);
+    const leftTuc = await sb.from("tuc_completions").select("user_id", { count: "exact", head: true }).eq("user_id", uid);
+    if (left.error || leftTuc.error) return { ok: false, signedIn: true, message: (left.error || leftTuc.error).message };
+    if (left.count || leftTuc.count) return { ok: false, signedIn: true, message: "The server wouldn't delete your saved progress (a delete permission is missing)." };
+    return { ok: true, signedIn: true };
+  };
+  
   sb.auth.onAuthStateChange(evt => { if (evt === "SIGNED_IN" || evt === "SIGNED_OUT") { if (evt === "SIGNED_OUT") queue = []; refresh(); } });
   window.addEventListener("load", refresh);
 })();

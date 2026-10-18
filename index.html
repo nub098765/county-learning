@@ -69,7 +69,7 @@
        <h1>Countellect</h1>
        <p class="subtitle">How would you like to learn the US, county by county?</p>
        <div class="home-columns">
-         <div class="home-col"><h2>Play</h2><div class="mode-options"><button type="button" class="btn-mode mode-pin" data-home-mode="pin" aria-pressed="false"><strong>Pin</strong><span>Click the county you are given; once found, it stays filled.</span></button><button type="button" class="btn-mode mode-pin" data-home-mode="pin-hard" aria-pressed="false"><strong>Flash</strong><span>Click the county you are given; once found, it flashes briefly.</span></button><button type="button" class="btn-mode mode-mc" data-home-mode="mc" aria-pressed="false"><strong>Multiple-Choice</strong><span>Pick the highlighted county's name from four options.</span></button><button type="button" class="btn-mode mode-list" data-home-mode="type" aria-pressed="false"><strong>List</strong><span>Type any county, in any order, and see how many you can list.</span></button><button type="button" class="btn-mode mode-type" data-home-mode="type-hard" aria-pressed="false"><strong>Identify</strong><span>Click a county, then type its name.</span></button><button type="button" class="btn-mode mode-type" data-home-mode="type-strict" aria-pressed="false"><strong>Verbatim</strong><span>Type the name of a specific highlighted county. You must press Enter to submit, and wrong guesses count against you.</span></button></div></div>
+         <div class="home-col"><h2>Play</h2><div class="mode-options"><button type="button" class="btn-mode mode-pin" data-home-mode="pin" aria-pressed="false"><strong>Pin</strong><span>Click the county you are given; once found, it stays filled.</span></button><button type="button" class="btn-mode mode-pin" data-home-mode="pin-hard" aria-pressed="false"><strong>Flash</strong><span>Click the county you are given; once found, it flashes briefly.</span></button><button type="button" class="btn-mode mode-mc" data-home-mode="mc" aria-pressed="false"><strong>Multiple-Choice</strong><span>Pick the highlighted county's name from four options.</span></button><button type="button" class="btn-mode mode-list" data-home-mode="type" aria-pressed="false"><strong>List</strong><span>Type any county, in any order, and see how many you can list.</span></button><button type="button" class="btn-mode mode-type" data-home-mode="type-strict" aria-pressed="false"><strong>Type</strong><span>Type the name of a specific highlighted county. You must press Enter to submit, and wrong guesses count against you.</span></button><button type="button" class="btn-mode mode-type" data-home-mode="type-hard" aria-pressed="false"><strong>Identify</strong><span>Click a county, then type its name and press Enter.</span></button></div></div>
          <div class="home-col"><h2>Learn</h2><div class="mode-options"><button type="button" class="btn-mode mode-pin" data-home-learn="pin" aria-pressed="false"><strong>Pin</strong><span>Learn five at a time, then click each county on the map.</span></button><button type="button" class="btn-mode mode-mc" data-home-learn="mc" aria-pressed="false"><strong>Multiple-Choice</strong><span>Learn five at a time, then pick the right name from four options.</span></button><button type="button" class="btn-mode mode-type" data-home-learn="type" aria-pressed="false"><strong>Type</strong><span>Learn five at a time, then type each county's name.</span></button><button type="button" class="btn-mode mode-all" data-home-learn="all" aria-pressed="false"><strong>All</strong><span>Learn five at a time, then multiple-choice, typing, and pinning.</span><button type="button" class="btn-mode mode-list" data-home-learn="review" aria-pressed="false"><strong>Review</strong><span>Hover over counties to see their names. No quiz, no score.</span></button></button></div></div>
        </div>
        <button id="btn-start-game" class="btn-launch" disabled title="Select at least one state to play.">Play</button>
@@ -77,6 +77,10 @@
        <p id="home-msg" class="study-feedback" aria-live="polite"></p>
        <div class="home-options">
       <label id="home-skip-wrap" class="study-skip hidden"><input type="checkbox" id="home-skip-learned" checked> <span>Skip <span data-unit="plural">counties</span> I've already learned</span></label>
+      <label id="home-learn-count-wrap" class="study-skip home-slider hidden">
+        <span><span data-unit="plural">Counties</span> per round: <strong id="home-learn-count-out">5</strong></span>
+        <input type="range" id="home-learn-count" min="4" max="8" step="1" value="5">
+      </label>
          <div id="county-options-panel" class="county-panel hidden">
        <p class="plain-prompt">Would you like to exclude any <span data-unit="plural">counties</span>?</p>
      <div class="radio-group">
@@ -141,260 +145,270 @@
    <h2>Settings</h2>
    <p id="tuc-settings-banner" class="tuc-settings-banner hidden" role="note">You're in The Ultimate Challenge. Settings it controls are grayed out and locked until you leave the run.</p>
 
-   <div class="settings-layout">
+      <div class="settings-layout">
      <nav class="settings-toc" aria-label="Settings sections">
        <ul class="toc-section-list">
          <li class="toc-section">
            <div class="toc-section-row">
-             <button type="button" class="toc-caret" aria-expanded="true" aria-controls="toc-items-general" aria-label="Toggle General section">▾</button>
-             <a href="#settings-group-general" class="toc-section-link">General</a>
+             <button type="button" class="toc-caret" aria-expanded="true" aria-controls="toc-items-appearance" aria-label="Toggle Appearance and Sound section">▾</button>
+             <a href="#settings-group-appearance" class="toc-section-link">Appearance &amp; Sound</a>
            </div>
-           <ul class="toc-items" id="toc-items-general">
+           <ul class="toc-items" id="toc-items-appearance">
              <li><a href="#setting-dark-mode" class="toc-item-link">Dark Mode</a></li>
              <li><a href="#setting-high-contrast" class="toc-item-link">High-Contrast Colors</a></li>
              <li><a href="#setting-sound-volume" class="toc-item-link">Sound Volume</a></li>
+           </ul>
+         </li>
+         <li class="toc-section">
+           <div class="toc-section-row">
+             <button type="button" class="toc-caret" aria-expanded="true" aria-controls="toc-items-map-layout" aria-label="Toggle Map Layout section">▾</button>
+             <a href="#settings-group-map-layout" class="toc-section-link">Map Layout</a>
+           </div>
+           <ul class="toc-items" id="toc-items-map-layout">
+             <li><a href="#setting-scale-states-by-size" class="toc-item-link">Scale States by Size</a></li>
+             <li><a href="#setting-states-per-row" class="toc-item-link">States Per Row</a></li>
+             <li><a href="#setting-dividers-for-few-states" class="toc-item-link">Use Dividers for Few States</a></li>
+             <li><a href="#setting-sort-states-alpha" class="toc-item-link">Sort States Alphabetically</a></li>
+             <li><a href="#setting-auto-scroll" class="toc-item-link">Auto-Scroll to Next State</a></li>
+             <li><a href="#setting-hover-names" class="toc-item-link">Show Names on Hover</a></li>
+           </ul>
+         </li>
+         <li class="toc-section">
+           <div class="toc-section-row">
+             <button type="button" class="toc-caret" aria-expanded="true" aria-controls="toc-items-prompts" aria-label="Toggle Prompts and Timing section">▾</button>
+             <a href="#settings-group-prompts" class="toc-section-link">Prompts &amp; Timing</a>
+           </div>
+           <ul class="toc-items" id="toc-items-prompts">
+             <li><a href="#setting-stopwatch" class="toc-item-link">Stopwatch</a></li>
+             <li><a href="#setting-show-state-in-prompt" class="toc-item-link">Show State in Prompt</a></li>
+             <li><a href="#setting-reveal-answer" class="toc-item-link">Reveal Answer After Mistakes</a></li>
+             <li><a href="#setting-speedrun" class="toc-item-link">Speedrun Mode (Pin modes)</a></li>
+           </ul>
+         </li>
+         <li class="toc-section">
+           <div class="toc-section-row">
+             <button type="button" class="toc-caret" aria-expanded="true" aria-controls="toc-items-typing" aria-label="Toggle Typing section">▾</button>
+             <a href="#settings-group-typing" class="toc-section-link">Typing</a>
+           </div>
+           <ul class="toc-items" id="toc-items-typing">
+             <li><a href="#setting-instant-check" class="toc-item-link">Instant Check</a></li>
+             <li><a href="#setting-require-diacritics" class="toc-item-link">Require Exact Spelling</a></li>
+             <li class="toc-sub"><a href="#setting-accept-st-abbrev" class="toc-item-link">...except for &ldquo;Saint&rdquo;</a></li>
+           </ul>
+         </li>
+         <li class="toc-section">
+           <div class="toc-section-row">
+             <button type="button" class="toc-caret" aria-expanded="true" aria-controls="toc-items-list" aria-label="Toggle The List section">▾</button>
+             <a href="#settings-group-list" class="toc-section-link">The List</a>
+           </div>
+           <ul class="toc-items" id="toc-items-list">
+             <li><a href="#setting-show-county-list" class="toc-item-link">Show County List</a></li>
+             <li><a href="#setting-list-by-state" class="toc-item-link">Group Checklist by State</a></li>
+           </ul>
+         </li>
+         <li class="toc-section">
+           <div class="toc-section-row">
+             <button type="button" class="toc-caret" aria-expanded="true" aria-controls="toc-items-progress" aria-label="Toggle Progress and Learning section">▾</button>
+             <a href="#settings-group-progress" class="toc-section-link">Progress &amp; Learning</a>
+           </div>
+           <ul class="toc-items" id="toc-items-progress">
              <li><a href="#setting-hide-stats-default" class="toc-item-link">Hide Progress Tables by Default</a></li>
              <li><a href="#setting-best-known-count" class="toc-item-link">Best-Known Counties to Select</a></li>
              <li><a href="#setting-reset-progress" class="toc-item-link">Progress</a></li>
-           </ul>
-         </li>
-         <li class="toc-section">
-           <div class="toc-section-row">
-             <button type="button" class="toc-caret" aria-expanded="true" aria-controls="toc-items-in-game" aria-label="Toggle In-Game section">▾</button>
-             <a href="#settings-group-in-game" class="toc-section-link">In-Game</a>
-           </div>
-           <ul class="toc-items" id="toc-items-in-game">
-             <li><a href="#setting-stopwatch" class="toc-item-link">Stopwatch</a></li>
-              <li><a href="#setting-sort-states-alpha" class="toc-item-link">Sort States Alphabetically</a></li>
-             <li><a href="#setting-show-state-in-prompt" class="toc-item-link">Show State in Prompt</a></li>
-             <li><a href="#setting-reveal-answer" class="toc-item-link">Reveal Answer After Mistakes</a></li>
-             <li><a href="#setting-scale-states-by-size" class="toc-item-link">Scale States by Size</a></li>
-             <li><a href="#setting-dividers-for-few-states" class="toc-item-link">Use Dividers for Few States</a></li>
-             <li><a href="#setting-states-per-row" class="toc-item-link">States Per Row</a></li>
-              <li><a href="#setting-hover-names" class="toc-item-link">Show Names on Hover</a></li>
-             <li><a href="#setting-learn-count" class="toc-item-link">Counties Per Learn Round</a></li>
-             <li><a href="#setting-auto-scroll" class="toc-item-link">Auto-Scroll to Next State</a></li>
-           </ul>
-         </li>
-         <li class="toc-section">
-           <div class="toc-section-row">
-             <button type="button" class="toc-caret" aria-expanded="true" aria-controls="toc-items-specific-modes" aria-label="Toggle Specific Modes section">▾</button>
-             <a href="#settings-group-specific-modes" class="toc-section-link">Specific Modes</a>
-           </div>
-           <ul class="toc-items" id="toc-items-specific-modes">
-             <li><a href="#setting-show-county-list" class="toc-item-link">Show County List (List mode)</a></li>
-             <li><a href="#setting-speedrun" class="toc-item-link">Speedrun Mode (Pin modes)</a></li>
-             <li><a href="#setting-instant-check" class="toc-item-link">Instant Check (Type modes)</a></li>
-             <li><a href="#setting-list-by-state" class="toc-item-link">Group Checklist by State (List mode)</a></li>
-             <li><a href="#setting-require-diacritics" class="toc-item-link">Require Exact Spelling (Type modes)</a></li>
-             <li class="toc-sub"><a href="#setting-accept-st-abbrev" class="toc-item-link">...except for &ldquo;Saint&rdquo;</a></li>
            </ul>
          </li>
        </ul>
      </nav>
 
      <div class="settings-main">
-       <h3 id="settings-group-general" class="settings-group-title">General</h3>
-
-       <div class="setting-item" id="setting-dark-mode">
-         <div class="setting-text">
-           <label for="toggle-dark">Dark Mode</label>
-           <p class="setting-desc">Switch the whole app to a darker color scheme.</p>
-         </div>
-         <input type="checkbox" id="toggle-dark">
+       <div class="settings-search">
+         <input type="search" id="settings-search" placeholder="Search settings…" aria-label="Search settings" autocomplete="off" spellcheck="false">
        </div>
-       <div class="setting-item" id="setting-high-contrast">
-         <div class="setting-text">
-           <label for="toggle-contrast">High-Contrast Colors</label>
-           <p class="setting-desc">Use bolder, more distinct colors for correct and incorrect counties.</p>
+       <p id="settings-no-results" class="settings-no-results hidden">No settings match that.</p>
+
+       <section class="settings-group" id="settings-group-appearance-box">
+         <h3 id="settings-group-appearance" class="settings-group-title"><button type="button" class="settings-group-toggle" aria-expanded="true">Appearance &amp; Sound</button></h3>
+         <div class="settings-group-body">
+<div class="setting-item" id="setting-dark-mode">
+<div class="setting-text">
+<label for="toggle-dark">Dark Mode</label>
+<p class="setting-desc">Switch the whole app to a darker color scheme.</p>
+</div>
+<input type="checkbox" id="toggle-dark">
+</div>
+<div class="setting-item" id="setting-high-contrast">
+<div class="setting-text">
+<label for="toggle-contrast">High-Contrast Colors</label>
+<p class="setting-desc">Use bolder, more distinct colors for correct and incorrect counties.</p>
+</div>
+<input type="checkbox" id="toggle-contrast">
+</div>
+<div class="setting-item" id="setting-sound-volume">
+<div class="setting-text">
+<label for="slider-sound">Sound Volume</label>
+<p class="setting-desc">How loud the correct/incorrect sound effects play.</p>
+</div>
+<input type="range" id="slider-sound" min="0" max="100" value="50" step="1">
+</div>
          </div>
-         <input type="checkbox" id="toggle-contrast">
-       </div>
-
-
-       <div class="setting-item" id="setting-sound-volume">
-         <div class="setting-text">
-           <label for="slider-sound">Sound Volume</label>
-           <p class="setting-desc">How loud the correct/incorrect sound effects play.</p>
+       </section>
+       <section class="settings-group" id="settings-group-map-layout-box">
+         <h3 id="settings-group-map-layout" class="settings-group-title"><button type="button" class="settings-group-toggle" aria-expanded="true">Map Layout</button></h3>
+         <div class="settings-group-body">
+<div class="setting-item" id="setting-scale-states-by-size">
+<div class="setting-text">
+<label for="toggle-scale-states-by-size">Scale States by Size</label>
+<p class="setting-desc">Size each state's map based on how much it has going on—Texas gets more room, Delaware gets less—with a thin divider between maps.</p>
+<p class="setting-warning">WARNING: This might lead to some bugs.</p>
+</div>
+<input type="checkbox" id="toggle-scale-states-by-size">
+</div>
+<div class="setting-item" id="setting-states-per-row">
+<div class="setting-text">
+<label for="select-states-per-row">States Per Row</label>
+<p class="setting-desc">Set the maximum number of states displayed per row, if arranged in a grid.</p>
+</div>
+<select id="select-states-per-row">
+<option value="1">1</option>
+<option value="2">2</option>
+<option value="3">3</option>
+<option value="4">4</option>
+</select>
+</div>
+<div class="setting-item" id="setting-dividers-for-few-states">
+<div class="setting-text">
+<label for="toggle-dividers-for-few-states">Use Dividers for Few States</label>
+<p class="setting-desc">Always use dividers (instead of boxes) when playing with 3 or fewer states.</p>
+</div>
+<input type="checkbox" id="toggle-dividers-for-few-states">
+</div>
+<div class="setting-item" id="setting-sort-states-alpha">
+<div class="setting-text">
+<label for="toggle-sort-states-alpha">Sort States Alphabetically</label>
+<p class="setting-desc">Show states in A-Z order everywhere they're grouped or laid out: the home screen's exclusion checklist and progress tables, and the maps shown during the game.</p>
+</div>
+<input type="checkbox" id="toggle-sort-states-alpha">
+</div>
+<div class="setting-item" id="setting-auto-scroll">
+<div class="setting-text">
+<label for="toggle-auto-scroll">Auto-Scroll to Next State</label>
+<p class="setting-desc">When several states are on screen, scroll to the state of the next county you need to find.</p>
+</div>
+<input type="checkbox" id="toggle-auto-scroll">
+</div>
+<div class="setting-item" id="setting-hover-names">
+<div class="setting-text">
+<label for="toggle-hover-names">Show Names on Hover</label>
+<p class="setting-desc">Show a county's name when you hover over it. Turn this off to practice without hints.</p>
+</div>
+<input type="checkbox" id="toggle-hover-names">
+</div>
          </div>
-         <input type="range" id="slider-sound" min="0" max="100" value="50" step="1">
-       </div>
-
-
-       <div class="setting-item" id="setting-hide-stats-default">
-         <div class="setting-text">
-           <label for="toggle-hide-stats-default">Hide Progress Tables by Default</label>
-           <p class="setting-desc">Start each state's progress table collapsed on the setup screen. You can still show it with the Hide/Show button.</p>
+       </section>
+       <section class="settings-group" id="settings-group-prompts-box">
+         <h3 id="settings-group-prompts" class="settings-group-title"><button type="button" class="settings-group-toggle" aria-expanded="true">Prompts &amp; Timing</button></h3>
+         <div class="settings-group-body">
+<div class="setting-item" id="setting-stopwatch">
+<div class="setting-text">
+<label for="toggle-stopwatch">Stopwatch</label>
+<p class="setting-desc">Show a stopwatch during the game.</p>
+</div>
+<input type="checkbox" id="toggle-stopwatch">
+</div>
+<div class="setting-item tuc-controls" id="setting-show-state-in-prompt">
+<div class="setting-text">
+<label for="toggle-show-state-in-prompt">Show State in Prompt</label>
+<p class="setting-desc">Always include the state name alongside the target county in prompts.</p>
+</div>
+<input type="checkbox" id="toggle-show-state-in-prompt">
+</div>
+<div class="setting-item tuc-controls" id="setting-reveal-answer">
+<div class="setting-text">
+<label for="toggle-reveal-answer">Reveal Answer After Mistakes</label>
+<p class="setting-desc">Reveal the correct county after 3 wrong guesses. <i>(Doesn't apply to List mode)</i></p>
+</div>
+<input type="checkbox" id="toggle-reveal-answer">
+</div>
+<div class="setting-item" id="setting-speedrun">
+<div class="setting-text">
+<label for="toggle-speedrun">Speedrun Mode (Pin modes)</label>
+<p class="setting-desc">Register a guess the instant you press down on a county, instead of waiting for you to release.</p>
+</div>
+<input type="checkbox" id="toggle-speedrun">
+</div>
          </div>
-         <input type="checkbox" id="toggle-hide-stats-default">
-       </div>
-
-
-       <div class="setting-item" id="setting-best-known-count">
-         <div class="setting-text">
-           <label for="input-best-known-count">Best-Known Counties to Select</label>
-           <p class="setting-desc">How many counties the "Select your best-known" button checks when choosing counties to exclude. Any number from 1 up.</p>
+       </section>
+       <section class="settings-group" id="settings-group-typing-box">
+         <h3 id="settings-group-typing" class="settings-group-title"><button type="button" class="settings-group-toggle" aria-expanded="true">Typing</button></h3>
+         <div class="settings-group-body">
+<div class="setting-item tuc-controls" id="setting-instant-check">
+<div class="setting-text">
+<label for="toggle-instant-check">Instant Check</label>
+<p class="setting-desc">Check what you've typed as you type it, instead of waiting for you to press Enter. <i>(Doesn't apply to Type or Identify)</i></p>
+</div>
+<input type="checkbox" id="toggle-instant-check">
+</div>
+<div class="setting-item tuc-controls" id="setting-require-diacritics">
+<div class="setting-text">
+<label for="toggle-require-diacritics">Require Exact Spelling</label>
+<p class="setting-desc">Require all words to be typed exactly as they appear, including marks like diaereses. While this is on, a row of buttons for the special characters in that round's county names (like ö or the ʻokina) appears under the text box, so you can tap them instead of hunting for them on your keyboard.</p>
+</div>
+<input type="checkbox" id="toggle-require-diacritics">
+</div>
+<div class="setting-item tuc-controls setting-sub is-inactive" id="setting-accept-st-abbrev">
+<div class="setting-text">
+<label for="toggle-accept-st-abbrev">...except for &ldquo;Saint&rdquo;</label>
+<p class="setting-desc">Keep accepting &ldquo;St.&rdquo; and &ldquo;Ste.&rdquo; (or just &ldquo;St&rdquo; and &ldquo;Ste&rdquo;) for &ldquo;Saint&rdquo; and &ldquo;Sainte&rdquo; even while the setting above is on. Turn this off to type the whole word too. With the setting above off, they&rsquo;re always accepted.</p>
+</div>
+<input type="checkbox" id="toggle-accept-st-abbrev" checked disabled>
+</div>
          </div>
-         <input type="number" id="input-best-known-count" min="1" step="1" value="5" inputmode="numeric">
-       </div>
-
-
-       <div class="setting-item" id="setting-reset-progress">
-         <div class="setting-text">
-           <label>Progress</label>
-           <p class="setting-desc">Clear completed states, mistake history, best-known suggestions, and Study progress.</p>
+       </section>
+       <section class="settings-group" id="settings-group-list-box">
+         <h3 id="settings-group-list" class="settings-group-title"><button type="button" class="settings-group-toggle" aria-expanded="true">The List</button></h3>
+         <div class="settings-group-body">
+<div class="setting-item tuc-controls" id="setting-show-county-list">
+<div class="setting-text">
+<label for="toggle-show-county-list">Show County List</label>
+<p class="setting-desc">Show the "Show List" button in List mode, which opens a checklist of every county you still need to find. Turn this off to play from memory.</p>
+</div>
+<input type="checkbox" id="toggle-show-county-list">
+</div>
+<div class="setting-item" id="setting-list-by-state">
+<div class="setting-text">
+<label for="toggle-list-by-state">Group Checklist by State</label>
+<p class="setting-desc">Group the county checklist in List mode into a section per state, instead of one mixed alphabetical list.</p>
+</div>
+<input type="checkbox" id="toggle-list-by-state">
+</div>
          </div>
-         <button id="btn-reset-progress" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Reset Progress</button>
-       </div>
-
-
-       <h3 id="settings-group-in-game" class="settings-group-title">In-Game</h3>
-
-       <div class="setting-item" id="setting-speedrun">
-         <div class="setting-text">
-           <label for="toggle-stopwatch">Stopwatch</label>
-           <p class="setting-desc">Show a stopwatch during the game.</p>
+       </section>
+       <section class="settings-group" id="settings-group-progress-box">
+         <h3 id="settings-group-progress" class="settings-group-title"><button type="button" class="settings-group-toggle" aria-expanded="true">Progress &amp; Learning</button></h3>
+         <div class="settings-group-body">
+<div class="setting-item" id="setting-hide-stats-default">
+<div class="setting-text">
+<label for="toggle-hide-stats-default">Hide Progress Tables by Default</label>
+<p class="setting-desc">Start each state's progress table collapsed on the setup screen. You can still show it with the Hide/Show button.</p>
+</div>
+<input type="checkbox" id="toggle-hide-stats-default">
+</div>
+<div class="setting-item" id="setting-best-known-count">
+<div class="setting-text">
+<label for="input-best-known-count">Best-Known Counties to Select</label>
+<p class="setting-desc">How many counties the "Select your best-known" button checks when choosing counties to exclude. Any number from 1 up.</p>
+</div>
+<input type="number" id="input-best-known-count" min="1" step="1" value="5" inputmode="numeric">
+</div>
+<div class="setting-item" id="setting-reset-progress">
+<div class="setting-text">
+<label>Progress</label>
+<p class="setting-desc">Clear completed states, mistake history, best-known suggestions, and Study progress.</p>
+</div>
+<button id="btn-reset-progress" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Reset Progress</button>
+</div>
          </div>
-         <input type="checkbox" id="toggle-stopwatch">
-       </div>
-
-       <div class="setting-item" id="setting-sort-states-alpha">
-         <div class="setting-text">
-           <label for="toggle-sort-states-alpha">Sort States Alphabetically</label>
-           <p class="setting-desc">Show states in A-Z order everywhere they're grouped or laid out: the home screen's exclusion checklist and progress tables, and the maps shown during the game.</p>
-         </div>
-         <input type="checkbox" id="toggle-sort-states-alpha">
-       </div>
-
-       <div class="setting-item" id="setting-show-state-in-prompt">
-         <div class="setting-text">
-           <label for="toggle-show-state-in-prompt">Show State in Prompt</label>
-           <p class="setting-desc">Always include the state name alongside the target county in prompts.</p>
-         </div>
-         <input type="checkbox" id="toggle-show-state-in-prompt">
-       </div>
-
-       <div class="setting-item" id="setting-reveal-answer">
-         <div class="setting-text">
-           <label for="toggle-reveal-answer">Reveal Answer After Mistakes</label>
-           <p class="setting-desc">Reveal the correct county after 3 wrong guesses. <i>(Doesn't apply to List mode)</i></p>
-         </div>
-         <input type="checkbox" id="toggle-reveal-answer">
-       </div>
-
-       <div class="setting-item" id="setting-scale-states-by-size">
-         <div class="setting-text">
-           <label for="toggle-scale-states-by-size">Scale States by Size</label>
-           <p class="setting-desc">Size each state's map based on how much it has going on—Texas gets more room, Delaware gets less—with a thin divider between maps.</p>
-           <p class="setting-warning">WARNING: This might lead to some bugs.</p>
-         </div>
-         <input type="checkbox" id="toggle-scale-states-by-size">
-       </div>
-
-       <div class="setting-item" id="setting-dividers-for-few-states">
-         <div class="setting-text">
-           <label for="toggle-dividers-for-few-states">Use Dividers for Few States</label>
-           <p class="setting-desc">Always use dividers (instead of boxes) when playing with 3 or fewer states.</p>
-         </div>
-         <input type="checkbox" id="toggle-dividers-for-few-states">
-       </div>
-
-
-       <div class="setting-item" id="setting-states-per-row">
-         <div class="setting-text">
-           <label for="select-states-per-row">States Per Row</label>
-           <p class="setting-desc">Set the maximum number of states displayed per row, if arranged in a grid.</p>
-         </div>
-         <select id="select-states-per-row">
-           <option value="1">1</option>
-           <option value="2">2</option>
-           <option value="3">3</option>
-           <option value="4">4</option>
-         </select>
-       </div>
-
-        <div class="setting-item" id="setting-hover-names">
-         <div class="setting-text">
-           <label for="toggle-hover-names">Show Names on Hover</label>
-           <p class="setting-desc">Show a county's name when you hover over it. Turn this off to practice without hints.</p>
-         </div>
-         <input type="checkbox" id="toggle-hover-names">
-       </div>
-
-       <div class="setting-item" id="setting-learn-count">
-         <div class="setting-text">
-           <label for="select-learn-count">Counties Per Learn Round</label>
-           <p class="setting-desc">How many counties Learn mode gives you in each round.</p>
-         </div>
-         <select id="select-learn-count">
-           <option value="4">4</option>
-           <option value="5">5</option>
-           <option value="6">6</option>
-           <option value="7">7</option>
-           <option value="8">8</option>
-         </select>
-       </div>
-
-       <div class="setting-item" id="setting-auto-scroll">
-         <div class="setting-text">
-           <label for="toggle-auto-scroll">Auto-Scroll to Next State</label>
-           <p class="setting-desc">When several states are on screen, scroll to the state of the next county you need to find.</p>
-         </div>
-         <input type="checkbox" id="toggle-auto-scroll">
-       </div>
-
-       <h3 id="settings-group-specific-modes" class="settings-group-title">Specific Modes</h3>
-
-       <div class="setting-item" id="setting-show-county-list">
-         <div class="setting-text">
-           <label for="toggle-show-county-list">Show County List (List mode)</label>
-           <p class="setting-desc">Show the "Show List" button in List mode, which opens a checklist of every county you still need to find. Turn this off to play from memory.</p>
-         </div>
-         <input type="checkbox" id="toggle-show-county-list">
-       </div>
-
-       <div class="setting-item" id="setting-speedrun">
-         <div class="setting-text">
-           <label for="toggle-speedrun">Speedrun Mode (Pin modes)</label>
-           <p class="setting-desc">Register a guess the instant you press down on a county, instead of waiting for you to release.</p>
-         </div>
-         <input type="checkbox" id="toggle-speedrun">
-       </div>
-
-       <div class="setting-item" id="setting-instant-check">
-         <div class="setting-text">
-           <label for="toggle-instant-check">Instant Check (Type modes)</label>
-           <p class="setting-desc">Check what you've typed as you type it, instead of waiting for you to press Enter. <i>(Doesn't apply to Verbatim)</i></p>
-         </div>
-         <input type="checkbox" id="toggle-instant-check">
-       </div>
-
-
-       <div class="setting-item" id="setting-list-by-state">
-         <div class="setting-text">
-           <label for="toggle-list-by-state">Group Checklist by State (List mode)</label>
-           <p class="setting-desc">Group the county checklist in List mode into a section per state, instead of one mixed alphabetical list.</p>
-         </div>
-         <input type="checkbox" id="toggle-list-by-state">
-       </div>
-
-
-       <div class="setting-item" id="setting-require-diacritics">
-         <div class="setting-text">
-           <label for="toggle-require-diacritics">Require Exact Spelling (Type modes)</label>
-           <p class="setting-desc">Require all words to be typed exactly as they appear, including marks like diaereses. While this is on, a row of buttons for the special characters in that round's county names (like ö or the ʻokina) appears under the text box, so you can tap them instead of hunting for them on your keyboard.</p>
-         </div>
-         <input type="checkbox" id="toggle-require-diacritics">
-        </div>
-
-       <div class="setting-item setting-sub is-inactive" id="setting-accept-st-abbrev">
-         <div class="setting-text">
-           <label for="toggle-accept-st-abbrev">...except for &ldquo;Saint&rdquo;</label>
-           <p class="setting-desc">Keep accepting &ldquo;St.&rdquo; and &ldquo;Ste.&rdquo; (or just &ldquo;St&rdquo; and &ldquo;Ste&rdquo;) for &ldquo;Saint&rdquo; and &ldquo;Sainte&rdquo; even while the setting above is on. Turn this off to type the whole word too. With the setting above off, they&rsquo;re always accepted.</p>
-         </div>
-         <input type="checkbox" id="toggle-accept-st-abbrev" checked disabled>
-       </div>
-
+       </section>
 
        <button class="btn-back" data-target="screen-home">Back to Home</button>
      </div>
@@ -801,8 +815,14 @@
      <p id="feedback" aria-live="polite"></p>
      <div id="mc-options" class="mc-options hidden" role="group" aria-label="Answer choices"></div>
      <div id="type-input-box" class="hidden">
-       <input type="text" id="type-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type a county name…" aria-label="Type the county name">
-       <div id="special-chars" class="special-chars hidden" role="toolbar" aria-labelledby="special-chars-label" aria-controls="type-input">
+              <div class="type-row">
+         <input type="text" id="type-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type a county name…" aria-label="Type the county name">
+         <div id="tuc-desig" class="desig hidden">
+           <button type="button" id="tuc-desig-btn" class="desig-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Choose designation"><span id="tuc-desig-label"></span></button>
+           <ul id="tuc-desig-list" class="desig-list hidden" role="listbox" aria-label="Designation"></ul>
+         </div>
+       </div>
+         <div id="special-chars" class="special-chars hidden" role="toolbar" aria-labelledby="special-chars-label" aria-controls="type-input">
          <span id="special-chars-label" class="special-chars-label">Special characters</span>
          <div id="special-chars-buttons" class="special-chars-buttons"></div>
        </div>
@@ -932,7 +952,7 @@
    <p id="tuc-intro-text" class="info-intro"></p>
    <div class="modal-actions">
      <button type="button" id="btn-tuc-intro-never" class="btn-secondary">Don't show this again</button>
-     <button type="button" id="btn-tuc-intro-ok" class="btn-primary">Okay</button>
+     <button type="button" id="btn-tuc-intro-ok" class="btn-primary">Start</button>
    </div>
  </div>
 </div>
