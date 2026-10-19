@@ -40,11 +40,15 @@
        // the map's own state labels: keep the abbreviation, add the count next to it
     const labels = [...svg.querySelectorAll(".us-labels text")];
     // Hawaii's label sits on the Big Island by default: move it to the empty lower-left of its box and make it bigger
-    const LABEL_OVERRIDE = { hi: { x: 303, y: 616, size: 15 } };
+       // the not-to-scale boxes: bigger labels (Hawaii also moves to the empty lower-left of its box)
+    const LABEL_OVERRIDE = { hi: { x: 303, y: 614, size: 18 }, ak: { size: 20 } };
     labels.forEach(l => {
       l.dataset.abbr = l.textContent;
       const o = LABEL_OVERRIDE[l.dataset.code];
-      if (o) { l.setAttribute("x", o.x); l.setAttribute("y", o.y); l.style.fontSize = o.size + "px"; }
+      if (o) {
+        if (o.x != null) { l.setAttribute("x", o.x); l.setAttribute("y", o.y); }
+        l.style.fontSize = o.size + "px";
+      }
     });
     const boxes = [...svg.querySelectorAll(".us-box")];
 
@@ -68,12 +72,13 @@
         const isTerr = l.style.textAnchor === "start";        // PR, VI, MP, AS, GU sit in the corner of their box
 
         // where the pair is centered: the label itself, or the middle of the territory's box
-        let cx = l.getAttribute("x");
+         let cx = l.getAttribute("x");
+         let boxW = 100;                                       // how wide the territory's box is: the count has to fit inside it
         if (isTerr) {
           const lx = parseFloat(cx), ly = parseFloat(l.getAttribute("y"));
           const box = boxes.find(r => Math.abs(parseFloat(r.getAttribute("x")) - (lx - 3.1)) < 1 &&
                                       Math.abs(parseFloat(r.getAttribute("y")) - (ly - 4.5)) < 1.5);
-          if (box) cx = parseFloat(box.getAttribute("x")) + parseFloat(box.getAttribute("width")) / 2;
+          if (box) { cx = parseFloat(box.getAttribute("x")) + parseFloat(box.getAttribute("width")) / 2; boxW = parseFloat(box.getAttribute("width")); }
         }
 
         const mkSpan = (txt, size, dy) => {
@@ -90,9 +95,10 @@
           // the small states on the right have no room below, so the count goes beside the name
           l.append(mkSpan(l.dataset.abbr, b, null), mkSpan(" " + count, b * 0.75, null));
         } else {
-          const c = isTerr ? b * 0.85 : Math.max(b * 0.6, 8);   // count size, never tiny
-          const first = isTerr ? 4 : -c * 0.55;                  // territories drop below their border line
-             l.append(mkSpan(l.dataset.abbr, b, first), mkSpan(count, c, b * 0.15 + c * 0.85 + 1));
+          const ab = isTerr ? b * 1.4 : b;                       // territories get a bigger abbreviation
+          const c = isTerr ? Math.min(b * 1.2, (boxW - 4) / (count.length * 0.62)) : Math.max(b * 0.6, 8);   // and a bigger count, but never wider than their box
+          const first = isTerr ? ab * 0.72 - 1 : -c * 0.55;             // territories drop below their border line
+             l.append(mkSpan(l.dataset.abbr, ab, first), mkSpan(count, c, ab * 0.15 + c * 0.85 + 1));
              if (!isTerr) {
                // measure the two lines together and center that block on the label's original spot
                const bb = l.getBBox();
