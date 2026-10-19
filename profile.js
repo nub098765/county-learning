@@ -794,6 +794,12 @@
   });
   $("p-username").addEventListener("keydown", e => { if (e.key === "Enter") $("p-save-name").click(); });
 
-  sb.auth.onAuthStateChange(evt => { if (!signingUp && (evt === "SIGNED_IN" || evt === "SIGNED_OUT")) route(); });
-  route();
+  let ready = false;     // the first load has finished
+  sb.auth.onAuthStateChange((evt, sess) => {
+    if (!ready || signingUp || (evt !== "SIGNED_IN" && evt !== "SIGNED_OUT")) return;
+    const uid = sess && sess.user ? sess.user.id : null;
+    if (uid === (session && session.user ? session.user.id : null)) return;   // same account: just a repeat announcement
+    route();
+  });
+  route().then(() => { ready = true; });
 })();
