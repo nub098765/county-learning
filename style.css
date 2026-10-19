@@ -3990,3 +3990,125 @@ body.dark-mode .lb-tab { border-color: #3f3f38; }
 body.dark-mode .lb-tab.on { background: #fdeca6; border-color: #fdeca6; color: #242420; }
 a.lb-tab:hover { background: rgba(128,128,128,.18); text-decoration: none; }
 .lb-table td a, .lb-table td a:visited { color: inherit; }
+
+.unlock-toasts {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 20000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+.unlock-toast {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto;
+  align-items: center;
+  justify-items: center;
+  row-gap: 5px;
+  position: relative;
+  padding: 14px 18px 16px;
+  width: fit-content;
+  min-width: 180px;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--unlock-color) 38%, transparent);
+  border-radius: 14px;
+  background: #fffdf7;
+  color: #25251f;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, .16);
+  pointer-events: auto;
+  animation: unlock-toast-in .16s ease-out both;
+}
+.unlock-toast-eyebrow {
+  grid-column: 1;
+  grid-row: 1;
+  color: transparent;
+  font-size: .88rem;
+  font-weight: 500;
+  text-align: center;
+  background-image: linear-gradient(90deg, #e85d75, #f2a541, #e9d64a, #5dbb7a, #4fa6d8, #9a70cf, #e85d75);
+  background-size: 220% 100%;
+  background-position: 100% 50%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: unlock-rainbow-sweep 2.2s ease-out both;
+}
+.unlock-toast-medal {
+  grid-row: 2;
+}
+.unlock-toast-copy {
+  grid-row: 3;
+  justify-items: center;
+  text-align: center;
+}
+.unlock-toast-close {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  margin: 0;
+}
+.unlock-toast-medal {
+  display: block;
+  flex: 0 0 auto;
+  width: 72px;
+  height: 72px;
+  overflow: visible;
+  color: var(--unlock-color);
+}
+.unlock-medal-face { fill: rgba(128, 128, 128, .1); transition: fill .22s ease; }
+.unlock-medal-locked-ring { fill: none; stroke: currentColor; stroke-width: 3; stroke-dasharray: 3 5; opacity: .45; }
+.unlock-medal-earned-ring {
+  fill: none;
+  stroke: var(--unlock-color);
+  stroke-width: 5;
+  opacity: 0;
+  transition: opacity .22s ease;
+}
+.unlock-medal-glyph,
+.unlock-medal-state-shape { fill: var(--unlock-color); opacity: .3; transition: opacity .22s ease; }
+.unlock-medal-glyph { font-weight: 700; font-family: 'Lexend', system-ui, sans-serif; }
+.unlock-toast-copy { display: grid; gap: 3px; min-width: 0; }
+.unlock-toast-copy strong { font-size: 1rem; line-height: 1.15; }
+.unlock-toast-copy > span:last-child { font-size: .82rem; line-height: 1.3; opacity: .78; }
+.unlock-toast-close {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin: -6px -7px 0 auto;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.unlock-toast-close:hover { background: rgba(128, 128, 128, .16); }
+.unlock-toast-earned .unlock-medal-face { fill: color-mix(in srgb, var(--unlock-color) 10%, transparent); }
+.unlock-toast-earned .unlock-medal-earned-ring { opacity: 1; }
+.unlock-toast-earned .unlock-medal-glyph,
+.unlock-toast-earned .unlock-medal-state-shape { opacity: 1; }
+.unlock-toast-exit { animation: unlock-toast-out .16s ease-in both; }
+body.dark-mode .unlock-toast { background: #292923; color: #f2ecd9; }
+@keyframes unlock-toast-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes unlock-toast-out {
+  to { opacity: 0; }
+}
+@keyframes unlock-rainbow-sweep {
+  to { background-position: 0% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .unlock-toast, .unlock-toast-exit { animation-duration: .01ms; }
+  .unlock-toast-eyebrow { animation: none; background-position: 0% 50%; }
+  .unlock-medal-face, .unlock-medal-earned-ring, .unlock-medal-glyph, .unlock-medal-state-shape { transition-duration: .01ms; }
+}

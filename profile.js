@@ -487,6 +487,16 @@
     return rows;
   }
 
+  async function fetchStateRuns(userId) {
+    const rows = [];
+    for (let from = 0; ; from += 1000) {
+      const result = await sb.from("state_runs").select("state_key, time_ms").eq("user_id", userId).order("time_ms").order("state_key").range(from, from + 999);
+      if (result.error) return result;
+      rows.push(...(result.data || []));
+      if (!result.data || result.data.length < 1000) return { data: rows, error: null };
+    }
+  }
+
   function modeBars(tiles) {
     const total = tiles.reduce((a, t) => a + t.total, 0);
     const wrap = mk("div", "pc-bars");
@@ -658,13 +668,15 @@
     const view = $("p-view");
     view.replaceChildren(mk("p", "info-intro", "Loading…"));
     show("p-view", true);
-    const [who, prog, states, weights] = await Promise.all([
+    const [who, prog, states, weights, speedRun, stateRuns] = await Promise.all([
       sb.from("leaderboard").select("id, username, points, has_tuc").eq("id", userId).maybeSingle(),
       sb.from("user_state_mode").select("state_key, mode, done").eq("user_id", userId),
       sb.from("state_multipliers").select("state_key, name, multiplier, county_count").order("name"),
-      sb.from("mode_weights").select("mode, weight")
+      sb.from("mode_weights").select("mode, weight"),
+      sb.from("state_runs").select("time_ms").eq("user_id", userId).lt("time_ms", 5000).limit(1).maybeSingle(),
+      fetchStateRuns(userId)
     ]);
-    const err = who.error || prog.error || states.error || weights.error;
+    const err = who.error || prog.error || states.error || weights.error || speedRun.error || stateRuns.error;
     if (err || !who.data) {
       view.replaceChildren(mk("p", "info-intro", err ? "Couldn't load the profile: " + err.message : "That profile wasn't found."));
       return;
@@ -703,13 +715,35 @@
 
     const gold = tiles.filter(t => t.full === MODES.length).length;
     const modeDone = m => tiles.every(t => t.per.find(x => x.m === m).full);
+    const stateRunRows = stateRuns.data || [];
+    const fastStateRuns = new Set(stateRunRows
+      .filter(run => tiles.some(tile => tile.key === run.state_key && Number(run.time_ms) <= tile.total * 3000))
+      .map(run => run.state_key));
+    const noTimeToWaste = tiles.length > 0 && tiles.every(tile => fastStateRuns.has(tile.key));
     const achievements = [
-      { label: "The Ultimate Challenge", sub: "Beat it", icon: "flame", color: "#CE4E2C", earned: !!who.data.has_tuc },
-      { label: "First gold", sub: "A state in all 6 modes", glyph: "★", color: "#d4a017", earned: gold >= 1 },
-      { label: "Five gold", sub: "5 states in all 6 modes", glyph: "★5", color: "#d4a017", earned: gold >= 5 },
-      ...[[1000, "1K"], [10000, "10K"], [50000, "50K"], [150000, "150K"], [300000, "300K"]]
-        .map(([n, g]) => ({ label: n.toLocaleString() + " points", sub: "", glyph: g, color: "#6FA3D8", earned: pts >= n })),
-      ...MODES.map(m => ({ label: MODE_LABEL[m] + " master", sub: "Every state done", glyph: MODE_LETTER[m], color: MODE_COLOR[m], earned: modeDone(m) }))
+      { label: "County God", sub: "Beat the Ultimate Challenge", icon: "flame", color: "#CE4E2C", earned: !!who.data.has_tuc },
+      { label: "Gold Star", sub: "A state in all 6 modes", glyph: "★", color: "#d4a017", earned: gold >= 1 },
+      { label: "Gold Ring", sub: "5 states in all 6 modes", glyph: "★5", color: "#d4a017", earned: gold >= 5 },
+      { label: "Gold Necklace", sub: "10 states in all 6 modes", glyph: "★10", color: "#d4a017", earned: gold >= 10 },
+      { label: "Gold Rush", sub: "25 states in all 6 modes", glyph: "★25", color: "#d4a017", earned: gold >= 25 },
+      { label: "County Master", sub: "Every county found in every mode", glyph: "★57", color: "#d4a017", earned: gold >= 57 },
+      { label: "Amateur Countellectual", sub: "Get 1,000 points", glyph: "1K", color: "#6FA3D8", earned: pts >= 1000 },
+      { label: "Getting Into It", sub: "Get 10,000 points", glyph: "10K", color: "#6FA3D8", earned: pts >= 10000 },
+      { label: "In the Weeds", sub: "Get 25,000 points", glyph: "25K", color: "#6FA3D8", earned: pts >= 25000 },
+      { label: "County Connoisseur", sub: "Get 50,000 points", glyph: "50K", color: "#6FA3D8", earned: pts >= 50000 },
+      { label: "State Savant", sub: "Get 100,000 points", glyph: "100K", color: "#6FA3D8", earned: pts >= 100000 },
+      { label: "Pro Countellectual", sub: "Get all points possible without the Ultimate Challenge",glyph: "143K", color: "#6FA3D8", earned: pts >= 143840 },
+      { label: "Point God", sub: "Get all points possible", glyph: "300K", color: "#6FA3D8", earned: pts >= 300000 },
+      { label: "Jack of All Trades", sub: "Complete every state in at least one mode", glyph: "1×57", color: "#6FA3D8", earned: tiles.every(t => t.full > 0) },
+      { label: "Speed Is Key", sub: "Complete a perfect state run in under 10 seconds", glyph: "⏱", color: "#6FA3D8", earned: !!speedRun.data },
+      { label: "Speed is Everything", sub: "Complete a perfect state run in under 5 seconds", glyph: "⏱⏱", color: "#6FA3D8", earned: !!speedRun.data },
+      { label: "No Time to Waste", sub: "Complete at least one perfect run for every state at a pace of three seconds or less per county", glyph: "⏱⏱⏱", color: "#6FA3D8", earned: noTimeToWaste },
+     { label: "Put Your Finger On It", sub: "Complete every state in Pin", glyph: "P", color: MODE_COLOR.pin, earned: modeDone("pin") },
+    { label: "Know It in a Flash", sub: "Complete every state in Flash", glyph: "F", color: MODE_COLOR["pin-hard"], earned: modeDone("pin-hard") },
+    { label: "Made The Right Choice", sub: "Complete every state in Multiple-Choice", glyph: "MC", color: MODE_COLOR.mc, earned: modeDone("mc") },
+    { label: "Checking It Twice", sub: "Complete every state in List", glyph: "L", color: MODE_COLOR.type, earned: modeDone("type") },
+    { label: "Infinite Monkey Theorem", sub: "Complete every state in Type", glyph: "T", color: MODE_COLOR["type-strict"], earned: modeDone("type-strict") },
+    { label: "This One Is Washington", sub: "Complete every state in Identify", glyph: "I", color: MODE_COLOR["type-hard"], earned: modeDone("type-hard") },
     ].sort((a, b) => b.earned - a.earned);
 
     const byPts = (a, b) => b.full - a.full || b.pts - a.pts || a.name.localeCompare(b.name);

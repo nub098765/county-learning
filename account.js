@@ -19,7 +19,86 @@
   if (!window.supabase) return;
 
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  let session = null, profile = null, queue = [], timer = 0;
+  let session = null, profile = null, queue = [], timer = 0, lastKnownPoints = null;
+
+  async function loadBadgeProgress() {
+    if (!session) return null;
+    const [progressResult, statesResult] = await Promise.all([
+      sb.from("user_state_mode").select("state_key, mode, done").eq("user_id", session.user.id),
+      sb.from("state_multipliers").select("state_key, name, county_count")
+    ]);
+    const error = progressResult.error || statesResult.error;
+    if (error) {
+      console.warn("Couldn't check saved badge progress:", error.message);
+      return null;
+    }
+
+    const doneByState = {};
+    (progressResult.data || []).forEach(row => {
+      (doneByState[row.state_key] ||= {})[row.mode] = Number(row.done) || 0;
+    });
+    const states = (statesResult.data || []).map(state => ({
+      key: state.state_key,
+      name: state.name,
+      modesDone: MODES.filter(mode => (doneByState[state.state_key]?.[mode] || 0) >= state.county_count)
+    }));
+    return {
+      states,
+      gold: states.filter(state => state.modesDone.length === MODES.length).length
+    };
+  }
+
+  async function loadStateRuns(userId) {
+    const rows = [];
+    for (let from = 0; ; from += 1000) {
+      const result = await sb.from("state_runs").select("state_key, time_ms").eq("user_id", userId).order("time_ms").order("state_key").range(from, from + 999);
+      if (result.error) return result;
+      rows.push(...(result.data || []));
+      if (!result.data || result.data.length < 1000) return { data: rows, error: null };
+    }
+  }
+
+  function notifyBadgeUnlocks(before, after) {
+    if (!before || !after || !window.showUnlockToast) return;
+    const tierOf = count => count >= MODES.length ? "Gold" : count >= 3 ? "Silver" : count >= 1 ? "Bronze" : "";
+    after.states.forEach(state => {
+      const previous = before.states.find(item => item.key === state.key);
+      if (!previous) return;
+      const previousTier = tierOf(previous.modesDone.length);
+      const currentTier = tierOf(state.modesDone.length);
+      if (currentTier && currentTier !== previousTier) {
+        const tierColor = { Bronze: "#b0703c", Silver: "#b8c0cc", Gold: "#d4a017" }[currentTier];
+        window.showUnlockToast(state.name, currentTier, {
+          stateKey: state.key,
+          color: tierColor
+        });
+      }
+    });
+
+    const achievements = [
+      { label: "First Gold", threshold: 1, detail: "A state in all 6 modes", glyph: "★" },
+      { label: "Five Gold", threshold: 5, detail: "5 states in all 6 modes", glyph: "★5" },
+      { label: "Ten Gold", threshold: 10, detail: "10 states in all 6 modes", glyph: "★10" },
+      { label: "County Master", threshold: 57, detail: "Every county found in every mode", glyph: "★57" }
+    ];
+    achievements
+      .filter(item => before.gold < item.threshold && after.gold >= item.threshold)
+      .forEach(item => window.showUnlockToast(item.label, item.detail, { glyph: item.glyph, color: "#d4a017" }));
+
+    MODES.forEach(mode => {
+      const wasComplete = before.states.every(state => state.modesDone.includes(mode));
+      const isComplete = after.states.every(state => state.modesDone.includes(mode));
+      if (!wasComplete && isComplete) {
+        const labels = { pin: "Pin", "pin-hard": "Flash", mc: "Multiple-Choice", type: "List", "type-strict": "Type", "type-hard": "Identify" };
+        const colors = { pin: "#3b82f6", "pin-hard": "#8b5cf6", mc: "#f59e0b", type: "#14b8a6", "type-hard": "#ec4899", "type-strict": "#ef4444" };
+        const glyphs = { pin: "P", "pin-hard": "F", mc: "MC", type: "L", "type-strict": "T", "type-hard": "I" };
+        window.showUnlockToast(`${labels[mode]} Master`, "Every state done", {
+          glyph: glyphs[mode],
+          color: colors[mode]
+        });
+      }
+    });
+  }
 
   async function syncLocal() {
     const flag = "accountSynced:" + session.user.id;
@@ -70,6 +149,7 @@
   async function refresh() {
     if (!window.findCountyForAccount) { setTimeout(refresh, 300); return; }   // wait for the game script to load
     const { data } = await sb.auth.getSession();
+    lastKnownPoints = null;
     session = data.session;
     profile = null;
     if (session) {
@@ -89,16 +169,36 @@
   async function flush() {
     if (!queue.length || !session) return;
     const rows = queue.splice(0, queue.length);
+    const badgeProgressBefore = await loadBadgeProgress();
     const { error } = await sb.from("completions").upsert(rows, { onConflict: "user_id,county_id,mode", ignoreDuplicates: true });
     if (error) { console.warn("completion upload failed:", error.message); if (error.code !== "23503") queue.unshift(...rows); }
-    else updateWho();
+    else {
+      notifyBadgeUnlocks(badgeProgressBefore, await loadBadgeProgress());
+      updateWho();
+    }
   }
 
     async function updateWho() {
     if (!whoBtn) return;
     if (!session || !profile) { whoBtn.classList.add("hidden"); return; }
     const r = await sb.from("leaderboard").select("points").eq("id", session.user.id).maybeSingle();
+    if (r.error) { console.warn("Couldn't refresh your points:", r.error.message); return; }
     const pts = r.data ? Math.round(Number(r.data.points) || 0) : 0;
+    if (lastKnownPoints !== null && pts > lastKnownPoints && window.showUnlockToast) {
+      const milestones = [
+        [1000, "Amateur Countellectual", "Get 1,000 points.", "1K"],
+        [10000, "Getting Into It", "Get 10,000 points.", "10K"],
+        [25000, "In the Weeds", "Get 25,000 points.", "25K"],
+        [50000, "County Connoisseur", "Get 50,000 points.", "50K"],
+        [100000, "State Savant", "Get 100,000 points.", "100K"],
+        [143840, "Pro Countellectual", "Get all points possible without the Ultimate Challenge.", "143K"],
+        [300000, "Point God", "Get all points possible.", "300K"]
+      ];
+      milestones
+        .filter(([threshold]) => lastKnownPoints < threshold && pts >= threshold)
+        .forEach(([, label, detail, glyph]) => window.showUnlockToast(label, detail, { glyph, color: "#6FA3D8" }));
+    }
+    lastKnownPoints = pts;
     document.getElementById("home-who-name").textContent = profile.username;
     document.getElementById("home-who-pts").textContent = pts.toLocaleString() + " pts";
     whoBtn.classList.remove("hidden");
@@ -114,13 +214,50 @@
   };
   window.reportTucComplete = async () => {
     if (!session || !profile) return;
-    await sb.from("tuc_completions").upsert({ user_id: session.user.id }, { onConflict: "user_id", ignoreDuplicates: true });
+    const existing = await sb.from("tuc_completions").select("user_id").eq("user_id", session.user.id).maybeSingle();
+    if (existing.error) { console.warn("Couldn't check Ultimate Challenge progress:", existing.error.message); return; }
+    if (existing.data) return;
+    const result = await sb.from("tuc_completions").upsert({ user_id: session.user.id }, { onConflict: "user_id", ignoreDuplicates: true });
+    if (result.error) { console.warn("Couldn't save Ultimate Challenge progress:", result.error.message); return; }
+    if (window.showUnlockToast) window.showUnlockToast("The Ultimate Challenge", "Beat it.", { flame: true, color: "#CE4E2C" });
   };
 
   window.reportStateRun = async (stateKey, mode, ms) => {
     if (!session || !profile || !MODES.includes(mode) || !(ms > 0)) return;
-    const { error } = await sb.from("state_runs").insert({ user_id: session.user.id, state_key: stateKey, mode, time_ms: Math.round(ms) });
-    if (error) console.warn("run upload failed:", error.message);
+    const timeMs = Math.round(ms);
+    let firstSpeedRun = false, completesNoTimeToWaste = false;
+    const countyCount = window.countyCountForAccount && window.countyCountForAccount(stateKey);
+    if (countyCount && timeMs <= countyCount * 3000) {
+      const [stateResult, runsResult] = await Promise.all([
+        sb.from("state_multipliers").select("state_key, county_count"),
+        loadStateRuns(session.user.id)
+      ]);
+      const error = stateResult.error || runsResult.error;
+      if (error) console.warn("Couldn't check No Time to Waste progress:", error.message);
+      else {
+        const states = stateResult.data || [];
+        const countyCounts = new Map(states.map(state => [state.state_key, state.county_count]));
+        const qualifyingStates = new Set((runsResult.data || [])
+          .filter(run => Number(run.time_ms) <= (countyCounts.get(run.state_key) || 0) * 3000)
+          .map(run => run.state_key));
+        const wasComplete = states.length > 0 && states.every(state => qualifyingStates.has(state.state_key));
+        qualifyingStates.add(stateKey);
+        completesNoTimeToWaste = !wasComplete && states.length > 0 && states.every(state => qualifyingStates.has(state.state_key));
+      }
+    }
+    if (timeMs < 10000) {
+      const existing = await sb.from("state_runs").select("time_ms").eq("user_id", session.user.id).lt("time_ms", 10000).limit(1).maybeSingle();
+      if (existing.error) console.warn("Couldn't check Speed Is Key progress:", existing.error.message);
+      else firstSpeedRun = !existing.data;
+    }
+    const { error } = await sb.from("state_runs").insert({ user_id: session.user.id, state_key: stateKey, mode, time_ms: timeMs });
+    if (error) { console.warn("run upload failed:", error.message); return; }
+    if (firstSpeedRun && window.showUnlockToast) {
+      window.showUnlockToast("Speed Is Key", "Perfect state run under 10 seconds", { glyph: "⏱", color: "#6FA3D8" });
+    }
+    if (completesNoTimeToWaste && window.showUnlockToast) {
+      window.showUnlockToast("No Time to Waste", "A perfect run for every state at three seconds per county or less", { glyph: "⏱⏱⏱", color: "#6FA3D8" });
+    }
   };
     // Reset progress: wipe this account's saved completions. Points, badges and the leaderboard are all worked out from them.
   window.accountIsSignedIn = () => !!(session && profile);
