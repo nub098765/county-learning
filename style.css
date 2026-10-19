@@ -839,6 +839,8 @@ body.dark-mode .badge-mistake {
  right: 0.75rem;
  width: 2.1rem;
  height: 2.1rem;
+ padding: 0;
+ box-sizing: border-box;
  border-radius: 50%;
  border: 2px solid #2d5a27;
  background: #ffffff;
@@ -3980,3 +3982,11 @@ body .btn-mode.btn-mode[data-home-learn="review"] { border-left-color: var(--mod
 body.dark-mode .zoom-arrows-top { background: #2a2a2a; border-color: #555; color: #eee; }
 body.dark-mode .zoom-arrows-top:hover { background: #363636; color: #eee; }
 body.dark-mode .zoom-arrows-top[aria-pressed="true"] { background: #1f3a55; border-color: #5b9bd5; color: #cfe4fa; }
+
+.lb-tabs { display: flex; gap: .5rem; justify-content: center; margin: .25rem 0 1rem; }
+.lb-tab, .lb-tab:visited { padding: .4rem 1rem; border-radius: 999px; border: 1px solid #ccc; text-decoration: none; color: inherit; font-size: .9rem; font-weight: 600; }
+body.dark-mode .lb-tab { border-color: #3f3f38; }
+.lb-tab.on { background: #2d5a27; border-color: #2d5a27; color: #fff; }
+body.dark-mode .lb-tab.on { background: #fdeca6; border-color: #fdeca6; color: #242420; }
+a.lb-tab:hover { background: rgba(128,128,128,.18); text-decoration: none; }
+.lb-table td a, .lb-table td a:visited { color: inherit; }

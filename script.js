@@ -1289,7 +1289,7 @@ function normalizeTypedName(str) {
     .trim()
     .replace(/\s+/g, " ");
   if (!gameSettings.requireDiacritics) {
-    result = foldDiacriticsForComparison(result).replace(/\u02BB/g, "");
+    result = foldDiacriticsForComparison(result).replace(/[\u02BB']/g, "");
   }
   if (!gameSettings.requireDiacritics || gameSettings.acceptStAbbrev !== false) {
     result = result
@@ -1375,7 +1375,7 @@ const DEFAULT_SETTINGS = {
   learnCount: 5,
   showHoverNames: true,
   autoScrollToState: true,
-  autoZoom: false,
+  autoZoom: true,
   reviewArrowsOn: false
 };
 let gameSettings = { ...DEFAULT_SETTINGS, ...readStoredJson("gameSettings", {}) };
@@ -3362,7 +3362,7 @@ function markCountyLearned(countyId, mode, viaRetryMissed) {
   if (!countyProgress[countyId]) countyProgress[countyId] = {};
   countyProgress[countyId][mode] = newStatus;
   localStorage.setItem("countyProgress", JSON.stringify(countyProgress));
-  if (newStatus === "clean" && window.reportCompletion) window.reportCompletion(countyId, mode);
+  if (window.reportCompletion) window.reportCompletion(countyId, mode);
   renderStatsPanel();
 }
 
@@ -5174,6 +5174,9 @@ function pickNextTarget() {
   lastRunWasNewBest = previousBest !== null && finalTime < previousBest;
   perfectTimes[key].push({ time: finalTime, date: Date.now() });
   localStorage.setItem("perfectTimes", JSON.stringify(perfectTimes));
+  if (activeStateKeys.length === 1 && selectedMode !== "tuc" && selectedCounties.length === getActiveCountiesPool().length && window.reportStateRun) {
+    window.reportStateRun(activeStateKeys[0], selectedMode, finalTime);     // a full, perfect, single-state run goes on the board
+  }
 }
     showSummaryModal();
     return;

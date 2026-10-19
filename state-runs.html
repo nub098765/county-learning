@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fastest Runs · Countellect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Serif:opsz,wght@8..144,300;400;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="geonerds.png">
+<link rel="stylesheet" href="style.css">
+<style>
+  .lb-tabs { display: flex; gap: .5rem; justify-content: center; margin: .25rem 0 1rem; }
+  .lb-tab { padding: .4rem 1rem; border-radius: 999px; border: 1px solid #ccc; text-decoration: none; color: inherit; font-size: .9rem; font-weight: 600; }
+  body.dark-mode .lb-tab { border-color: #3f3f38; }
+  .lb-tab.on { background: #2d5a27; border-color: #2d5a27; color: #fff; }
+  a.lb-tab:hover { background: rgba(128,128,128,.18); }
+  .lb-search select { flex: 1; min-width: 0; font: inherit; padding: 0.55rem 0.8rem; border: 1px solid #ccc; border-radius: 8px; background: #fbfaf6; color: inherit; }
+  body.dark-mode .lb-search select { background: #2b2b26; border-color: #3f3f38; }
+  .sr-modes { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; margin: 0 0 1.25rem; }
+  .sr-modes button { padding: .35rem .8rem; font-size: .85rem; border-radius: 999px; background: transparent; color: inherit; border: 1px solid #ccc; }
+  body.dark-mode .sr-modes button { border-color: #3f3f38; }
+  .sr-modes button:hover { background: rgba(128,128,128,.18); }
+  .sr-modes button[aria-pressed="true"] { background: #2d5a27; border-color: #2d5a27; color: #fff; }
+  .lb-table td a, .lb-table td a:visited { color: inherit; }
+</style>
+</head>
+<body>
+<div class="app-container wide-settings profile-page">
+  <div class="lb-wrap">
+    <div class="profile-topbar">
+      <a class="profile-link" href="index.html">← Back to game</a>
+      <div class="profile-actions"><a class="profile-link" href="profile.html">My profile</a></div>
+    </div>
+
+    <h2>Leaderboard</h2>
+    <div class="lb-tabs"><a class="lb-tab" href="leaderboard.html">Points</a><span class="lb-tab on">Fastest runs</span></div>
+    <div class="lb-search">
+      <select id="sr-state" aria-label="State"></select>
+    </div>
+    <div class="sr-modes" id="sr-modes"></div>
+    <div class="lb-search">
+      <input type="search" id="sr-search" placeholder="Search players" maxlength="20" autocomplete="off" autocapitalize="off" aria-label="Search players">
+    </div>
+
+    <table class="lb-table" id="sr-table">
+      <thead><tr><th>#</th><th>Player</th><th>Time</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p id="sr-msg" class="info-intro">Loading…</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(function () {
+  const SUPABASE_URL = "https://jgwhnidtjnuufdjcmqdv.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impnd2huaWR0am51dWZkamNtcWR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxOTE4MDgsImV4cCI6MjEwNzc2NzgwOH0.SsIHfT9TFvAYthQbwcD_Ee6W9T9a8yqlD2HfiAbcgCk";
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const MODE_LABELS = { pin: "Pin", "pin-hard": "Flash", mc: "Multiple Choice", type: "List", "type-strict": "Type", "type-hard": "Identify" };
+  const MODES = Object.keys(MODE_LABELS);
+  const stateSel = document.getElementById("sr-state"), modesEl = document.getElementById("sr-modes"), searchEl = document.getElementById("sr-search");
+  const tbody = document.querySelector("#sr-table tbody"), table = document.getElementById("sr-table"), msg = document.getElementById("sr-msg");
+  let runs = [], names = {}, me = null, mode = "pin";
+
+  const stateName = k => k.replace(/[_-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  function fmt(ms) {
+    const m = Math.floor(ms / 60000), s = Math.floor(ms % 60000 / 1000), t = ms % 1000;
+    return m + ":" + String(s).padStart(2, "0") + "." + String(t).padStart(3, "0");
+  }
+
+  function render() {
+    const state = stateSel.value, q = searchEl.value.trim().toLowerCase();
+    modesEl.replaceChildren(...MODES.map(m => {
+      const b = document.createElement("button");
+      b.type = "button"; b.textContent = MODE_LABELS[m];
+      b.setAttribute("aria-pressed", String(m === mode));
+      b.addEventListener("click", () => { mode = m; render(); });
+      return b;
+    }));
+    const best = new Map();       // each player's fastest time only
+    runs.filter(r => r.state_key === state && r.mode === mode).forEach(r => {
+      if (!best.has(r.user_id) || r.time_ms < best.get(r.user_id)) best.set(r.user_id, r.time_ms);
+    });
+    const ranked = [...best].sort((a, b) => a[1] - b[1]).map((r, i) => ({ uid: r[0], ms: r[1], rank: i + 1 }));
+    const rows = ranked.filter(r => !q || (names[r.uid] || "").toLowerCase().includes(q)).slice(0, 100);
+    tbody.replaceChildren();
+    table.classList.toggle("hidden", !rows.length);
+    msg.textContent = rows.length ? "" : (q ? "No players match that." : "No perfect runs yet. Be the first!");
+    rows.forEach(r => {
+      const tr = document.createElement("tr");
+      if (r.uid === me) tr.className = "lb-me";
+      const c1 = document.createElement("td"); c1.textContent = r.rank;
+      const c2 = document.createElement("td");
+      const a = document.createElement("a");
+      a.textContent = names[r.uid] || "Player";
+      a.href = "profile.html?u=" + encodeURIComponent(names[r.uid] || "");
+      c2.append(a);
+      const c3 = document.createElement("td"); c3.textContent = fmt(r.ms);
+      tr.append(c1, c2, c3);
+      tbody.append(tr);
+    });
+  }
+
+  async function load() {
+    const s = await sb.auth.getSession();
+    me = s.data.session ? s.data.session.user.id : null;
+    const r = await sb.from("state_runs").select("user_id, state_key, mode, time_ms").order("time_ms", { ascending: true }).limit(5000);
+    if (r.error) { msg.textContent = "Couldn\u2019t load the runs."; table.classList.add("hidden"); return; }
+    runs = r.data || [];
+    const ids = [...new Set(runs.map(x => x.user_id))];
+    for (let i = 0; i < ids.length; i += 100) {
+      const l = await sb.from("leaderboard").select("id, username").in("id", ids.slice(i, i + 100));
+      (l.data || []).forEach(p => { names[p.id] = p.username; });
+    }
+    const states = [...new Set(runs.map(x => x.state_key))].sort((a, b) => stateName(a).localeCompare(stateName(b)));
+    if (!states.length) {
+      msg.textContent = "No perfect runs yet. Finish a whole state with no misses to get on the board.";
+      table.classList.add("hidden"); stateSel.parentElement.classList.add("hidden"); searchEl.parentElement.classList.add("hidden");
+      return;
+    }
+    stateSel.replaceChildren(...states.map(k => { const o = document.createElement("option"); o.value = k; o.textContent = stateName(k); return o; }));
+    const firstMode = MODES.find(m => runs.some(x => x.state_key === states[0] && x.mode === m));
+    if (firstMode) mode = firstMode;
+    render();
+  }
+  stateSel.addEventListener("change", render);
+  searchEl.addEventListener("input", render);
+  load();
+})();
+</script>
+<script>
+  try {
+    var saved = localStorage.getItem("darkMode");
+    var dark = saved !== null ? JSON.parse(saved) : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (dark) document.body.classList.add("dark-mode");
+  } catch (e) {}
+</script>
+</body>
+</html>

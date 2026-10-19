@@ -537,6 +537,11 @@
   }
 
   function lineChart(days, unit = "counties", compact = false) {      // days: [{key, n}] cumulative, sorted
+    if (days.length === 1) {                 // one active day would draw as a lone dot, so start the line the day before at 0
+      const before = new Date(days[0].key + "T00:00:00");
+      before.setDate(before.getDate() - 1);
+      days = [{ key: dayKey(before), n: 0 }, days[0]];
+    }
     const W = compact ? 420 : 600, H = compact ? 210 : 190, L = unit === "points" ? 54 : 40, R = 14, T = 12, B = 26;
     const wrap = mk("div", "pc-line");
     const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "pc-svg", role: "img" });

@@ -45,6 +45,28 @@
     localStorage.setItem(flag, "1");
   }
 
+    async function syncRuns() {
+    const flag = "runsSynced:" + session.user.id;
+    if (localStorage.getItem(flag)) return;
+    if (!window.countyCountForAccount) return;
+    let times = {};
+    try { times = JSON.parse(localStorage.getItem("perfectTimes") || "{}") || {}; } catch (e) {}
+    const rows = [];
+    for (const [key, list] of Object.entries(times)) {
+      const [states, mode, count] = key.split("|");
+      if (!states || states.includes(",") || !MODES.includes(mode)) continue;          // one state, a real mode
+      if (Number(count) !== window.countyCountForAccount(states)) continue;            // the whole state only
+      const best = Math.min(...(list || []).map(r => Number(r.time)).filter(t => t > 0));
+      if (!isFinite(best)) continue;
+      rows.push({ user_id: session.user.id, state_key: states, mode, time_ms: Math.round(best) });
+    }
+    if (rows.length) {
+      const { error } = await sb.from("state_runs").insert(rows);
+      if (error) { console.warn("Couldn't upload your past runs:", error.message); return; }
+    }
+    localStorage.setItem(flag, "1");
+  }
+
   async function refresh() {
     if (!window.findCountyForAccount) { setTimeout(refresh, 300); return; }   // wait for the game script to load
     const { data } = await sb.auth.getSession();
@@ -56,6 +78,7 @@
     }
     if (session && profile) {
       await syncLocal();
+      await syncRuns();
       if (openBtn) openBtn.title = "Signed in as " + profile.username;
     } else if (openBtn) {
       openBtn.title = "Account";
@@ -94,6 +117,11 @@
     await sb.from("tuc_completions").upsert({ user_id: session.user.id }, { onConflict: "user_id", ignoreDuplicates: true });
   };
 
+  window.reportStateRun = async (stateKey, mode, ms) => {
+    if (!session || !profile || !MODES.includes(mode) || !(ms > 0)) return;
+    const { error } = await sb.from("state_runs").insert({ user_id: session.user.id, state_key: stateKey, mode, time_ms: Math.round(ms) });
+    if (error) console.warn("run upload failed:", error.message);
+  };
     // Reset progress: wipe this account's saved completions. Points, badges and the leaderboard are all worked out from them.
   window.accountIsSignedIn = () => !!(session && profile);
   window.resetAccountProgress = async () => {
@@ -103,6 +131,7 @@
     const uid = session.user.id;
     const a = await sb.from("completions").delete().eq("user_id", uid);
     const b = await sb.from("tuc_completions").delete().eq("user_id", uid);
+    await sb.from("state_runs").delete().eq("user_id", uid);
     if (a.error || b.error) return { ok: false, signedIn: true, message: (a.error || b.error).message };
     // the server can refuse a delete without raising an error, so check that the rows are really gone
     const left = await sb.from("completions").select("county_id", { count: "exact", head: true }).eq("user_id", uid);
