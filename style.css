@@ -3948,3 +3948,10 @@ body .btn-mode.btn-mode[data-home-mode="type"],       body .btn-mode.btn-mode[da
 body .btn-mode.btn-mode[data-home-mode="type-hard"],  body .btn-mode.btn-mode[data-mode="type-hard"]   { border-left-color: var(--mode-identify); }
 body .btn-mode.btn-mode[data-home-mode="type-strict"], body .btn-mode.btn-mode[data-mode="type-strict"] { border-left-color: var(--mode-type); }
 body .btn-mode.btn-mode[data-study-mode="pin"]        { border-left-color: var(--mode-pin); }
+
+/* Learn column: Type matches Play's Type, All is green, Review is white */
+:root { --mode-all: #4caf50; --mode-review: #cfcfcf; }
+body.dark-mode { --mode-review: #ffffff; }
+body .btn-mode.btn-mode[data-home-learn="type"],  body .btn-mode.btn-mode[data-study-mode="type"]  { border-left-color: var(--mode-type); }
+body .btn-mode.btn-mode[data-home-learn="all"],   body .btn-mode.btn-mode[data-study-mode="all"]   { border-left-color: var(--mode-all); }
+body .btn-mode.btn-mode[data-home-learn="review"] { border-left-color: var(--mode-review); }
