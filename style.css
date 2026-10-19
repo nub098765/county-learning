@@ -3931,3 +3931,20 @@ body.dark-mode .pmap .us-map.by-mode .us-labels text {
   .home-who { position: static; transform: none; margin: 0 auto .5rem; display: flex; }
   .home-who.hidden { display: none; }
 }
+
+/* mode colors: the profile map's colors are the master set, so the menu buttons use the same ones */
+:root {
+  --mode-pin: #3b82f6;      /* Pin */
+  --mode-flash: #8b5cf6;    /* Flash */
+  --mode-mc: #f59e0b;       /* Multiple-Choice */
+  --mode-list: #14b8a6;     /* List */
+  --mode-identify: #ec4899; /* Identify */
+  --mode-type: #ef4444;     /* Type */
+}
+body .btn-mode.btn-mode[data-home-mode="pin"],        body .btn-mode.btn-mode[data-mode="pin"],        body .btn-mode.btn-mode[data-home-learn="pin"] { border-left-color: var(--mode-pin); }
+body .btn-mode.btn-mode[data-home-mode="pin-hard"],   body .btn-mode.btn-mode[data-mode="pin-hard"]   { border-left-color: var(--mode-flash); }
+body .btn-mode.btn-mode[data-home-mode="mc"],         body .btn-mode.btn-mode[data-home-learn="mc"],   body .btn-mode.btn-mode[data-study-mode="mc"] { border-left-color: var(--mode-mc); }
+body .btn-mode.btn-mode[data-home-mode="type"],       body .btn-mode.btn-mode[data-mode="type"]        { border-left-color: var(--mode-list); }
+body .btn-mode.btn-mode[data-home-mode="type-hard"],  body .btn-mode.btn-mode[data-mode="type-hard"]   { border-left-color: var(--mode-identify); }
+body .btn-mode.btn-mode[data-home-mode="type-strict"], body .btn-mode.btn-mode[data-mode="type-strict"] { border-left-color: var(--mode-type); }
+body .btn-mode.btn-mode[data-study-mode="pin"]        { border-left-color: var(--mode-pin); }
