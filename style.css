@@ -3898,3 +3898,36 @@ body[data-play-mode="tuc"] [class$="-callout"],
 body[data-play-mode="tuc"] [class$="-callout-line"] {
   display: none !important;
 }
+
+.pmap-cap { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; opacity: .85; cursor: pointer; }
+.pmap-cap input { cursor: pointer; }
+
+.pmap .us-map .us-labels text,
+.pmap .us-map.by-mode .us-labels text {
+  fill: #fff;
+  stroke: rgba(0, 0, 0, .8);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  font-weight: 700;
+}
+body.dark-mode .pmap .us-map .us-labels text,
+body.dark-mode .pmap .us-map.by-mode .us-labels text {
+  fill: #fff;
+  stroke: rgba(0, 0, 0, .85);
+}
+
+.home-who {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 3;
+  display: inline-flex; flex-direction: column; align-items: center; gap: .1rem;
+  padding: 0; margin: 0; border: 0; background: none; box-shadow: none;
+  font: inherit; color: inherit; line-height: 1.2; text-align: center; cursor: pointer;
+}
+.home-who.hidden { display: none; }
+.home-who #home-who-name { font-weight: 700; font-size: 1.05rem; letter-spacing: -0.01em; max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-who #home-who-pts { font-size: .85rem; opacity: .7; font-variant-numeric: tabular-nums; }
+.home-who:hover #home-who-name { text-decoration: underline; }
+@media (max-width: 900px) {
+  .home-who { position: static; transform: none; margin: 0 auto .5rem; display: flex; }
+  .home-who.hidden { display: none; }
+}

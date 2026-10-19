@@ -13,6 +13,8 @@
   const openBtn = document.getElementById("btn-account");
   if (openBtn) openBtn.addEventListener("click", () => { location.href = "profile.html"; });
   const lbBtn = document.getElementById("btn-leaderboard");
+  const whoBtn = document.getElementById("home-who");
+  if (whoBtn) whoBtn.addEventListener("click", () => { location.href = "profile.html"; });
   if (lbBtn) lbBtn.addEventListener("click", () => { location.href = "leaderboard.html"; });
   if (!window.supabase) return;
 
@@ -58,6 +60,7 @@
     } else if (openBtn) {
       openBtn.title = "Account";
     }
+    updateWho();
   }
 
   async function flush() {
@@ -65,6 +68,17 @@
     const rows = queue.splice(0, queue.length);
     const { error } = await sb.from("completions").upsert(rows, { onConflict: "user_id,county_id,mode", ignoreDuplicates: true });
     if (error) { console.warn("completion upload failed:", error.message); if (error.code !== "23503") queue.unshift(...rows); }
+    else updateWho();
+  }
+
+    async function updateWho() {
+    if (!whoBtn) return;
+    if (!session || !profile) { whoBtn.classList.add("hidden"); return; }
+    const r = await sb.from("leaderboard").select("points").eq("id", session.user.id).maybeSingle();
+    const pts = r.data ? Math.round(Number(r.data.points) || 0) : 0;
+    document.getElementById("home-who-name").textContent = profile.username;
+    document.getElementById("home-who-pts").textContent = pts.toLocaleString() + " pts";
+    whoBtn.classList.remove("hidden");
   }
 
   window.reportCompletion = (countyId, mode) => {
@@ -97,7 +111,7 @@
     if (left.count || leftTuc.count) return { ok: false, signedIn: true, message: "The server wouldn't delete your saved progress (a delete permission is missing)." };
     return { ok: true, signedIn: true };
   };
-  
+
   sb.auth.onAuthStateChange(evt => { if (evt === "SIGNED_IN" || evt === "SIGNED_OUT") { if (evt === "SIGNED_OUT") queue = []; refresh(); } });
   window.addEventListener("load", refresh);
 })();

@@ -27,6 +27,8 @@
     tiles.forEach(t => { byName[t.name] = t; });
     const fills = [];
     let pinned = null;
+    let capFill = true;
+    try { capFill = localStorage.getItem("pmapCapFill") !== "0"; } catch (e) {}
 
     const wrap = mk("div", "pmap");
     const holder = mk("div", "pmap-holder");
@@ -37,14 +39,22 @@
 
        // the map's own state labels: keep the abbreviation, add the count next to it
     const labels = [...svg.querySelectorAll(".us-labels text")];
-    labels.forEach(l => { l.dataset.abbr = l.textContent; });
+    // Hawaii's label sits on the Big Island by default: move it to the empty lower-left of its box and make it bigger
+    const LABEL_OVERRIDE = { hi: { x: 303, y: 616, size: 15 } };
+    labels.forEach(l => {
+      l.dataset.abbr = l.textContent;
+      const o = LABEL_OVERRIDE[l.dataset.code];
+      if (o) { l.setAttribute("x", o.x); l.setAttribute("y", o.y); l.style.fontSize = o.size + "px"; }
+    });
     const boxes = [...svg.querySelectorAll(".us-box")];
 
     const showMode = mode => {
       fills.forEach(({ t, r }) => {
         const x = mode ? t.per.find(q => q.m === mode) : null;
         r.style.fill = mode ? MODE_COLOR[mode] : "";
-        r.style.transform = x ? `scaleY(${t.total ? x.d / t.total : 0})` : "";
+        const frac = x && t.total ? x.d / t.total : 0;
+        const shown = (frac >= 1 || !capFill) ? frac : Math.min(frac, 0.8);   // 80% is the ceiling until every county is done
+        r.style.transform = x ? `scaleY(${shown})` : "";
       });
       labels.forEach(l => {
         const t = byName[l.dataset.name];
@@ -150,7 +160,15 @@
     });
     const modeRow = mk("div", "pmap-key-row");
     modeRow.append(...buttons);
-    key.append(legendRow, modeRow);
+    const capLabel = mk("label", "pmap-cap");
+    const capBox = document.createElement("input"); capBox.type = "checkbox"; capBox.checked = capFill;
+    capBox.addEventListener("change", () => {
+      capFill = capBox.checked;
+      try { localStorage.setItem("pmapCapFill", capFill ? "1" : "0"); } catch (e) {}
+      showMode(pinned);
+    });
+    capLabel.append(capBox, " Stop at 80% until a state is fully done");
+    key.append(legendRow, modeRow, capLabel);
 
     wrap.append(key, holder);
     return wrap;
