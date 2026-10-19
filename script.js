@@ -1374,7 +1374,9 @@ const DEFAULT_SETTINGS = {
   bestKnownCount: 5,
   learnCount: 5,
   showHoverNames: true,
-  autoScrollToState: true
+  autoScrollToState: true,
+  autoZoom: false,
+  reviewArrowsOn: false
 };
 let gameSettings = { ...DEFAULT_SETTINGS, ...readStoredJson("gameSettings", {}) };
 function saveSettings() { localStorage.setItem("gameSettings", JSON.stringify(gameSettings)); }
@@ -1416,6 +1418,7 @@ const SETTING_CONTROLS = [
   } },
   { id: "toggle-hover-names", key: "showHoverNames", ...asCheckbox },
   { id: "toggle-auto-scroll", key: "autoScrollToState", ...asCheckbox },
+  { id: "toggle-auto-zoom", key: "autoZoom", ...asCheckbox },
 ];
 if (gameSettings.revealAnswerAfterMistakes === undefined) gameSettings.revealAnswerAfterMistakes = true;
 if (gameSettings.scaleStatesBySize === undefined) gameSettings.scaleStatesBySize = false;
@@ -1770,6 +1773,7 @@ function exitMapZoom() {
   zoomScroller.scrollLeft = 0;
   zoomLevel = 1;
   zoomControls.remove();
+  zoomArrowsBtn.remove();
   zoomBackdrop.classList.remove("active");
   document.body.classList.remove("map-zoomed");
 }
@@ -1803,6 +1807,7 @@ function enterMapZoom(svg) {
   document.body.classList.add("map-zoomed");
   layoutZoom();
   document.body.appendChild(zoomControls);
+  document.body.appendChild(zoomArrowsBtn);
   updateZoomControls();
   const banner = visibleBanner();
   if (banner && window.ResizeObserver) {
@@ -1829,12 +1834,29 @@ zoomControls.innerHTML =
   '<button type="button" data-z="reset" aria-label="Reset zoom" title="Reset zoom (0)">Reset</button>';
 const zoomLevelLabel = zoomControls.querySelector(".zoom-level");
 
+const zoomArrowsBtn = document.createElement("button");
+zoomArrowsBtn.type = "button";
+zoomArrowsBtn.className = "zoom-arrows-top";
+zoomArrowsBtn.setAttribute("aria-label", "Arrows from labels to counties");
+zoomArrowsBtn.title = "Show or hide the arrows from dragged labels to their counties";
+zoomArrowsBtn.textContent = "\u2197 Arrows";
+zoomArrowsBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  gameSettings.reviewArrowsOn = gameSettings.reviewArrowsOn !== true;
+  saveSettings();
+  const cb = document.getElementById("toggle-review-arrows"); if (cb) cb.checked = gameSettings.reviewArrows;
+  updateZoomControls();
+  if (typeof reviewReposition === "function") reviewReposition();
+});
+
 function updateZoomControls() {
   const shown = zoomLevel < 10 ? zoomLevel.toFixed(1).replace(/\.0$/, "") : String(Math.round(zoomLevel));
   zoomLevelLabel.textContent = shown + "\u00D7";
   zoomControls.querySelector('[data-z="out"]').disabled = zoomLevel <= 1.001;
   zoomControls.querySelector('[data-z="in"]').disabled = zoomLevel >= ZOOM_MAX - 0.001;
   zoomControls.querySelector('[data-z="reset"]').disabled = zoomLevel <= 1.001;
+  zoomArrowsBtn.hidden = !reviewMode;      // only while reviewing: it's about the dragged name labels
+  zoomArrowsBtn.setAttribute("aria-pressed", String(gameSettings.reviewArrowsOn === true));
   zoomScroller.classList.toggle("zoom-deep", zoomLevel > 1.001);
 }
 
@@ -1995,11 +2017,14 @@ svgMaps.forEach(svg => {
   });
   svg.addEventListener("touchcancel", cancelPressTimer);
 
-  svg.addEventListener("contextmenu", (e) => {
+  const onCardContext = (e) => {
     e.preventDefault();
+    e.stopPropagation();                                  // the map and the card both listen; only one of them should toggle
     if (Date.now() - touchLongPressFiredAt < LONG_PRESS_GUARD_MS) return;
     toggleMapZoom(svg);
-  });
+  };
+  svg.addEventListener("contextmenu", onCardContext);     // still needed once the map has moved out of its card into the zoom view
+  if (magnifyBox) magnifyBox.addEventListener("contextmenu", onCardContext);   // the whole card: title, padding, buttons
 });
 
 zoomBackdrop.addEventListener("click", exitMapZoom);
@@ -4321,31 +4346,90 @@ if (btnForfeitTarget) {
 
 let reviewMode = false;
 
-const reviewPinned = new Map();   // county id -> { label, glow }
+const reviewPinned = new Map();   // county id -> { tip, glow, svg, ax, ay, dx, dy, line }
+let reviewRaf = 0;
+let reviewArrowLayer = null;
 
-function clearReviewPins() {
-  reviewPinned.forEach(p => { p.tip.remove(); p.glow.forEach(g => g.remove()); });
-  reviewPinned.clear();
+// one see-through layer for all the arrows; each pin gets a line in it
+function reviewArrows() {
+  if (reviewArrowLayer) return reviewArrowLayer;
+  const NS = "http://www.w3.org/2000/svg";
+  const s = document.createElementNS(NS, "svg");
+  s.setAttribute("class", "review-arrows");
+  s.innerHTML = '<defs><marker id="rv-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#5b9bd5"/></marker></defs>';
+  document.body.appendChild(s);
+  reviewArrowLayer = s;
+  return s;
 }
 
-function reviewTap(pathEl) {      // click or tap: freeze the name tooltip where it is; click the county again to remove it
+function removeReviewPin(id) {
+  const p = reviewPinned.get(id);
+  if (!p) return;
+  p.tip.remove(); p.glow.forEach(g => g.remove()); if (p.line) p.line.remove();
+  reviewPinned.delete(id);
+}
+
+function clearReviewPins() {
+  [...reviewPinned.keys()].forEach(removeReviewPin);
+  if (reviewArrowLayer) { reviewArrowLayer.remove(); reviewArrowLayer = null; }
+}
+
+// keeps every label glued to its county: runs every frame while there are labels, so zooming, panning, scrolling and resizing all just work
+function reviewLoop() {
+  reviewRaf = 0;
+  if (!reviewPinned.size) return;
+  reviewReposition();
+  reviewRaf = requestAnimationFrame(reviewLoop);
+}
+
+function reviewReposition() {
+  const NS = "http://www.w3.org/2000/svg";
+  const wantArrows = gameSettings.reviewArrowsOn === true;
+  reviewPinned.forEach(p => {
+    const svg = p.svg;
+    const m = svg && svg.isConnected && svg.getClientRects().length && (!zoomedMap || zoomedMap === svg) ? svg.getScreenCTM() : null;
+    if (!m) { p.tip.style.visibility = "hidden"; if (p.line) p.line.style.display = "none"; return; }
+    const ax = m.a * p.ax + m.c * p.ay + m.e, ay = m.b * p.ax + m.d * p.ay + m.f;     // the spot on the county, in screen pixels
+    p.tip.style.visibility = "";
+    p.tip.style.left = (ax + p.dx) + "px";
+    p.tip.style.top = (ay + p.dy) + "px";
+
+    // arrow: only when the label has been dragged off its county
+    const r = p.tip.getBoundingClientRect();
+    const near = ax > r.left - 22 && ax < r.right + 22 && ay > r.top - 22 && ay < r.bottom + 22;
+    if (!wantArrows || near) { if (p.line) p.line.style.display = "none"; return; }
+    if (!p.line) {
+      p.line = document.createElementNS(NS, "line");
+      p.line.setAttribute("marker-end", "url(#rv-head)");
+      reviewArrows().appendChild(p.line);
+    }
+    const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2, vx = ax - cx, vy = ay - cy;
+    const t = Math.min((r.width / 2 + 2) / (Math.abs(vx) || 1e-6), (r.height / 2 + 2) / (Math.abs(vy) || 1e-6));    // where the line leaves the label's edge
+    p.line.style.display = "";
+    p.line.setAttribute("x1", cx + vx * t); p.line.setAttribute("y1", cy + vy * t);
+    p.line.setAttribute("x2", ax); p.line.setAttribute("y2", ay);
+  });
+}
+
+function reviewTap(pathEl) {      // click or tap: pin the name; drag it wherever you like; click the county again to remove it
   const id = pathEl.dataset.countyId || pathEl.id;
   const county = findCountyById(id);
   if (!county) return;
-  const hit = reviewPinned.get(id);
-  if (hit) { hit.tip.remove(); hit.glow.forEach(g => g.remove()); reviewPinned.delete(id); return; }
+  if (reviewPinned.has(id)) { removeReviewPin(id); return; }
 
+  const svg = pathEl.closest("svg");
+  if (!svg || !svg.getScreenCTM()) return;
   const tip = document.createElement("div");
   tip.className = "county-hover-tooltip pinned";
   tip.textContent = getPlainName(county);
-  let x, y;
+  let x, y, dy = 0;
   if (hoverTooltip && !hoverTooltip.classList.contains("hidden")) {
     x = parseFloat(hoverTooltip.style.left); y = parseFloat(hoverTooltip.style.top);     // exactly where the live tooltip is
   } else {                                                                              // touch screens have no hover tooltip
-    const r = pathEl.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top;
+    const r = pathEl.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top + r.height / 2; dy = -34;
   }
-  tip.style.left = (x + window.scrollX) + "px";     // page coordinates, so it scrolls with the map
-  tip.style.top = (y + window.scrollY) + "px";
+  const pt = svg.createSVGPoint(); pt.x = x; pt.y = y;
+  const a = pt.matrixTransform(svg.getScreenCTM().inverse());       // the spot on the county, in the map's own units, so it follows zooming
   document.body.appendChild(tip);
 
   const glow = getCountyElements(id).filter(p => p.parentNode).map(part => {
@@ -4356,7 +4440,27 @@ function reviewTap(pathEl) {      // click or tap: freeze the name tooltip where
     part.parentNode.appendChild(c);
     return c;
   });
-  reviewPinned.set(id, { tip, glow });
+  const pin = { tip, glow, svg, ax: a.x, ay: a.y, dx: 0, dy, line: null };
+  reviewPinned.set(id, pin);
+
+  // drag the label anywhere
+  tip.addEventListener("pointerdown", e => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    tip.setPointerCapture(e.pointerId);
+    tip.classList.add("dragging");
+    const sx = e.clientX, sy = e.clientY, dx0 = pin.dx, dy0 = pin.dy;
+    const move = ev => { pin.dx = dx0 + ev.clientX - sx; pin.dy = dy0 + ev.clientY - sy; reviewReposition(); };
+    const up = () => {
+      tip.classList.remove("dragging");
+      tip.removeEventListener("pointermove", move); tip.removeEventListener("pointerup", up); tip.removeEventListener("pointercancel", up);
+    };
+    tip.addEventListener("pointermove", move); tip.addEventListener("pointerup", up); tip.addEventListener("pointercancel", up);
+  });
+  tip.addEventListener("dblclick", () => removeReviewPin(id));     // double-click a label to remove it
+
+  reviewReposition();
+  if (!reviewRaf) reviewRaf = requestAnimationFrame(reviewLoop);
 }
 
 function enterReviewMode() {
@@ -5036,6 +5140,17 @@ function scrollToTargetState() {
   box.style.scrollMarginTop = clearance + "px";
   box.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
+let autoZoomedByGame = false;
+function autoZoomToTarget() {
+  if (!gameSettings.autoZoom || !isGameActive || !currentTarget) return;
+  if (selectedMode !== "mc" && selectedMode !== "type-strict") return;
+  const svg = document.getElementById(stateData[currentTarget.stateKey]?.svgId);
+  if (!svg || zoomedMap === svg) return;                   // already zoomed on that state
+  enterMapZoom(svg); layoutZoom();
+  autoZoomedByGame = true;
+}
+
 function pickNextTarget() {
   currentAttemptMistakes = 0;
   updateProgressCounter();
@@ -5077,6 +5192,7 @@ function pickNextTarget() {
   refreshTargetPrompt(false);
   clearTimeout(scrollToTargetTimer);
   scrollToTargetTimer = setTimeout(scrollToTargetState, 350);
+  autoZoomToTarget();
 
   if (SINGLE_TARGET_TYPE_MODES.has(selectedMode)) {
     getCountyElements(currentTarget.id).forEach(el => { el.classList.add("typing-highlight"); if (el.parentNode) el.parentNode.appendChild(el); });
@@ -5209,7 +5325,7 @@ function acceptTypedMatches(matchedCounties) {
     if (!recoveredFromMistake) markCountyLearned(matchedCounty.id, selectedMode, currentRunIsRetryMissed);
     getCountyElements(matchedCounty.id).forEach(el => {
       el.classList.remove("typing-highlight");
-      const useRecoveredColor = recoveredFromMistake && (selectedMode === "type-strict" || selectedMode === "mc");
+      const useRecoveredColor = recoveredFromMistake && (selectedMode === "type-strict" || selectedMode === "mc" || selectedMode === "type-hard");
       el.classList.add(useRecoveredColor ? "correct-recovered" : "correct", "found");
       el.style.pointerEvents = "none";
     });
@@ -5376,6 +5492,8 @@ function tucWaitForPick() {
   if (typeInput) { typeInput.value = ""; typeInput.disabled = true; typeInput.placeholder = "Click a county first"; }
   if (tucDesig) { tucDesig.value = ""; tucDesig.disabled = true; tucDesig.classList.toggle("hidden", selectedMode !== "tuc"); }
   refreshSpecialCharsBar();
+  if (typeInputBox) typeInputBox.classList.remove("hidden");     // keep the box in place (dimmed) so the card never changes height
+  if (typeInputBox) typeInputBox.classList.add("tuc-waiting");
   if (targetPrompt) targetPrompt.innerHTML = `<span class="find-label">Click a ${unitWord(false)}, then name it</span>`;
 }
 
@@ -5698,6 +5816,8 @@ function formatTime(ms) {
 }
 
 function showSummaryModal() {
+  if (autoZoomedByGame && zoomedMap) exitMapZoom();
+  autoZoomedByGame = false;
   if (!modalSummary) return;
 
 

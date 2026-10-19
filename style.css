@@ -3798,7 +3798,10 @@ body[data-play-mode="review"] #game-stopwatch,
 body[data-play-mode="review"] #feedback { display: none; }
 body[data-play-mode="review"] #target-prompt .find-label { font-size: 0.95rem; }
 
-.county-hover-tooltip.pinned { position: absolute; z-index: 1000; box-shadow: 0 0 0 2px #5b9bd5; }
+.county-hover-tooltip.pinned { position: fixed; z-index: 1050; box-shadow: 0 0 0 2px #5b9bd5; pointer-events: auto; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.county-hover-tooltip.pinned.dragging { cursor: grabbing; }
+.review-arrows { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 1040; opacity: 0.6; overflow: visible; }
+.review-arrows line { stroke: #5b9bd5; stroke-width: 2.5; stroke-linecap: round; }
 
 .home-slider { gap: 0.75rem; }
 .home-slider input[type="range"] { width: 9rem; accent-color: #2d5a27; cursor: pointer; }
@@ -3955,3 +3958,25 @@ body.dark-mode { --mode-review: #ffffff; }
 body .btn-mode.btn-mode[data-home-learn="type"],  body .btn-mode.btn-mode[data-study-mode="type"]  { border-left-color: var(--mode-type); }
 body .btn-mode.btn-mode[data-home-learn="all"],   body .btn-mode.btn-mode[data-study-mode="all"]   { border-left-color: var(--mode-all); }
 body .btn-mode.btn-mode[data-home-learn="review"] { border-left-color: var(--mode-review); }
+
+.zoom-arrows-top {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 1100;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #c9c9c9;
+  background: #fff;
+  color: #222;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+.zoom-arrows-top:hover { background: #f0f0f0; color: #222; }
+.zoom-arrows-top[hidden] { display: none; }
+.zoom-arrows-top[aria-pressed="true"] { background: #dce9f7; border-color: #5b9bd5; color: #14395f; }
+body.dark-mode .zoom-arrows-top { background: #2a2a2a; border-color: #555; color: #eee; }
+body.dark-mode .zoom-arrows-top:hover { background: #363636; color: #eee; }
+body.dark-mode .zoom-arrows-top[aria-pressed="true"] { background: #1f3a55; border-color: #5b9bd5; color: #cfe4fa; }
