@@ -3555,12 +3555,12 @@ function markStateMistake(stateKey) {
 
 let mostRecentCorrectVersion = 0;
 
-function clearMostRecentCorrect() {
+function clearMostRecentCorrect(keepRecoveredGreen = true) {
   mostRecentCorrectVersion++;
   document.querySelectorAll(".county.just-found").forEach(el => el.classList.remove("just-found"));
   document.querySelectorAll(".county.correct-recovered").forEach(el => {
     el.classList.remove("correct-recovered");
-    el.classList.add("correct", "found");
+    if (keepRecoveredGreen) el.classList.add("correct", "found");
   });
   return mostRecentCorrectVersion;
 }
@@ -5488,13 +5488,16 @@ function handleCountyClick(pathEl) {
 
     const countyElements = getCountyElements(currentTarget.id);
     if (selectedMode === "pin-hard") {
-      clearMostRecentCorrect();
+      clearMostRecentCorrect(false);
       countyElements.forEach(el => {
         el.classList.remove("typing-highlight", "correct-recovered", "correct", "found", "just-found");
         el.getAnimations().forEach(a => a.cancel());
         const dark = document.body.classList.contains("dark-mode");
         const rest = dark ? "#3a3a34" : "#e8e4d9";
-        const peak = dark ? "#5fcf5f" : "#2d5a27";
+        const recovered = currentAttemptMistakes > 0;
+        const peak = recovered
+          ? (dark ? "#f0c030" : "#d4a017")
+          : (dark ? "#5fcf5f" : "#2d5a27");
         const animation = el.animate([{ fill: rest, offset: 0 }, { fill: peak, offset: 0.12 }, { fill: rest, offset: 1 }], { duration: 400, easing: "linear" });
         animation.onfinish = () => {
           el.style.pointerEvents = "none";
