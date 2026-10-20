@@ -6460,3 +6460,14 @@ document.querySelectorAll(".state-row[data-state] .state-count").forEach(el => {
   if (includeState) includeState.addEventListener("change", render);
 })();
 });
+
+/* Home "More" dropdown */
+(function () {
+  const btn = document.getElementById("btn-more"), menu = document.getElementById("more-menu");
+  if (!btn || !menu) return;
+  const set = open => { menu.classList.toggle("hidden", !open); btn.setAttribute("aria-expanded", open ? "true" : "false"); };
+  btn.addEventListener("click", e => { e.stopPropagation(); set(menu.classList.contains("hidden")); });
+  menu.addEventListener("click", () => set(false));
+  document.addEventListener("click", e => { if (!menu.contains(e.target) && e.target !== btn) set(false); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") set(false); });
+})();

@@ -22,6 +22,7 @@
   const CHANNEL_OWNER = { src: "special-badge.png", label: "Channel Owner" };
   const SPECIAL_BADGES = {
     "mellohihellohi": CHANNEL_OWNER,
+    "phil": CHANNEL_OWNER,
     "stalgoodman": CHANNEL_OWNER,
     "nub098765": CHANNEL_OWNER,
   };
@@ -876,6 +877,16 @@
       head.querySelector(".profile-avatar").append(img);
     }
 
+    {
+      let rankText = "Leaderboard →";
+      if (pts > 0) {
+        const ahead = await sb.from("leaderboard_with_badges").select("id", { count: "exact", head: true }).gt("points", who.data.points);
+        if (!ahead.error) rankText = "#" + ((ahead.count || 0) + 1) + " on the leaderboard →";
+      }
+      const rankLink = mk("a", "profile-link profile-rank", rankText);
+      rankLink.href = "leaderboard.html?u=" + encodeURIComponent(who.data.username);
+      head.append(rankLink);
+    }
     const gold = tiles.filter(t => t.badgeFull === MODES.length).length;
     const modeDone = m => tiles.every(t => t.per.find(x => x.m === m).badgeEarned);
     const stateRunRows = stateRuns.data || [];

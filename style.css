@@ -4117,3 +4117,15 @@ body.dark-mode .unlock-toast { background: #292923; color: #f2ecd9; }
 .profile-avatar { position: relative; }
 .profile-avatar-badge { position: absolute; right: -8px; bottom: -8px; width: 28px; height: 28px; border-radius: 50%; box-shadow: 0 0 0 2px #fff; background: #fff; }
 body.dark-mode .profile-avatar-badge { box-shadow: 0 0 0 2px #242420; background: #242420; }
+
+/* top-right: More dropdown */
+.more-wrap { position: relative; }
+.more-menu { position: absolute; top: calc(100% + 0.4rem); right: 0; min-width: 11rem; padding: 0.3rem; display: flex; flex-direction: column; gap: 0.1rem; background: #fafaf7; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,.18); z-index: 20; }
+.more-menu.hidden { display: none; }
+.more-item { display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.5rem 0.6rem; border: 0; border-radius: 7px; background: transparent; color: #222; font: inherit; font-size: 0.95rem; text-align: left; cursor: pointer; }
+.more-item svg { width: 1.3rem; height: 1.3rem; flex: none; }
+.more-item:hover, .more-item:focus-visible { background: rgba(0,0,0,.08); outline: none; }
+body.dark-mode .more-menu { background: #242420; border-color: #444; }
+body.dark-mode .more-item { color: #fdeca6; }
+body.dark-mode .more-item:hover, body.dark-mode .more-item:focus-visible { background: rgba(253,236,166,.14); }
+.profile-rank { display: inline-block; margin-top: .4rem; }

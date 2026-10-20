@@ -10,9 +10,20 @@
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let rows = [], myName = null;
+  const focusName = new URLSearchParams(location.search).get("u");
+
+  // scroll to a player's row; if they're outside the top list, search for them so the row exists
+  function focusRow(name) {
+    if (!name) return;
+    const want = name.toLowerCase();
+    const r = rows.find(x => x.username.toLowerCase() === want);
+    if (r && r.rank > 0 && rows.indexOf(r) >= TOP) { $("lb-search").value = r.username; render(); }
+    const tr = [...document.querySelectorAll("#lb-table tbody tr")].find(t => t.dataset.name.toLowerCase() === want);
+    if (tr) { tr.scrollIntoView({ block: "center", behavior: "smooth" }); tr.classList.add("lb-me"); }
+  }
 
   function markMe() {
-    document.querySelectorAll("#lb-table tbody tr").forEach(tr => tr.classList.toggle("lb-me", !!myName && tr.dataset.name === myName));
+    document.querySelectorAll("#lb-table tbody tr").forEach(tr => tr.classList.toggle("lb-me", (!!myName && tr.dataset.name === myName) || (!!focusName && tr.dataset.name.toLowerCase() === focusName.toLowerCase())));
   }
 
   const matches = () => {
@@ -56,8 +67,10 @@
     if (ahead.error) return;
     const rank = (ahead.count || 0) + 1, pts = Number(me.data.points).toLocaleString();
     $("lb-note").innerHTML = me.data.points > 0
-      ? `You're <span class="lb-big">#${rank}</span> with <span class="lb-big">${pts}</span> points!`
+      ? `<a href="#" id="lb-find-me" class="profile-link">You're <span class="lb-big">#${rank}</span></a> with <span class="lb-big">${pts}</span> points!`
       : "Find a county in any mode to get on the board.";
+    const fm = $("lb-find-me");
+    if (fm) fm.addEventListener("click", e => { e.preventDefault(); focusRow(myName); });
   }
 
   async function load() {
@@ -67,6 +80,7 @@
     let rank = 0, last = null;
     rows = data.map((r, i) => { if (r.points !== last) { rank = i + 1; last = r.points; } return { ...r, rank }; });   // ties share a rank
     render();
+    focusRow(focusName);
   }
 
   yourRank();
