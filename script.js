@@ -2086,7 +2086,7 @@ const INFO_MODE_CONFIG = {
     demo: "type-strict",
     word: "Sonoma",
   },
-  "tuc": { title: "The Ultimate Challenge", intro: "Every county equivalent in the country, from memory. You choose the county and type its full name, like Hoonah-Angoon Census Area. Spelling counts. Accents count. Correct answers flash once and vanish, so keep track yourself. There are no hints and no second chances: one wrong answer ends the run.", demo: "pin", word: "", noDemo: true },
+  "tuc": { title: "The Ultimate Challenge", intro: "Every county equivalent in the country, from memory. You choose the county and type its full name, like Hoonah-Angoon Census Area. Spelling counts. Accents count. Correct answers stay dark green, with the most recent in light green. There are no hints and no second chances: one wrong answer ends the run.", demo: "pin", word: "", noDemo: true },
 };
 
 let infoTypeTimer = null;
@@ -3541,6 +3541,25 @@ function markCountyLearned(countyId, mode, viaRetryMissed) {
   renderStatsPanel();
 }
 
+let mostRecentCorrectVersion = 0;
+
+function clearMostRecentCorrect() {
+  mostRecentCorrectVersion++;
+  document.querySelectorAll(".county.just-found").forEach(el => el.classList.remove("just-found"));
+  document.querySelectorAll(".county.correct-recovered").forEach(el => {
+    el.classList.remove("correct-recovered");
+    el.classList.add("correct", "found");
+  });
+  return mostRecentCorrectVersion;
+}
+
+function markMostRecentCorrect(counties, version = clearMostRecentCorrect()) {
+  if (version !== mostRecentCorrectVersion) return;
+  counties.forEach(county => {
+    getCountyElements(county.id).forEach(el => el.classList.add("just-found"));
+  });
+}
+
 
 function miniMap(s, learned) {
   const src = document.getElementById(s.svgId);
@@ -4641,6 +4660,7 @@ function reviewTap(pathEl) {      // click or tap: pin the name; drag it whereve
 }
 
 function enterReviewMode() {
+  clearMostRecentCorrect();
   clearReviewPins();
   reviewMode = true;
   isGameActive = false;
@@ -4655,7 +4675,7 @@ function enterReviewMode() {
   hideHoverTooltip();
   document.querySelectorAll(".map-box.state-done").forEach(b => b.classList.remove("state-done"));
   countyPaths.forEach(path => {
-    path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered", "typing-highlight", "given-up-missed");
+    path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered", "typing-highlight", "given-up-missed", "just-found");
     path.style.pointerEvents = "auto";
     path.setAttribute("tabindex", "0");
     path.setAttribute("role", "button");
@@ -4679,6 +4699,7 @@ function startReview() {
 }
 
 function initGame(countiesToPlay, isRetryMissedRun = false) {
+  clearMostRecentCorrect();
   reviewMode = false;
   if (typeInput) { typeInput.disabled = false; typeInput.placeholder = "Type a county name…"; }
   if (tucDesig) { tucDesig.disabled = false; tucDesig.value = ""; tucDesig.classList.add("hidden"); }
@@ -4721,7 +4742,7 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   document.body.dataset.playMode = selectedMode;
 
   countyPaths.forEach(path => {
-    path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered", "typing-highlight", "given-up-missed");
+    path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered", "typing-highlight", "given-up-missed", "just-found");
     path.style.pointerEvents = (TYPE_MODES.has(selectedMode) && selectedMode !== "type-hard") ? "none" : "auto";
     path.setAttribute("tabindex", "0");
     path.setAttribute("role", "button");
@@ -5436,19 +5457,31 @@ function handleCountyClick(pathEl) {
     }
 
 
-    getCountyElements(currentTarget.id).forEach(el => {
-      if (selectedMode === "pin") {
-        el.classList.add(recoveredFromMistake ? "correct-recovered" : "correct", "found");
-        el.style.pointerEvents = "none";
-      } else if (selectedMode === "pin-hard") {
-        el.classList.remove("typing-highlight");
+    const countyElements = getCountyElements(currentTarget.id);
+    if (selectedMode === "pin-hard") {
+      const version = clearMostRecentCorrect();
+      const answeredCounty = currentTarget;
+      countyElements.forEach(el => {
+        el.classList.remove("typing-highlight", "correct-recovered");
         el.getAnimations().forEach(a => a.cancel());
         const dark = document.body.classList.contains("dark-mode");
         const rest = dark ? "#3a3a34" : "#e8e4d9";
-        const peak = recoveredFromMistake ? (dark ? "#f0c030" : "#d4a017") : (dark ? "#5fcf5f" : "#2d5a27");
-        el.animate([{ fill: rest, offset: 0 }, { fill: peak, offset: 0.12 }, { fill: rest, offset: 1 }], { duration: 400, easing: "linear" });
-      }
-    });
+        const peak = dark ? "#5fcf5f" : "#2d5a27";
+        const animation = el.animate([{ fill: rest, offset: 0 }, { fill: peak, offset: 0.12 }, { fill: rest, offset: 1 }], { duration: 400, easing: "linear" });
+        animation.onfinish = () => {
+          el.classList.add("correct", "found");
+          el.style.pointerEvents = "none";
+          markMostRecentCorrect([answeredCounty], version);
+        };
+      });
+    } else {
+      countyElements.forEach(el => {
+        el.classList.remove("typing-highlight", "correct-recovered");
+        el.classList.add("correct", "found");
+        el.style.pointerEvents = "none";
+      });
+      markMostRecentCorrect([currentTarget]);
+    }
 
     targetPool = targetPool.filter(c => c.id !== currentTarget.id);
     markStateIfDone(currentTarget.stateKey);
@@ -5507,16 +5540,12 @@ function acceptTypedMatches(matchedCounties) {
   matchedCounties.forEach(matchedCounty => {
     if (!recoveredFromMistake) markCountyLearned(matchedCounty.id, selectedMode, currentRunIsRetryMissed);
     getCountyElements(matchedCounty.id).forEach(el => {
-      el.classList.remove("typing-highlight");
-      const useRecoveredColor = recoveredFromMistake && (selectedMode === "type-strict" || selectedMode === "mc" || selectedMode === "type-hard");
-      el.classList.add(useRecoveredColor ? "correct-recovered" : "correct", "found");
+      el.classList.remove("typing-highlight", "correct-recovered");
+      el.classList.add("correct", "found");
       el.style.pointerEvents = "none";
     });
   });
-  if (selectedMode === "type") {
-    document.querySelectorAll(".county.just-found").forEach(el => el.classList.remove("just-found"));
-    matchedCounties.forEach(c => getCountyElements(c.id).forEach(el => el.classList.add("just-found")));
-  }
+  markMostRecentCorrect(matchedCounties);
 
   const matchedIds = new Set(matchedCounties.map(c => c.id));
   targetPool = targetPool.filter(c => !matchedIds.has(c.id));
@@ -5720,13 +5749,12 @@ function tucSubmit() {
   if (tucDesig) tucDesig.value = "";
   scoreRight++;
   playSound("correct");
-  const dark = document.body.classList.contains("dark-mode");
-  const rest = dark ? "#3a3a34" : "#e8e4d9", peak = dark ? "#5fcf5f" : "#2d5a27";
-  getCountyElements(c.id).forEach(el => {                // Flash: green for a moment, then blank again. Nothing stays filled.
-    el.classList.remove("typing-highlight");
-    el.getAnimations().forEach(a => a.cancel());
-    el.animate([{ fill: rest, offset: 0 }, { fill: peak, offset: 0.12 }, { fill: rest, offset: 1 }], { duration: 400, easing: "linear" });
+  getCountyElements(c.id).forEach(el => {
+    el.classList.remove("typing-highlight", "correct-recovered");
+    el.classList.add("correct", "found");
+    el.style.pointerEvents = "none";
   });
+  markMostRecentCorrect([c]);
   if (feedbackEl) { feedbackEl.textContent = `Correct! ${tucFullName(c)}.`; feedbackEl.className = "feedback-message success"; }
   targetPool = targetPool.filter(x => x.id !== c.id);
   typeInput.value = "";
