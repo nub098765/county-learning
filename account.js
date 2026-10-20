@@ -141,16 +141,20 @@
     }
   }
 
-    async function syncRuns() {
-    const flag = "runsSynced:v2:" + session.user.id;
-    if (localStorage.getItem(flag)) return;
+  async function syncRuns() {
     if (!window.countyCountForAccount) return;
     let times = {};
-    try { times = JSON.parse(localStorage.getItem("perfectTimes") || "{}") || {}; } catch (e) {}
+    try {
+      times = JSON.parse(localStorage.getItem("perfectTimes") || "{}") || {};
+    } catch (error) {
+      console.warn("Couldn't read your saved perfect runs:", error);
+      return;
+    }
     const existingResult = await loadStateRuns(session.user.id);
     if (existingResult.error) { console.warn("Couldn't check saved state runs:", existingResult.error.message); return; }
     const existing = new Set((existingResult.data || []).map(run => `${run.state_key}|${run.mode}`));
     const rows = [];
+    const skipped = [];
     for (const [key, list] of Object.entries(times)) {
       const [states, mode, count] = key.split("|");
       const stateKeys = states ? states.split(",") : [];
@@ -159,7 +163,10 @@
         const stateCount = window.countyCountForAccount(stateKey);
         return stateCount == null ? null : sum == null ? null : sum + stateCount;
       }, 0);
-      if (countyCount == null || Number(count) !== countyCount) continue;
+      if (countyCount == null || Number(count) !== countyCount) {
+        skipped.push(`${key} (saved ${count}, expected ${countyCount ?? "unknown"})`);
+        continue;
+      }
       const best = Math.min(...(list || []).map(r => Number(r.time)).filter(t => t > 0));
       if (!isFinite(best)) continue;
       for (const stateKey of stateKeys) {
@@ -169,11 +176,11 @@
         rows.push({ user_id: session.user.id, state_key: stateKey, mode, time_ms: Math.round(best) });
       }
     }
+    if (skipped.length) console.warn("Some saved perfect runs don't cover every selected state's counties:", skipped);
     if (rows.length) {
       const { error } = await sb.from("state_runs").insert(rows);
       if (error) { console.warn("Couldn't upload your past runs:", error.message); return; }
     }
-    localStorage.setItem(flag, "1");
   }
 
   async function refresh() {
