@@ -3556,13 +3556,9 @@ function markStateMistake(stateKey) {
 
 let mostRecentCorrectVersion = 0;
 
-function clearMostRecentCorrect(keepRecoveredGreen = true) {
+function clearMostRecentCorrect() {
   mostRecentCorrectVersion++;
   document.querySelectorAll(".county.just-found").forEach(el => el.classList.remove("just-found"));
-  document.querySelectorAll(".county.correct-recovered").forEach(el => {
-    el.classList.remove("correct-recovered");
-    if (keepRecoveredGreen) el.classList.add("correct", "found");
-  });
   return mostRecentCorrectVersion;
 }
 
@@ -5486,6 +5482,7 @@ function handleCountyClick(pathEl) {
 
 
   if (clickedId === currentTarget.id) {
+    const recovered = currentAttemptMistakes > 0 || currentRunIsRetryMissed;
     scoreRight++;
     playSound("correct");
     clearHoverGlow();
@@ -5501,22 +5498,24 @@ function handleCountyClick(pathEl) {
 
     const countyElements = getCountyElements(currentTarget.id);
     if (selectedMode === "pin-hard") {
-      clearMostRecentCorrect(false);
+      clearMostRecentCorrect();
       countyElements.forEach(el => {
         el.classList.remove("typing-highlight", "correct-recovered", "correct", "found", "just-found");
         el.getAnimations().forEach(a => a.cancel());
+        if (recovered) {
+          el.classList.add("correct-recovered", "found");
+          el.style.pointerEvents = "none";
+          return;
+        }
         const dark = document.body.classList.contains("dark-mode");
         const rest = dark ? "#3a3a34" : "#e8e4d9";
-        const recovered = currentAttemptMistakes > 0;
-        const peak = recovered
-          ? (dark ? "#f0c030" : "#d4a017")
-          : (dark ? "#5fcf5f" : "#2d5a27");
+        const peak = dark ? "#5fcf5f" : "#2d5a27";
         el.animate([{ fill: rest, offset: 0 }, { fill: peak, offset: 0.12 }, { fill: rest, offset: 1 }], { duration: 400, easing: "linear" });
       });
     } else {
       countyElements.forEach(el => {
         el.classList.remove("typing-highlight", "correct-recovered");
-        el.classList.add("correct", "found");
+        el.classList.add(recovered ? "correct-recovered" : "correct", "found");
         el.style.pointerEvents = "none";
       });
       markMostRecentCorrect([currentTarget]);
@@ -5562,6 +5561,7 @@ function handleCountyClick(pathEl) {
 
 
 function acceptTypedMatches(matchedCounties) {
+  const recovered = currentAttemptMistakes > 0 || currentRunIsRetryMissed;
   scoreRight++;
   playSound("correct");
 
@@ -5581,7 +5581,7 @@ function acceptTypedMatches(matchedCounties) {
     resolveMissedCounty(matchedCounty);
     getCountyElements(matchedCounty.id).forEach(el => {
       el.classList.remove("typing-highlight", "correct-recovered");
-      el.classList.add("correct", "found");
+      el.classList.add(recovered ? "correct-recovered" : "correct", "found");
       el.style.pointerEvents = "none";
     });
   });
