@@ -5381,20 +5381,6 @@ function pickNextTarget() {
     isGameActive = false;
     stopStopwatch();
     if (mcOptions) mcOptions.classList.add("hidden");
-    if (!currentRunIsRetryMissed && selectedMode !== "tuc" && window.reportStateRun) {
-      const selectedIds = new Set(selectedCounties.map(county => county.id));
-      const completedMode = selectedMode;
-      const completedRuns = activeStateKeys.flatMap(stateKey => {
-        const state = stateData[stateKey];
-        if (!state || stateMistakes.has(stateKey) || state.counties.some(county => !selectedIds.has(county.id))) return [];
-        return [{ stateKey, timeMs: stateCompletionTimes.get(stateKey) || finalTime }];
-      });
-      void (async () => {
-        for (const run of completedRuns) {
-          await window.reportStateRun(run.stateKey, completedMode, run.timeMs);
-        }
-      })();
-    }
     if (!currentRunHadMistake && !currentRunIsRetryMissed && forfeitedCount === 0) {
   const key = bestTimeKey();
   perfectTimes[key] = perfectTimes[key] || [];
@@ -5440,10 +5426,36 @@ function pickNextTarget() {
   }
 }
 
+let stateRunChain = Promise.resolve();
+
+function reportFinishedState(stateKey, timeMs) {
+  // a perfect full-state run counts the moment that state is finished, judged on that state alone:
+  // other states in the same run (their exclusions, their mistakes) don't matter
+  if (currentRunIsRetryMissed || selectedMode === "tuc") return;
+  const state = stateData[stateKey];
+  if (!state || stateMistakes.has(stateKey)) return;
+  const selectedIds = new Set(selectedCounties.map(c => c.id));
+  if (state.counties.some(c => !selectedIds.has(c.id))) return;      // this state has no excluded counties
+  const mode = selectedMode;
+
+  // keep a local copy per state, so a failed upload (or signing in later) can be retried by the backfill
+  try {
+    const store = JSON.parse(localStorage.getItem("stateRunBests") || "{}") || {};
+    const k = `${stateKey}|${mode}`;
+    if (!(store[k] <= timeMs)) { store[k] = Math.round(timeMs); localStorage.setItem("stateRunBests", JSON.stringify(store)); }
+  } catch (e) {}
+
+  if (!window.reportStateRun) return;
+  stateRunChain = stateRunChain.then(() => window.reportStateRun(stateKey, mode, timeMs)).catch(() => {});   // one at a time, in order
+}
+
 function markStateIfDone(stateKey) {
   if (!stateKey) return;
   if (targetPool.some(c => c.stateKey === stateKey)) return;     // that state still has counties left
-  if (!stateCompletionTimes.has(stateKey)) stateCompletionTimes.set(stateKey, finalTime);
+  if (!stateCompletionTimes.has(stateKey)) {
+    stateCompletionTimes.set(stateKey, finalTime);
+    reportFinishedState(stateKey, finalTime);
+  }
   if (activeStateKeys.length < 2) return;
   const box = document.querySelector(`.map-box[data-state="${stateKey}"]`);
   if (box) box.classList.add("state-done");
@@ -5583,6 +5595,7 @@ function acceptTypedMatches(matchedCounties) {
 function registerWrongTypedGuess() {
   currentRunHadMistake = true;
   if (currentTarget) markStateMistake(currentTarget.stateKey);
+  else activeStateKeys.forEach(k => { if (targetPool.some(c => c.stateKey === k)) markStateMistake(k); });   // List: a typo can't be pinned on one state, so it counts against every state still unfinished
   if (selectedMode === "type-strict" || selectedMode === "mc") scoreWrong++;
   currentAttemptMistakes++;
   playSound("wrong");

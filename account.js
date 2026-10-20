@@ -176,10 +176,29 @@
         rows.push({ user_id: session.user.id, state_key: stateKey, mode, time_ms: Math.round(best) });
       }
     }
+    // per-state records kept by the game (a state counts on its own, whatever else happened in that run)
+    let bests = {};
+    try { bests = JSON.parse(localStorage.getItem("stateRunBests") || "{}") || {}; } catch (e) {}
+    for (const [recordKey, ms] of Object.entries(bests)) {
+      const [stateKey, mode] = recordKey.split("|");
+      if (!MODES.includes(mode) || existing.has(recordKey) || !(Number(ms) > 0)) continue;
+      if (window.countyCountForAccount(stateKey) == null) continue;
+      existing.add(recordKey);
+      rows.push({ user_id: session.user.id, state_key: stateKey, mode, time_ms: Math.round(Number(ms)) });
+    }
     if (skipped.length) console.warn("Some saved perfect runs don't cover every selected state's counties:", skipped);
     if (rows.length) {
       const { error } = await sb.from("state_runs").insert(rows);
-      if (error) { console.warn("Couldn't upload your past runs:", error.message); return; }
+      if (error) {
+        // one rejected row fails the whole batch, so retry one at a time: the good ones go in, and the console says exactly why each bad one didn't
+        console.warn("Batch upload of past runs failed, retrying one at a time:", error.message);
+        const failed = [];
+        for (const row of rows) {
+          const r = await sb.from("state_runs").insert(row);
+          if (r.error) failed.push(`${row.state_key} / ${row.mode}: ${r.error.message}`);
+        }
+        if (failed.length) console.warn(`${failed.length} past runs were rejected:`, failed);
+      }
     }
   }
 
