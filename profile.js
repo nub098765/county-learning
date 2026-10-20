@@ -17,6 +17,16 @@
   if (!window.supabase) { say("Couldn't load the sign-in service. Check your connection and reload."); return; }
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // Special badges shown at the bottom right of a player's profile picture. Add a line per player: lowercase username -> badge.
+  // Example:  "somename": { src: "special-badge.png", label: "What this badge is" },
+  const CHANNEL_OWNER = { src: "special-badge.png", label: "Channel Owner" };
+  const SPECIAL_BADGES = {
+    "mellohihellohi": CHANNEL_OWNER,
+    "phil": CHANNEL_OWNER,
+    "stalgoodman": CHANNEL_OWNER,
+    "nub098765": CHANNEL_OWNER,
+  };
+
   const wantedName = new URLSearchParams(location.search).get("u");   // profile.html?u=name shows that player
   let session = null, me = null;
 
@@ -860,6 +870,12 @@
                 mk("h2", "profile-name", who.data.username), ptsEl, bar,
                 mk("div", "profile-pct", pctText));
     if (who.data.has_tuc) head.querySelector(".profile-avatar").classList.add("tuc");
+    const special = SPECIAL_BADGES[String(who.data.username).toLowerCase()];
+    if (special) {
+      const img = mk("img", "profile-avatar-badge");
+      img.src = special.src; img.alt = special.label || "Special badge"; img.title = special.label || "Special badge";
+      head.querySelector(".profile-avatar").append(img);
+    }
 
     const gold = tiles.filter(t => t.badgeFull === MODES.length).length;
     const modeDone = m => tiles.every(t => t.per.find(x => x.m === m).badgeEarned);

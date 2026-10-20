@@ -4114,3 +4114,6 @@ body.dark-mode .unlock-toast { background: #292923; color: #f2ecd9; }
   .unlock-toast-eyebrow { animation: none; background-position: 0% 50%; }
   .unlock-medal-face, .unlock-medal-earned-ring, .unlock-medal-glyph, .unlock-medal-state-shape { transition-duration: .01ms; }
 }
+.profile-avatar { position: relative; }
+.profile-avatar-badge { position: absolute; right: -8px; bottom: -8px; width: 28px; height: 28px; border-radius: 50%; box-shadow: 0 0 0 2px #fff; background: #fff; }
+body.dark-mode .profile-avatar-badge { box-shadow: 0 0 0 2px #242420; background: #242420; }
