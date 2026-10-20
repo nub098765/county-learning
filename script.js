@@ -5498,10 +5498,7 @@ function handleCountyClick(pathEl) {
         const peak = recovered
           ? (dark ? "#f0c030" : "#d4a017")
           : (dark ? "#5fcf5f" : "#2d5a27");
-        const animation = el.animate([{ fill: rest, offset: 0 }, { fill: peak, offset: 0.12 }, { fill: rest, offset: 1 }], { duration: 400, easing: "linear" });
-        animation.onfinish = () => {
-          el.style.pointerEvents = "none";
-        };
+        el.animate([{ fill: rest, offset: 0 }, { fill: peak, offset: 0.12 }, { fill: rest, offset: 1 }], { duration: 400, easing: "linear" });
       });
     } else {
       countyElements.forEach(el => {
