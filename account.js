@@ -142,19 +142,32 @@
   }
 
     async function syncRuns() {
-    const flag = "runsSynced:" + session.user.id;
+    const flag = "runsSynced:v2:" + session.user.id;
     if (localStorage.getItem(flag)) return;
     if (!window.countyCountForAccount) return;
     let times = {};
     try { times = JSON.parse(localStorage.getItem("perfectTimes") || "{}") || {}; } catch (e) {}
+    const existingResult = await loadStateRuns(session.user.id);
+    if (existingResult.error) { console.warn("Couldn't check saved state runs:", existingResult.error.message); return; }
+    const existing = new Set((existingResult.data || []).map(run => `${run.state_key}|${run.mode}`));
     const rows = [];
     for (const [key, list] of Object.entries(times)) {
       const [states, mode, count] = key.split("|");
-      if (!states || states.includes(",") || !MODES.includes(mode)) continue;          // one state, a real mode
-      if (Number(count) !== window.countyCountForAccount(states)) continue;            // the whole state only
+      const stateKeys = states ? states.split(",") : [];
+      if (!stateKeys.length || !MODES.includes(mode)) continue;
+      const countyCount = stateKeys.reduce((sum, stateKey) => {
+        const stateCount = window.countyCountForAccount(stateKey);
+        return stateCount == null ? null : sum == null ? null : sum + stateCount;
+      }, 0);
+      if (countyCount == null || Number(count) !== countyCount) continue;
       const best = Math.min(...(list || []).map(r => Number(r.time)).filter(t => t > 0));
       if (!isFinite(best)) continue;
-      rows.push({ user_id: session.user.id, state_key: states, mode, time_ms: Math.round(best) });
+      for (const stateKey of stateKeys) {
+        const recordKey = `${stateKey}|${mode}`;
+        if (existing.has(recordKey)) continue;
+        existing.add(recordKey);
+        rows.push({ user_id: session.user.id, state_key: stateKey, mode, time_ms: Math.round(best) });
+      }
     }
     if (rows.length) {
       const { error } = await sb.from("state_runs").insert(rows);

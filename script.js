@@ -858,6 +858,8 @@ let updateHandle = null;
 let finalTime = 0;
 let pausedByTab = false;
 let missedCounties = new Set();
+let stateMistakes = new Set();
+let stateCompletionTimes = new Map();
 let forfeitedCount = 0;
 let currentRunIsRetryMissed = false;
 let currentRunHadMistake = false;
@@ -3541,6 +3543,16 @@ function markCountyLearned(countyId, mode, viaRetryMissed) {
   renderStatsPanel();
 }
 
+function resolveMissedCounty(county) {
+  for (const missed of missedCounties) {
+    if (missed.id === county.id) missedCounties.delete(missed);
+  }
+}
+
+function markStateMistake(stateKey) {
+  if (stateKey) stateMistakes.add(stateKey);
+}
+
 let mostRecentCorrectVersion = 0;
 
 function clearMostRecentCorrect() {
@@ -4466,6 +4478,7 @@ function giveUp() {
 
   targetPool.forEach(c => {
     missedCounties.add(c);
+    markStateMistake(c.stateKey);
     scoreWrong++;
     currentRunHadMistake = true;
     countyMistakes[c.id] = (countyMistakes[c.id] || 0) + 1;
@@ -4509,6 +4522,7 @@ function forfeitCurrentTarget() {
 
   scoreWrong++;
   currentRunHadMistake = true;
+  markStateMistake(forfeited.stateKey);
   missedCounties.add(forfeited);
   forfeitedCount++;
   countyMistakes[forfeited.id] = (countyMistakes[forfeited.id] || 0) + 1;
@@ -4715,6 +4729,8 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   startStopwatch(isRetryMissedRun);
   isGameActive = true;
   missedCounties.clear();
+  stateMistakes.clear();
+  stateCompletionTimes = new Map();
   forfeitedCount = 0;
   currentAttemptMistakes = 0;
 
@@ -5365,6 +5381,20 @@ function pickNextTarget() {
     isGameActive = false;
     stopStopwatch();
     if (mcOptions) mcOptions.classList.add("hidden");
+    if (!currentRunIsRetryMissed && selectedMode !== "tuc" && window.reportStateRun) {
+      const selectedIds = new Set(selectedCounties.map(county => county.id));
+      const completedMode = selectedMode;
+      const completedRuns = activeStateKeys.flatMap(stateKey => {
+        const state = stateData[stateKey];
+        if (!state || stateMistakes.has(stateKey) || state.counties.some(county => !selectedIds.has(county.id))) return [];
+        return [{ stateKey, timeMs: stateCompletionTimes.get(stateKey) || finalTime }];
+      });
+      void (async () => {
+        for (const run of completedRuns) {
+          await window.reportStateRun(run.stateKey, completedMode, run.timeMs);
+        }
+      })();
+    }
     if (!currentRunHadMistake && !currentRunIsRetryMissed && forfeitedCount === 0) {
   const key = bestTimeKey();
   perfectTimes[key] = perfectTimes[key] || [];
@@ -5374,9 +5404,6 @@ function pickNextTarget() {
   lastRunWasNewBest = previousBest !== null && finalTime < previousBest;
   perfectTimes[key].push({ time: finalTime, date: Date.now() });
   localStorage.setItem("perfectTimes", JSON.stringify(perfectTimes));
-  if (activeStateKeys.length === 1 && selectedMode !== "tuc" && selectedCounties.length === getActiveCountiesPool().length && window.reportStateRun) {
-    window.reportStateRun(activeStateKeys[0], selectedMode, finalTime);     // a full, perfect, single-state run goes on the board
-  }
 }
     showSummaryModal();
     return;
@@ -5414,8 +5441,10 @@ function pickNextTarget() {
 }
 
 function markStateIfDone(stateKey) {
-  if (activeStateKeys.length < 2 || !stateKey) return;
+  if (!stateKey) return;
   if (targetPool.some(c => c.stateKey === stateKey)) return;     // that state still has counties left
+  if (!stateCompletionTimes.has(stateKey)) stateCompletionTimes.set(stateKey, finalTime);
+  if (activeStateKeys.length < 2) return;
   const box = document.querySelector(`.map-box[data-state="${stateKey}"]`);
   if (box) box.classList.add("state-done");
 }
@@ -5447,8 +5476,8 @@ function handleCountyClick(pathEl) {
     scoreRight++;
     playSound("correct");
     clearHoverGlow();
-    const recoveredFromMistake = currentAttemptMistakes > 0;
-    if (!recoveredFromMistake) markCountyLearned(currentTarget.id, selectedMode, currentRunIsRetryMissed);
+    markCountyLearned(currentTarget.id, selectedMode, currentRunIsRetryMissed);
+    resolveMissedCounty(currentTarget);
 
 
     if (feedbackEl) {
@@ -5490,6 +5519,7 @@ function handleCountyClick(pathEl) {
     scoreWrong++;
     currentRunHadMistake = true;
     currentAttemptMistakes++;
+    markStateMistake(currentTarget.stateKey);
     playSound("wrong");
     recordConfusion(currentTarget.id, clickedId);
 
@@ -5524,7 +5554,6 @@ function handleCountyClick(pathEl) {
 function acceptTypedMatches(matchedCounties) {
   scoreRight++;
   playSound("correct");
-  const recoveredFromMistake = currentAttemptMistakes > 0;
 
   if (feedbackEl) {
     if (SINGLE_TARGET_TYPE_MODES.has(selectedMode)) {
@@ -5538,7 +5567,8 @@ function acceptTypedMatches(matchedCounties) {
   }
 
   matchedCounties.forEach(matchedCounty => {
-    if (!recoveredFromMistake) markCountyLearned(matchedCounty.id, selectedMode, currentRunIsRetryMissed);
+    markCountyLearned(matchedCounty.id, selectedMode, currentRunIsRetryMissed);
+    resolveMissedCounty(matchedCounty);
     getCountyElements(matchedCounty.id).forEach(el => {
       el.classList.remove("typing-highlight", "correct-recovered");
       el.classList.add("correct", "found");
@@ -5555,6 +5585,7 @@ function acceptTypedMatches(matchedCounties) {
 
 function registerWrongTypedGuess() {
   currentRunHadMistake = true;
+  if (currentTarget) markStateMistake(currentTarget.stateKey);
   if (selectedMode === "type-strict" || selectedMode === "mc") scoreWrong++;
   currentAttemptMistakes++;
   playSound("wrong");
