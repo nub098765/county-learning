@@ -5,7 +5,9 @@
   const MODES = ["pin", "pin-hard", "mc", "type", "type-strict", "type-hard"];
   const MODE_LABEL = { pin: "Pin", "pin-hard": "Flash", mc: "Multiple-Choice", type: "List", "type-strict": "Type", "type-hard": "Identify" };
   const MODE_LETTER = { pin: "P", "pin-hard": "F", mc: "MC", type: "L", "type-strict": "T", "type-hard": "I" };
-  const MAX_POINTS = 300000;
+  const MAX_POINTS = 500000;
+  const ULTIMATE_CHALLENGE_POINTS = 266260;
+  const BADGE_WEIGHTS = { bronze: 2, silver: 3, gold: 5 };
 
   const $ = id => document.getElementById(id);
   const mk = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
@@ -115,7 +117,7 @@
       svg.querySelectorAll("path.us-st").forEach((p, i) => {
         const t = byName[p.dataset.name];
         if (!t) { console.warn("profile map: no data for", p.dataset.name); return; }
-        p.classList.toggle("gold", t.full === MODES.length);
+        p.classList.toggle("gold", t.badgeFull === MODES.length);
         const b = p.getBBox();
         let defs = svg.querySelector("defs");
         if (!defs) { defs = document.createElementNS(SVGNS, "defs"); svg.insertBefore(defs, svg.firstChild); }
@@ -184,10 +186,7 @@
   // each state's name colours from the points sheet: [background, text]
   const STATE_STYLE = {"Alabama":["00491C","D9EAD3"],"Alaska":["6DFEFE","674EA7"],"American Samoa":["767576","E6CCE6"],"Arizona":["8A9CC6","E3E9FC"],"Arkansas":["BEC86F","990000"],"California":["FB85FD","351C75"],"Colorado":["00856D","D0E0E3"],"Connecticut":["FFC0C1","4C1130"],"Delaware":["0000A1","FFE599"],"District of Columbia":["670011","9FC5E8"],"Florida":["E4F73A","38761D"],"Georgia":["FF553D","FFF8ED"],"Guam":["5050F5","C9DAF8"],"Hawaii":["4FEEA5","674EA7"],"Idaho":["F7CE00","7F6000"],"Illinois":["FFF281","1155CC"],"Indiana":["D4AA77","990000"],"Iowa":["E7FFA9","7F6000"],"Kansas":["B0E8B5","85200C"],"Kentucky":["1897B4","CFE2F3"],"Louisiana":["803499","EAD1DC"],"Maine":["FB9163","FFF2CC"],"Maryland":["FC2E5B","FFF2CC"],"Massachusetts":["CD70FF","F0D4FF"],"Michigan":["95DF15","274E13"],"Minnesota":["FFC294","434343"],"Mississippi":["7F0E54","D5A6BD"],"Missouri":["17C5E4","0000A1"],"Montana":["C6DBE8","A61C00"],"Nebraska":["C11A36","CFE2F3"],"Nevada":["FFE7BC","666666"],"New Hampshire":["FF3DA8","420027"],"New Jersey":["5D4033","F9CB9C"],"New Mexico":["F1AB13","990000"],"New York":["FF8181","783F04"],"North Carolina":["006597","F4CCCC"],"North Dakota":["6C5BCA","FFE599"],"Northern Mariana Islands":["44FF00","7F6000"],"Ohio":["FFA33B","FFF2CC"],"Oklahoma":["A15F39","F4CCCC"],"Oregon":["BD6E63","FCD7D0"],"Pennsylvania":["D6C040","1C4587"],"Puerto Rico":["FBD573","CC0000"],"Rhode Island":["008A28","CFE2F3"],"South Carolina":["68CAD5","134F5C"],"South Dakota":["87CAF3","1155CC"],"Tennessee":["F05400","FCE5CD"],"Texas":["798830","FFF2CC"],"United States Minor Outlying Islands":["C3C3C3","666666"],"United States Virgin Islands":["C62FD0","EAD1DC"],"Utah":["F0781D","FFDBB7"],"Vermont":["0089F1","D9EAD3"],"Virginia":["B390DB","EFE8FF"],"Washington":["87B9A3","1C4587"],"West Virginia":["355850","FCE5CD"],"Wisconsin":["E9BAF5","741B47"],"Wyoming":["8C607E","FCE5CD"]};
   const MULT_BG = { 0: "#F4CCCC", 1: "#FFF2CC", 2: "#D9EAD3", 3: "#CFE2F3", 4: "#D9D2E9" };
-  const POINT_HEAD = {   // mode header colours from the sheet: [background, text]
-    pin: ["#6FA3D8", "#1c1c1a"], "pin-hard": ["#6FA3D8", "#fff"], mc: ["#6CC36A", "#fff"],
-    type: ["#E0AB5C", "#1c1c1a"], "type-hard": ["#A682C9", "#1c1c1a"], "type-strict": ["#A682C9", "#fff"]
-  };
+  const POINT_HEAD = Object.fromEntries(MODES.map(mode => [mode, [MODE_COLOR[mode], "#fff"]]));
 
   let pointsData = null;
   async function loadPointsData() {
@@ -218,49 +217,67 @@
     hr.append(
       cell("th", "STATE", "#D9D2E9", dark, "pp-state"),
       cell("th", "# OF COUNTIES", "#EFEFEF", dark),
-      cell("th", "STATE-SPECIFIC MULTIPLIER", "#EFEFEF", dark),
+      cell("th", "STATE SPECIFIC MULTIPLIER", "#EFEFEF", dark),
       ...MODES.map(m => cell("th", `${MODE_LABEL[m].toUpperCase()} (${w[m] || 0})`, POINT_HEAD[m][0], POINT_HEAD[m][1])),
+      cell("th", "BRONZE BADGE (100% RUN IN 1–2 GAME MODES) (2)", "#b0703c", "#fff"),
+      cell("th", "SILVER BADGE (100% RUN IN 3–5 GAME MODES) (3)", "#b8c0cc", dark),
+      cell("th", "GOLD BADGE (100% RUN IN 6 GAME MODES) (5)", "#d4a017", dark),
       cell("th", "HIGHEST POSSIBLE SCORE", "#081B39", "#fff"));
     const thead = mk("thead");
     thead.append(hr);
 
     const totals = MODES.map(() => 0);
-    let totalCounties = 0, grand = 0;
+    const badgeTotals = Object.fromEntries(Object.keys(BADGE_WEIGHTS).map(tier => [tier, 0]));
+    let totalCounties = 0, countyGrand = 0, badgeGrand = 0;
     const tbody = mk("tbody");
     rows.forEach(s => {
       const st = STATE_STYLE[s.name];
       const per = MODES.map(m => s.county_count * s.multiplier * (w[m] || 0));
-      const max = per.reduce((a, b) => a + b, 0);
+      const badge = Object.fromEntries(Object.entries(BADGE_WEIGHTS).map(([tier, weight]) =>
+        [tier, s.county_count * s.multiplier * weight]));
+      const max = per.reduce((a, b) => a + b, 0) + Object.values(badge).reduce((a, b) => a + b, 0);
       per.forEach((v, i) => { totals[i] += v; });
+      Object.keys(badgeTotals).forEach(tier => { badgeTotals[tier] += badge[tier]; });
       totalCounties += s.county_count;
-      grand += max;
+      countyGrand += per.reduce((a, b) => a + b, 0);
+      badgeGrand += Object.values(badge).reduce((a, b) => a + b, 0);
       const tr = mk("tr");
       tr.append(
         cell("td", s.name, st && "#" + st[0], st && "#" + st[1], "pp-state"),
         cell("td", s.county_count),
         cell("td", s.multiplier, MULT_BG[s.multiplier], dark),
         ...per.map(v => cell("td", fmt(v))),
+        ...Object.values(badge).map(v => cell("td", fmt(v))),
         cell("td", fmt(max)));
       tbody.append(tr);
     });
 
-    const tuc = Math.max(0, MAX_POINTS - grand);   // the Ultimate Challenge is worth whatever is left of the total
-    const blanks = n => Array.from({ length: n }, () => cell("td", ""));
-    const footRow = (label, labelBg, labelFg, fillers, value, valueBg, valueFg) => {
+    const tuc = ULTIMATE_CHALLENGE_POINTS;
+    const footRow = (label, amount, labelBg, labelFg, amountBg, amountFg) => {
       const tr = mk("tr", "pp-total");
-      tr.append(cell("td", label, labelBg, labelFg, "pp-state"), ...fillers, cell("td", value, valueBg, valueFg));
+      tr.append(cell("td", label, labelBg, labelFg, "pp-state"));
+      for (let i = 0; i < MODES.length + 5; i++) tr.append(cell("td", ""));
+      tr.append(cell("td", amount, amountBg, amountFg));
       return tr;
     };
     const tfoot = mk("tfoot");
+    const totalRow = mk("tr", "pp-total");
+    totalRow.append(
+      cell("td", "Total", "#081B39", "#fff", "pp-state"),
+      cell("td", fmt(totalCounties)),
+      cell("td", ""),
+      ...totals.map(v => cell("td", fmt(v))),
+      ...Object.values(badgeTotals).map(v => cell("td", fmt(v))),
+      cell("td", fmt(countyGrand + badgeGrand)));
     tfoot.append(
-      footRow("Total", "#081B39", "#fff", [cell("td", fmt(totalCounties)), cell("td", ""), ...totals.map(v => cell("td", fmt(v)))], fmt(grand)),
-      footRow("The Ultimate Challenge", "#CE4E2C", "#fff", blanks(8), fmt(tuc), "#F4CCCC", dark),
-      footRow("Highest possible score", "#081B39", "#fff", blanks(8), fmt(grand + tuc), "#081B39", "#fff"));
+      totalRow,
+      footRow("THE ULTIMATE CHALLENGE", fmt(tuc), "#CE4E2C", "#fff"),
+      footRow("HIGHEST POSSIBLE SCORE", fmt(countyGrand + badgeGrand + tuc), "#081B39", "#fff", "#2d5a27", "#fff"));
 
     const table = mk("table", "pp-table");
     table.append(thead, tbody, tfoot);
 
-        return table;
+    return table;
   }
 
   async function openPoints() {
@@ -271,7 +288,7 @@
     const top = mk("div", "pp-top");
     const close = mk("button", "pp-close", "Close");
     close.type = "button";
-    top.append(mk("p", "pp-note", "Every county you find earns its state's multiplier × the mode's weight. Each cell is the most that state can give you in that mode."), close);
+    top.append(mk("p", "pp-note", "When you find a county in a state, you earn points for that county. Perfect full-state runs earn stacking badge bonuses: Bronze (1–2 modes), Silver (3–5), and Gold (all 6). Beat the Ultimate Challenge for 266,260 points."), close);
     const body = mk("div", "pp-body", "Loading…");
     card.append(top, body);
     overlay.append(card);
@@ -324,8 +341,8 @@
     svg.append(
       svgEl("circle", { cx: 50, cy: 50, r: 46, class: "medal-face" }),
       svgEl("circle", locked
-        ? { cx: 50, cy: 50, r: 46, fill: "none", stroke: ringColor, "stroke-width": 3, "stroke-dasharray": "3 5" }
-        : { cx: 50, cy: 50, r: 46, fill: "none", stroke: ringColor, "stroke-width": 5 }));
+        ? { cx: 50, cy: 50, r: 46, class: "medal-ring", fill: "none", stroke: ringColor, "stroke-width": 3, "stroke-dasharray": "3 5" }
+        : { cx: 50, cy: 50, r: 46, class: "medal-ring", fill: "none", stroke: ringColor, "stroke-width": 5 }));
     return svg;
   }
 
@@ -341,7 +358,7 @@
   const tiltOf = name => (name in STATE_LON && !SHAPE_OVERRIDE[name]) ? 0.6029 * (STATE_LON[name] + 96) : 0;
     // the round badge: tier ring with the state's shape inside
   function badgeSvg(t) {
-    const tier = TIER(t.full), locked = tier === "locked";
+    const tier = TIER(t.badgeFull), locked = tier === "locked";
     const st = STATE_STYLE[t.name];
     const svg = discSvg(TIER_RING[tier], locked);
     const d = shapeFor(t.name);
@@ -362,13 +379,13 @@
   }
 
   function stateMedal(t) {
-    const tier = TIER(t.full);
+    const tier = TIER(t.badgeFull);
     const el = mk("div", "medal clickable " + tier);
     el.tabIndex = 0;
     el.setAttribute("role", "button");
     el.setAttribute("aria-label", `${t.name}: see details`);
     const pips = mk("div", "medal-pips");
-    t.per.forEach(x => { const p = mk("span", "medal-pip" + (x.full ? " on" : "")); p.style.setProperty("--c", MODE_COLOR[x.m]); pips.append(p); });
+    t.per.forEach(x => { const p = mk("span", "medal-pip" + (x.badgeEarned ? " on" : "")); p.style.setProperty("--c", MODE_COLOR[x.m]); pips.append(p); });
     el.append(badgeSvg(t), mk("div", "medal-name", t.name), pips);
     el.addEventListener("click", () => openStateDetail(t));
     el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openStateDetail(t); } });
@@ -377,7 +394,7 @@
 
   // the screen that opens when you click a state's badge
   function openStateDetail(t) {
-    const tier = TIER(t.full);
+    const tier = TIER(t.badgeFull);
     const TIER_LABEL = { gold: "Gold", silver: "Silver", bronze: "Bronze", locked: "Not started" };
     const doneAll = t.per.reduce((a, x) => a + x.d, 0), totalAll = t.total * MODES.length;
     const pct = totalAll ? Math.round((doneAll / totalAll) * 100) : 0;
@@ -403,7 +420,7 @@
 
     const rows = mk("div", "sd-rows");
     t.per.forEach(r => {
-      const row = mk("div", "sd-row" + (r.full ? " full" : ""));
+      const row = mk("div", "sd-row" + (r.badgeEarned ? " full" : ""));
       const label = mk("span", "sd-mode");
       const dot = mk("span", "sd-dot");
       dot.style.background = MODE_COLOR[r.m];
@@ -412,7 +429,7 @@
       fill.style.width = (t.total ? (r.d / t.total) * 100 : 0) + "%";
       fill.style.background = MODE_COLOR[r.m];
       bar.append(fill);
-      row.append(label, bar, mk("span", "sd-count", (r.full ? "\u2713 " : "") + r.d + "/" + t.total));
+      row.append(label, bar, mk("span", "sd-count", (r.badgeEarned ? "\u2713 " : "") + r.d + "/" + t.total));
       rows.append(row);
     });
 
@@ -423,7 +440,8 @@
     card.append(
       x, badge,
       mk("h2", "sd-title", t.name),
-      mk("div", "sd-sub", `${TIER_LABEL[tier]} \u00b7 ${t.full} of ${MODES.length} modes complete`),
+      mk("div", "sd-sub", `${TIER_LABEL[tier]} \u00b7 ${t.badgeFull} of ${MODES.length} modes mastered`),
+      mk("p", "sd-foot", "A mode badge requires a perfect full-state run."),
       mk("div", "sd-pct", pct + "%"),
       mk("div", "sd-pct-label", `${doneAll} of ${totalAll} done`),
       rows, foot);
@@ -438,7 +456,69 @@
     el.title = a.label + (a.sub ? " — " + a.sub : "");
     const svg = discSvg(a.earned ? a.color : TIER_RING.locked, !a.earned);
     const fillColor = a.earned ? a.color : "currentColor";
-    if (a.icon === "flame") {
+    if (a.splitStates) {
+      const [first, second] = a.splitStates;
+      svg.querySelector(".medal-face").style.fill = "transparent";
+      const gradientId = "medal-split-" + a.label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      const defs = svgEl("defs", {});
+      const clipId = gradientId + "-inside";
+      const clip = svgEl("clipPath", { id: clipId });
+      clip.append(svgEl("circle", { cx: 50, cy: 50, r: 43.5 }));
+      defs.append(clip);
+      svg.insertBefore(defs, svg.firstChild);
+      svg.querySelector(".medal-ring").setAttribute("stroke", "none");
+      const details = svgEl("g", { "clip-path": `url(#${clipId})` });
+      svg.append(details);
+      const divider = { x1: 10, y1: 90, x2: 90, y2: 10 };
+      details.append(
+        svgEl("line", {
+          ...divider, transform: "translate(-1.05 -1.05)",
+          stroke: "#" + STATE_STYLE[first][0], "stroke-width": 3
+        }),
+        svgEl("line", {
+          ...divider, transform: "translate(1.05 1.05)",
+          stroke: "#" + STATE_STYLE[second][0], "stroke-width": 3
+        })
+      );
+
+      [
+        { name: first, x: 15, y: 15 },
+        { name: second, x: 45, y: 45 }
+      ].forEach(({ name, x, y }) => {
+        const d = shapeFor(name);
+        if (!d) return;
+        const icon = svgEl("svg", {
+          x, y, width: 40, height: 40, viewBox: "0 0 100 100",
+          preserveAspectRatio: "xMidYMid meet", class: "medal-shape"
+        });
+        const group = svgEl("g", {});
+        group.append(svgEl("path", {
+          d, "fill-rule": "evenodd", "vector-effect": "non-scaling-stroke",
+          fill: "none",
+          stroke: "#" + STATE_STYLE[name][0],
+          "stroke-width": 1.5,
+          "stroke-linejoin": "round",
+          "stroke-linecap": "round"
+        }));
+        icon.append(group);
+        details.append(icon);
+      });
+      const halfCircumference = 144.513;
+      [
+        [second, 0],
+        [first, halfCircumference]
+      ].forEach(([name, offset]) => {
+        svg.append(svgEl("circle", {
+          cx: 50, cy: 50, r: 46,
+          stroke: "#" + STATE_STYLE[name][0],
+          "stroke-width": 5,
+          "stroke-dasharray": a.earned ? `${halfCircumference} ${halfCircumference}` : "3 5",
+          "stroke-dashoffset": offset,
+          transform: "rotate(-45 50 50)",
+          fill: "none"
+        }));
+      });
+    } else if (a.icon === "flame") {
       svg.append(svgEl("path", { d: "M50 22 C58 34 71 41 67 58 C65 69 58 76 50 76 C42 76 35 69 33 58 C31 50 37 45 41 39 C43 45 46 47 50 45 C53 39 51 31 50 22 Z", fill: fillColor }));
     } else {
       const g = String(a.glyph);
@@ -490,7 +570,7 @@
   async function fetchStateRuns(userId) {
     const rows = [];
     for (let from = 0; ; from += 1000) {
-      const result = await sb.from("state_runs").select("state_key, time_ms").eq("user_id", userId).order("time_ms").order("state_key").range(from, from + 999);
+      const result = await sb.from("state_runs").select("state_key, mode, time_ms, completed_at").eq("user_id", userId).order("completed_at").order("state_key").range(from, from + 999);
       if (result.error) return result;
       rows.push(...(result.data || []));
       if (!result.data || result.data.length < 1000) return { data: rows, error: null };
@@ -514,12 +594,42 @@
     return wrap;
   }
 
+  function modeOverlap(rows, tiles) {
+    const countyModes = new Map();
+    rows.forEach(row => {
+      if (!MODES.includes(row.mode)) return;
+      const key = `${row.state_key}:${row.county_id}`;
+      if (!countyModes.has(key)) countyModes.set(key, new Set());
+      countyModes.get(key).add(row.mode);
+    });
+
+    const counts = Array(MODES.length).fill(0);
+    countyModes.forEach(modes => { counts[modes.size - 1] += 1; });
+    const total = tiles.reduce((sum, tile) => sum + tile.total, 0);
+    const wrap = mk("section", "pc-sec");
+    wrap.append(mk("h3", "pc-title", "Counties by number of modes learned in"));
+
+    const bars = mk("div", "pc-bars");
+    counts.forEach((count, index) => {
+      const row = mk("div", "pc-bar-row");
+      const track = mk("div", "pc-bar-track"), fill = mk("div", "pc-bar-fill");
+      fill.style.width = (total ? count / total * 100 : 0) + "%";
+      fill.style.background = "#6FA3D8";
+      track.append(fill);
+      row.append(mk("span", "pc-bar-label", `${index + 1} mode${index ? "s" : ""}`), track, mk("span", "pc-bar-num", count.toLocaleString()));
+      row.title = `${count.toLocaleString()} of ${total.toLocaleString()} counties learned in exactly ${index + 1} mode${index ? "s" : ""}`;
+      bars.append(row);
+    });
+    wrap.append(bars);
+    return wrap;
+  }
+
     function niceCeil(v) {       // a tidy top for the axis, a little above the highest value
     const target = Math.max(v, 1) * 1.05, mag = Math.pow(10, Math.floor(Math.log10(target)));
     return mag * ([1, 1.2, 1.6, 2, 2.4, 3, 4, 5, 6, 8, 10].find(s => s * mag >= target));
   }
 
-  function pointsDays(rows, tiles, w, who, tucDay) {
+  function pointsDays(rows, tiles, w, who, tucDay, stateRuns) {
     const info = {};
     tiles.forEach(t => { info[t.key] = t; });
     const counted = {}, add = {};
@@ -532,13 +642,30 @@
       const d = dayKey(r.completed_at);
       add[d] = (add[d] || 0) + t.mult * wt;
     });
+    const modesByState = new Map();
+    (stateRuns || []).forEach(run => {
+      const tile = info[run.state_key];
+      if (!tile || !MODES.includes(run.mode)) return;
+      const modes = modesByState.get(run.state_key) || new Map();
+      if (!modes.has(run.mode)) modes.set(run.mode, run.completed_at);
+      else if (run.completed_at < modes.get(run.mode)) modes.set(run.mode, run.completed_at);
+      modesByState.set(run.state_key, modes);
+    });
+    modesByState.forEach((modeDates, stateKey) => {
+      const tile = info[stateKey];
+      const earned = [...modeDates.values()].sort();
+      [[1, BADGE_WEIGHTS.bronze], [3, BADGE_WEIGHTS.silver], [6, BADGE_WEIGHTS.gold]].forEach(([threshold, weight]) => {
+        if (earned.length < threshold) return;
+        const date = earned[threshold - 1];
+        const day = dayKey(date);
+        add[day] = (add[day] || 0) + tile.total * tile.mult * weight;
+      });
+    });
     let note = "Progress from before tracking began is counted on the first day shown.";
     if (who.has_tuc) {
-      const grand = tiles.reduce((a, t) => a + t.maxPts, 0);
-      const bonus = Math.max(0, MAX_POINTS - grand);
       const keys = Object.keys(add).sort();
       const d = tucDay || keys[keys.length - 1] || dayKey(new Date());
-      add[d] = (add[d] || 0) + bonus;
+      add[d] = (add[d] || 0) + ULTIMATE_CHALLENGE_POINTS;
       if (!tucDay) note += " The Ultimate Challenge bonus is shown on the last day, since its date isn't visible on other profiles.";
     }
     let n = 0;
@@ -620,16 +747,23 @@
     return grid;
   }
 
-   function buildCharts(userId, tiles, w, who) {
+   function buildCharts(userId, tiles, w, who, stateRuns) {
     const box = mk("div", "pc");
     const bars = mk("section", "pc-sec");
     bars.append(mk("h3", "pc-title", "Counties by mode"), modeBars(tiles));
-    box.append(bars);
-    const hist = mk("section", "pc-sec");
-    box.append(hist);
-    fetchCompletions(userId).then(async rows => {
-      if (!rows || !rows.length) { hist.remove(); return; }
-      const first = {}, perDay = {};
+     const overlap = mk("section", "pc-sec");
+     box.append(bars, overlap);
+     const hist = mk("section", "pc-sec");
+     box.append(hist);
+     fetchCompletions(userId).then(async rows => {
+       if (!rows) {
+         overlap.append(mk("p", "pc-note", "Couldn't load mode overlap data."));
+         hist.remove();
+         return;
+       }
+       overlap.replaceChildren(modeOverlap(rows, tiles));
+       if (!rows.length) { hist.remove(); return; }
+       const first = {}, perDay = {};
       rows.forEach(r => {
         const k = dayKey(r.completed_at);
         perDay[k] = (perDay[k] || 0) + 1;
@@ -651,7 +785,7 @@
         const t = await sb.from("tuc_completions").select("completed_at").eq("user_id", userId).maybeSingle();
         if (t.data) tucDay = dayKey(t.data.completed_at);
       }
-      const pts = pointsDays(rows, tiles, w, who, tucDay);
+      const pts = pointsDays(rows, tiles, w, who, tucDay, stateRuns);
       let note = "Progress from before tracking began is counted on the first day shown.";
       if (pts.days.length) {
         const right = mk("div", "pc-half");
@@ -668,15 +802,16 @@
     const view = $("p-view");
     view.replaceChildren(mk("p", "info-intro", "Loading…"));
     show("p-view", true);
-    const [who, prog, states, weights, speedRun, stateRuns] = await Promise.all([
-      sb.from("leaderboard").select("id, username, points, has_tuc").eq("id", userId).maybeSingle(),
+    const [who, prog, states, weights, speedRun, stateRuns, concentratedEffort] = await Promise.all([
+      sb.from("leaderboard_with_badges").select("id, username, points, has_tuc").eq("id", userId).maybeSingle(),
       sb.from("user_state_mode").select("state_key, mode, done").eq("user_id", userId),
       sb.from("state_multipliers").select("state_key, name, multiplier, county_count").order("name"),
       sb.from("mode_weights").select("mode, weight"),
       sb.from("state_runs").select("time_ms").eq("user_id", userId).lt("time_ms", 5000).limit(1).maybeSingle(),
-      fetchStateRuns(userId)
+      fetchStateRuns(userId),
+      sb.from("concentrated_effort_achievements").select("user_id").eq("user_id", userId).maybeSingle()
     ]);
-    const err = who.error || prog.error || states.error || weights.error || speedRun.error || stateRuns.error;
+    const err = who.error || prog.error || states.error || weights.error || speedRun.error || stateRuns.error || concentratedEffort.error;
     if (err || !who.data) {
       view.replaceChildren(mk("p", "info-intro", err ? "Couldn't load the profile: " + err.message : "That profile wasn't found."));
       return;
@@ -686,16 +821,29 @@
     (weights.data || []).forEach(r => { w[r.mode] = r.weight; });
     const done = {};
     (prog.data || []).forEach(r => { (done[r.state_key] = done[r.state_key] || {})[r.mode] = r.done; });
+    const stateRunModes = new Map();
+    (stateRuns.data || []).forEach(run => {
+      if (!MODES.includes(run.mode)) return;
+      if (!stateRunModes.has(run.state_key)) stateRunModes.set(run.state_key, new Set());
+      stateRunModes.get(run.state_key).add(run.mode);
+    });
     const tiles = (states.data || []).map(s => {
       const total = s.county_count;
       const per = MODES.map(m => {
         const d = Math.min((done[s.state_key] || {})[m] || 0, total);
-        return { m, d, full: d >= total, pts: d * s.multiplier * (w[m] || 0) };
+        const badgeEarned = stateRunModes.get(s.state_key)?.has(m) || false;
+        return { m, d, full: d >= total, badgeEarned, pts: d * s.multiplier * (w[m] || 0) };
       });
+      const badgeFull = per.filter(x => x.badgeEarned).length;
+      const badgePts = total * s.multiplier * (
+        (badgeFull >= 1 ? BADGE_WEIGHTS.bronze : 0) +
+        (badgeFull >= 3 ? BADGE_WEIGHTS.silver : 0) +
+        (badgeFull >= MODES.length ? BADGE_WEIGHTS.gold : 0)
+      );
       return {
         key: s.state_key,
-        name: s.name, total, per, full: per.filter(x => x.full).length, pts: per.reduce((a, x) => a + x.pts, 0),
-        mult: s.multiplier, maxPts: total * s.multiplier * MODES.reduce((a, m) => a + (w[m] || 0), 0)
+        name: s.name, total, per, full: per.filter(x => x.full).length, badgeFull, pts: per.reduce((a, x) => a + x.pts, 0) + badgePts,
+        mult: s.multiplier, maxPts: total * s.multiplier * (MODES.reduce((a, m) => a + (w[m] || 0), 0) + Object.values(BADGE_WEIGHTS).reduce((a, b) => a + b, 0))
       };
     });
     const pts = Number(who.data.points) || 0;
@@ -713,43 +861,48 @@
                 mk("div", "profile-pct", pctText));
     if (who.data.has_tuc) head.querySelector(".profile-avatar").classList.add("tuc");
 
-    const gold = tiles.filter(t => t.full === MODES.length).length;
-    const modeDone = m => tiles.every(t => t.per.find(x => x.m === m).full);
+    const gold = tiles.filter(t => t.badgeFull === MODES.length).length;
+    const modeDone = m => tiles.every(t => t.per.find(x => x.m === m).badgeEarned);
     const stateRunRows = stateRuns.data || [];
     const fastStateRuns = new Set(stateRunRows
       .filter(run => tiles.some(tile => tile.key === run.state_key && Number(run.time_ms) <= tile.total * 3000))
       .map(run => run.state_key));
     const noTimeToWaste = tiles.length > 0 && tiles.every(tile => fastStateRuns.has(tile.key));
     const achievements = [
-      { label: "County God", sub: "Beat the Ultimate Challenge", icon: "flame", color: "#CE4E2C", earned: !!who.data.has_tuc },
-      { label: "Gold Star", sub: "A state in all 6 modes", glyph: "★", color: "#d4a017", earned: gold >= 1 },
-      { label: "Gold Ring", sub: "5 states in all 6 modes", glyph: "★5", color: "#d4a017", earned: gold >= 5 },
-      { label: "Gold Necklace", sub: "10 states in all 6 modes", glyph: "★10", color: "#d4a017", earned: gold >= 10 },
-      { label: "Gold Rush", sub: "25 states in all 6 modes", glyph: "★25", color: "#d4a017", earned: gold >= 25 },
-      { label: "County Master", sub: "Every county found in every mode", glyph: "★57", color: "#d4a017", earned: gold >= 57 },
-      { label: "Amateur Countellectual", sub: "Get 1,000 points", glyph: "1K", color: "#6FA3D8", earned: pts >= 1000 },
-      { label: "Getting Into It", sub: "Get 10,000 points", glyph: "10K", color: "#6FA3D8", earned: pts >= 10000 },
-      { label: "In the Weeds", sub: "Get 25,000 points", glyph: "25K", color: "#6FA3D8", earned: pts >= 25000 },
+      { label: "Participation Trophy", sub: "Complete one state in at least one mode", glyph: "★", color: "#b0703c", earned: tiles.some(t => t.badgeFull >= 1) },
+      { label: "Gold Star", sub: "Complete one state in all six modes", glyph: "★", color: "#d4a017", earned: gold >= 1 },
+      { label: "Getting Them Over With", sub: "Complete District of Columbia and Guam in all six modes", glyph: "1", color: "#d4a017", splitStates: ["District of Columbia", "Guam"], earned: ["district_of_columbia", "guam"].every(key => tiles.some(t => t.key === key && t.badgeFull === MODES.length)) },
+      { label: "Gold Ring", sub: "Complete five states in all six modes", glyph: "★5", color: "#d4a017", earned: gold >= 5 },
+      { label: "Gold Necklace", sub: "Complete ten states in all six modes", glyph: "★10", color: "#d4a017", earned: gold >= 10 },
+      { label: "Gold Rush", sub: "Complete twenty-five states in all six modes", glyph: "★25", color: "#d4a017", earned: gold >= 25 },
+      { label: "County Master", sub: "Complete every state in all six modes", glyph: "★57", color: "#d4a017", earned: gold >= 57 },
+      { label: "Which One's Nebraska?", sub: "Get 1,000 points", glyph: "1K", color: "#6FA3D8", earned: pts >= 1000 },
+      { label: "Amateur Countellectual", sub: "Get 2,500 points", glyph: "2.5K", color: "#6FA3D8", earned: pts >= 2500 },
+      { label: "Getting the Hang of It", sub: "Get 5,000 points", glyph: "5K", color: "#6FA3D8", earned: pts >= 5000 },
+      { label: "You Know Your Stuff", sub: "Get 10,000 points", glyph: "10K", color: "#6FA3D8", earned: pts >= 10000 },
+      { label: "Intermediate Countellectual", sub: "Get 25,000 points", glyph: "25K", color: "#6FA3D8", earned: pts >= 25000 },
       { label: "County Connoisseur", sub: "Get 50,000 points", glyph: "50K", color: "#6FA3D8", earned: pts >= 50000 },
       { label: "State Savant", sub: "Get 100,000 points", glyph: "100K", color: "#6FA3D8", earned: pts >= 100000 },
-      { label: "Pro Countellectual", sub: "Get all points possible without the Ultimate Challenge",glyph: "143K", color: "#6FA3D8", earned: pts >= 143840 },
-      { label: "Point God", sub: "Get all points possible", glyph: "300K", color: "#6FA3D8", earned: pts >= 300000 },
-      { label: "Jack of All Trades", sub: "Complete every state in at least one mode", glyph: "1×57", color: "#6FA3D8", earned: tiles.every(t => t.full > 0) },
-      { label: "Speed Is Key", sub: "Complete a perfect state run in under 10 seconds", glyph: "⏱", color: "#6FA3D8", earned: !!speedRun.data },
-      { label: "Speed is Everything", sub: "Complete a perfect state run in under 5 seconds", glyph: "⏱⏱", color: "#6FA3D8", earned: !!speedRun.data },
+      { label: "Pro Countellectual", sub: "Get 150,000 points", glyph: "150K", color: "#6FA3D8", earned: pts >= 150000 },
+      { label: "Addicted", sub: "Get 200,000 points", glyph: "200K", color: "#6FA3D8", earned: pts >= 200000 },
+      { label: "You See Counties in Your Dreams", sub: "Get all points possible without the Ultimate Challenge",glyph: "234K", color: "#6FA3D8", earned: pts >= MAX_POINTS - ULTIMATE_CHALLENGE_POINTS },
+      { label: "County God", sub: "Beat the Ultimate Challenge", icon: "flame", color: "#CE4E2C", earned: !!who.data.has_tuc },
+      { label: "Point God", sub: "Get all points possible", glyph: "500K", color: "#6FA3D8", earned: pts >= MAX_POINTS },
+      { label: "Jack of All Trades", sub: "Complete a perfect full-state run in at least one mode for every state", glyph: "1×57", color: "#6FA3D8", earned: tiles.every(t => t.badgeFull > 0) },
+      { label: "Concentrated Effort", sub: "Earn 1,000 points from a single game", glyph: "1K in 1", color: "#6FA3D8", earned: !!concentratedEffort.data },
       { label: "No Time to Waste", sub: "Complete at least one perfect run for every state at a pace of three seconds or less per county", glyph: "⏱⏱⏱", color: "#6FA3D8", earned: noTimeToWaste },
-     { label: "Put Your Finger On It", sub: "Complete every state in Pin", glyph: "P", color: MODE_COLOR.pin, earned: modeDone("pin") },
-    { label: "Know It in a Flash", sub: "Complete every state in Flash", glyph: "F", color: MODE_COLOR["pin-hard"], earned: modeDone("pin-hard") },
-    { label: "Made The Right Choice", sub: "Complete every state in Multiple-Choice", glyph: "MC", color: MODE_COLOR.mc, earned: modeDone("mc") },
-    { label: "Checking It Twice", sub: "Complete every state in List", glyph: "L", color: MODE_COLOR.type, earned: modeDone("type") },
-    { label: "Infinite Monkey Theorem", sub: "Complete every state in Type", glyph: "T", color: MODE_COLOR["type-strict"], earned: modeDone("type-strict") },
-    { label: "This One Is Washington", sub: "Complete every state in Identify", glyph: "I", color: MODE_COLOR["type-hard"], earned: modeDone("type-hard") },
+     { label: "Put Your Finger On It", sub: "Complete a perfect full-state run in Pin for every state", glyph: "P", color: MODE_COLOR.pin, earned: modeDone("pin") },
+    { label: "Know It in a Flash", sub: "Complete a perfect full-state run in Flash for every state", glyph: "F", color: MODE_COLOR["pin-hard"], earned: modeDone("pin-hard") },
+    { label: "Made The Right Choice", sub: "Complete a perfect full-state run in Multiple-Choice for every state", glyph: "MC", color: MODE_COLOR.mc, earned: modeDone("mc") },
+    { label: "Checking It Twice", sub: "Complete a perfect full-state run in List for every state", glyph: "L", color: MODE_COLOR.type, earned: modeDone("type") },
+    { label: "Infinite Monkey Theorem", sub: "Complete a perfect full-state run in Type for every state", glyph: "T", color: MODE_COLOR["type-strict"], earned: modeDone("type-strict") },
+    { label: "This One Is Washington", sub: "Complete a perfect full-state run in Identify for every state", glyph: "I", color: MODE_COLOR["type-hard"], earned: modeDone("type-hard") },
     ].sort((a, b) => b.earned - a.earned);
 
-    const byPts = (a, b) => b.full - a.full || b.pts - a.pts || a.name.localeCompare(b.name);
+    const byPts = (a, b) => b.badgeFull - a.badgeFull || b.pts - a.pts || a.name.localeCompare(b.name);
     const stateOrder = [
-      ...tiles.filter(t => t.full > 0).sort(byPts),
-      ...tiles.filter(t => t.full === 0).sort((a, b) => a.name.localeCompare(b.name))
+      ...tiles.filter(t => t.badgeFull > 0).sort(byPts),
+      ...tiles.filter(t => t.badgeFull === 0).sort((a, b) => a.name.localeCompare(b.name))
     ];
 
     const shelf = (title, items) => {
@@ -762,9 +915,9 @@
     const sections = mk("div", "profile-sections");
     sections.append(
       shelf(`Achievements · ${achievements.filter(a => a.earned).length} of ${achievements.length}`, achievements.map(badgeMedal)),
-      shelf(`States · ${tiles.filter(t => t.full > 0).length} of ${tiles.length}`, stateOrder.map(stateMedal)));
+      shelf(`States · ${tiles.filter(t => t.badgeFull > 0).length} of ${tiles.length}`, stateOrder.map(stateMedal)));
 
-   view.replaceChildren(head, buildMap(tiles), buildCharts(userId, tiles, w, who.data), sections);
+   view.replaceChildren(head, buildMap(tiles), buildCharts(userId, tiles, w, who.data, stateRuns.data || []), sections);
     fitShapes(view);
     fitNames(view);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitShapes(view); fitNames(view); });

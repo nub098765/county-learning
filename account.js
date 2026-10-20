@@ -20,27 +20,28 @@
 
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let session = null, profile = null, queue = [], timer = 0, lastKnownPoints = null;
+  let lastKnownConcentratedEffort = null;
 
   async function loadBadgeProgress() {
     if (!session) return null;
-    const [progressResult, statesResult] = await Promise.all([
-      sb.from("user_state_mode").select("state_key, mode, done").eq("user_id", session.user.id),
-      sb.from("state_multipliers").select("state_key, name, county_count")
+    const [runsResult, statesResult] = await Promise.all([
+      loadStateRuns(session.user.id),
+      sb.from("state_multipliers").select("state_key, name")
     ]);
-    const error = progressResult.error || statesResult.error;
+    const error = runsResult.error || statesResult.error;
     if (error) {
       console.warn("Couldn't check saved badge progress:", error.message);
       return null;
     }
 
-    const doneByState = {};
-    (progressResult.data || []).forEach(row => {
-      (doneByState[row.state_key] ||= {})[row.mode] = Number(row.done) || 0;
+    const modesByState = {};
+    (runsResult.data || []).forEach(row => {
+      if (MODES.includes(row.mode)) (modesByState[row.state_key] ||= new Set()).add(row.mode);
     });
     const states = (statesResult.data || []).map(state => ({
       key: state.state_key,
       name: state.name,
-      modesDone: MODES.filter(mode => (doneByState[state.state_key]?.[mode] || 0) >= state.county_count)
+      modesDone: [...(modesByState[state.state_key] || [])]
     }));
     return {
       states,
@@ -51,11 +52,29 @@
   async function loadStateRuns(userId) {
     const rows = [];
     for (let from = 0; ; from += 1000) {
-      const result = await sb.from("state_runs").select("state_key, time_ms").eq("user_id", userId).order("time_ms").order("state_key").range(from, from + 999);
+      const result = await sb.from("state_runs").select("state_key, mode, time_ms, completed_at").eq("user_id", userId).order("completed_at").order("state_key").range(from, from + 999);
       if (result.error) return result;
       rows.push(...(result.data || []));
       if (!result.data || result.data.length < 1000) return { data: rows, error: null };
     }
+  }
+
+  async function checkConcentratedEffort() {
+    if (!session || !profile) return;
+    const result = await sb.from("concentrated_effort_achievements")
+      .select("user_id").eq("user_id", session.user.id).maybeSingle();
+    if (result.error) {
+      console.warn("Couldn't check Concentrated Effort progress:", result.error.message);
+      return;
+    }
+    const earned = !!result.data;
+    if (lastKnownConcentratedEffort === false && earned && window.showUnlockToast) {
+      window.showUnlockToast("Concentrated Effort", "Earn 1,000 county points from a single game", {
+        glyph: "1K in 1",
+        color: "#6FA3D8"
+      });
+    }
+    lastKnownConcentratedEffort = earned;
   }
 
   function notifyBadgeUnlocks(before, after) {
@@ -76,10 +95,11 @@
     });
 
     const achievements = [
-      { label: "First Gold", threshold: 1, detail: "A state in all 6 modes", glyph: "★" },
-      { label: "Five Gold", threshold: 5, detail: "5 states in all 6 modes", glyph: "★5" },
-      { label: "Ten Gold", threshold: 10, detail: "10 states in all 6 modes", glyph: "★10" },
-      { label: "County Master", threshold: 57, detail: "Every county found in every mode", glyph: "★57" }
+      { label: "Gold Star", threshold: 1, detail: "Perfect runs in all 6 modes of one state", glyph: "★" },
+      { label: "Gold Ring", threshold: 5, detail: "Perfect runs in all 6 modes of 5 states", glyph: "★5" },
+      { label: "Gold Necklace", threshold: 10, detail: "Perfect runs in all 6 modes of 10 states", glyph: "★10" },
+      { label: "Gold Rush", threshold: 25, detail: "Perfect runs in all 6 modes of 25 states", glyph: "★25" },
+      { label: "County Master", threshold: 57, detail: "Perfect full-state runs in every mode of every state", glyph: "★57" }
     ];
     achievements
       .filter(item => before.gold < item.threshold && after.gold >= item.threshold)
@@ -101,19 +121,17 @@
   }
 
   async function syncLocal() {
-    const flag = "accountSynced:" + session.user.id;
-    if (localStorage.getItem(flag)) return;
     const lookup = window.findCountyForAccount;
     if (!lookup) return;
     let progress = {};
     try { progress = JSON.parse(localStorage.getItem("countyProgress") || "{}") || {}; } catch (e) {}
     const rows = [];
-    for (const [cid, modes] of Object.entries(progress)) {
-      const c = lookup(cid);
-      if (!c) continue;
-      for (const [m, status] of Object.entries(modes || {})) {
-        if ((status === true || status === "clean") && MODES.includes(m)) {
-          rows.push({ user_id: session.user.id, county_id: cid, state_key: c.stateKey, mode: m });
+    for (const [countyId, modes] of Object.entries(progress)) {
+      const county = lookup(countyId);
+      if (!county) continue;
+      for (const [mode, status] of Object.entries(modes || {})) {
+        if ((status === true || status === "clean" || status === "retry") && MODES.includes(mode)) {
+          rows.push({ user_id: session.user.id, county_id: countyId, state_key: county.stateKey, mode });
         }
       }
     }
@@ -121,7 +139,6 @@
       const { error } = await sb.from("completions").upsert(rows.slice(i, i + 500), { onConflict: "user_id,county_id,mode", ignoreDuplicates: true });
       if (error) { console.warn("Couldn't upload your saved progress:", error.message); return; }
     }
-    localStorage.setItem(flag, "1");
   }
 
     async function syncRuns() {
@@ -150,6 +167,7 @@
     if (!window.findCountyForAccount) { setTimeout(refresh, 300); return; }   // wait for the game script to load
     const { data } = await sb.auth.getSession();
     lastKnownPoints = null;
+    lastKnownConcentratedEffort = null;
     session = data.session;
     profile = null;
     if (session) {
@@ -159,6 +177,7 @@
     if (session && profile) {
       await syncLocal();
       await syncRuns();
+      await checkConcentratedEffort();
       if (openBtn) openBtn.title = "Signed in as " + profile.username;
     } else if (openBtn) {
       openBtn.title = "Account";
@@ -169,19 +188,18 @@
   async function flush() {
     if (!queue.length || !session) return;
     const rows = queue.splice(0, queue.length);
-    const badgeProgressBefore = await loadBadgeProgress();
     const { error } = await sb.from("completions").upsert(rows, { onConflict: "user_id,county_id,mode", ignoreDuplicates: true });
     if (error) { console.warn("completion upload failed:", error.message); if (error.code !== "23503") queue.unshift(...rows); }
     else {
-      notifyBadgeUnlocks(badgeProgressBefore, await loadBadgeProgress());
       updateWho();
+      await checkConcentratedEffort();
     }
   }
 
     async function updateWho() {
     if (!whoBtn) return;
     if (!session || !profile) { whoBtn.classList.add("hidden"); return; }
-    const r = await sb.from("leaderboard").select("points").eq("id", session.user.id).maybeSingle();
+    const r = await sb.from("leaderboard_with_badges").select("points").eq("id", session.user.id).maybeSingle();
     if (r.error) { console.warn("Couldn't refresh your points:", r.error.message); return; }
     const pts = r.data ? Math.round(Number(r.data.points) || 0) : 0;
     if (lastKnownPoints !== null && pts > lastKnownPoints && window.showUnlockToast) {
@@ -191,8 +209,8 @@
         [25000, "In the Weeds", "Get 25,000 points.", "25K"],
         [50000, "County Connoisseur", "Get 50,000 points.", "50K"],
         [100000, "State Savant", "Get 100,000 points.", "100K"],
-        [143840, "Pro Countellectual", "Get all points possible without the Ultimate Challenge.", "143K"],
-        [300000, "Point God", "Get all points possible.", "300K"]
+        [233740, "Pro Countellectual", "Get all points possible without the Ultimate Challenge.", "234K"],
+        [500000, "Point God", "Get all points possible.", "500K"]
       ];
       milestones
         .filter(([threshold]) => lastKnownPoints < threshold && pts >= threshold)
@@ -204,11 +222,11 @@
     whoBtn.classList.remove("hidden");
   }
 
-  window.reportCompletion = (countyId, mode) => {
+  window.reportCompletion = (countyId, mode, gameRunId) => {
     if (!session || !profile || !MODES.includes(mode)) return;
-    const c = window.findCountyForAccount && window.findCountyForAccount(countyId);
-    if (!c) return;
-    queue.push({ user_id: session.user.id, county_id: countyId, state_key: c.stateKey, mode });
+    const county = window.findCountyForAccount && window.findCountyForAccount(countyId);
+    if (!county) return;
+    queue.push({ user_id: session.user.id, county_id: countyId, state_key: county.stateKey, mode, game_run_id: gameRunId || null });
     clearTimeout(timer);
     timer = setTimeout(flush, 1500);
   };
@@ -225,6 +243,7 @@
   window.reportStateRun = async (stateKey, mode, ms) => {
     if (!session || !profile || !MODES.includes(mode) || !(ms > 0)) return;
     const timeMs = Math.round(ms);
+    const badgeProgressBefore = await loadBadgeProgress();
     let firstSpeedRun = false, completesNoTimeToWaste = false;
     const countyCount = window.countyCountForAccount && window.countyCountForAccount(stateKey);
     if (countyCount && timeMs <= countyCount * 3000) {
@@ -252,6 +271,8 @@
     }
     const { error } = await sb.from("state_runs").insert({ user_id: session.user.id, state_key: stateKey, mode, time_ms: timeMs });
     if (error) { console.warn("run upload failed:", error.message); return; }
+    notifyBadgeUnlocks(badgeProgressBefore, await loadBadgeProgress());
+    updateWho();
     if (firstSpeedRun && window.showUnlockToast) {
       window.showUnlockToast("Speed Is Key", "Perfect state run under 10 seconds", { glyph: "⏱", color: "#6FA3D8" });
     }
@@ -268,13 +289,14 @@
     const uid = session.user.id;
     const a = await sb.from("completions").delete().eq("user_id", uid);
     const b = await sb.from("tuc_completions").delete().eq("user_id", uid);
-    await sb.from("state_runs").delete().eq("user_id", uid);
-    if (a.error || b.error) return { ok: false, signedIn: true, message: (a.error || b.error).message };
+    const c = await sb.from("state_runs").delete().eq("user_id", uid);
+    if (a.error || b.error || c.error) return { ok: false, signedIn: true, message: (a.error || b.error || c.error).message };
     // the server can refuse a delete without raising an error, so check that the rows are really gone
     const left = await sb.from("completions").select("county_id", { count: "exact", head: true }).eq("user_id", uid);
     const leftTuc = await sb.from("tuc_completions").select("user_id", { count: "exact", head: true }).eq("user_id", uid);
-    if (left.error || leftTuc.error) return { ok: false, signedIn: true, message: (left.error || leftTuc.error).message };
-    if (left.count || leftTuc.count) return { ok: false, signedIn: true, message: "The server wouldn't delete your saved progress (a delete permission is missing)." };
+    const leftRuns = await sb.from("state_runs").select("state_key", { count: "exact", head: true }).eq("user_id", uid);
+    if (left.error || leftTuc.error || leftRuns.error) return { ok: false, signedIn: true, message: (left.error || leftTuc.error || leftRuns.error).message };
+    if (left.count || leftTuc.count || leftRuns.count) return { ok: false, signedIn: true, message: "The server wouldn't delete your saved progress (a delete permission is missing)." };
     return { ok: true, signedIn: true };
   };
 

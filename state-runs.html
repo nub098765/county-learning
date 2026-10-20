@@ -110,7 +110,7 @@
     runs = r.data || [];
     const ids = [...new Set(runs.map(x => x.user_id))];
     for (let i = 0; i < ids.length; i += 100) {
-      const l = await sb.from("leaderboard").select("id, username").in("id", ids.slice(i, i + 100));
+      const l = await sb.from("leaderboard_with_badges").select("id, username").in("id", ids.slice(i, i + 100));
       (l.data || []).forEach(p => { names[p.id] = p.username; });
     }
     const states = [...new Set(runs.map(x => x.state_key))].sort((a, b) => stateName(a).localeCompare(stateName(b)));

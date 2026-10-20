@@ -49,10 +49,10 @@
   async function yourRank() {
     const { data } = await sb.auth.getSession();
     if (!data.session) { $("lb-note").textContent = "Sign in to see your own rank."; return; }
-    const me = await sb.from("leaderboard").select("username, points").eq("id", data.session.user.id).maybeSingle();
+    const me = await sb.from("leaderboard_with_badges").select("username, points").eq("id", data.session.user.id).maybeSingle();
     if (!me.data) { $("lb-note").textContent = "Pick a username on your profile page to join the leaderboard."; return; }
     myName = me.data.username; markMe();
-    const ahead = await sb.from("leaderboard").select("id", { count: "exact", head: true }).gt("points", me.data.points);
+    const ahead = await sb.from("leaderboard_with_badges").select("id", { count: "exact", head: true }).gt("points", me.data.points);
     if (ahead.error) return;
     const rank = (ahead.count || 0) + 1, pts = Number(me.data.points).toLocaleString();
     $("lb-note").innerHTML = me.data.points > 0
@@ -61,7 +61,7 @@
   }
 
   async function load() {
-    const { data, error } = await sb.from("leaderboard")
+    const { data, error } = await sb.from("leaderboard_with_badges")
       .select("username, points, has_tuc").gt("points", 0).order("points", { ascending: false }).limit(1000);
     if (error) { $("lb-msg").textContent = "Couldn't load the leaderboard: " + error.message; return; }
     let rank = 0, last = null;
