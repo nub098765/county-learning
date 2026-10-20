@@ -3533,13 +3533,14 @@ function showUnlockToast(title, detail, badge = {}) {
 window.showUnlockToast = showUnlockToast;
 
 function markCountyLearned(countyId, mode, viaRetryMissed) {
-  const newStatus = viaRetryMissed ? "retry" : "clean";
+  const earnedPoints = !viaRetryMissed && currentAttemptMistakes === 0;
+  const newStatus = earnedPoints ? "clean" : "retry";
   const current = getCountyLearnedStatus(countyId, mode);
   if (current === "clean" || current === newStatus) return;
   if (!countyProgress[countyId]) countyProgress[countyId] = {};
   countyProgress[countyId][mode] = newStatus;
   localStorage.setItem("countyProgress", JSON.stringify(countyProgress));
-  if (window.reportCompletion) window.reportCompletion(countyId, mode, currentGameRunId);
+  if (earnedPoints && window.reportCompletion) window.reportCompletion(countyId, mode, currentGameRunId);
   renderStatsPanel();
 }
 
@@ -3661,7 +3662,7 @@ function renderStatsPanel() {
         const status = statusOf(c.id, mode);
         const symbol = status === "clean" ? "✓" : status === "retry" ? "–" : "✗";
         const statusClass = status === "clean" ? "stats-yes" : status === "retry" ? "stats-retry" : "stats-no";
-        const label = status === "clean" ? "Learned" : status === "retry" ? "Learned (Retry Missed)" : "Not learned";
+        const label = status === "clean" ? "Learned" : status === "retry" ? "Learned after a mistake or retry" : "Not learned";
         return `<td class="stats-check-cell ${statusClass}" aria-label="${label}">${symbol}</td>`;
       }).join("");
       return `<tr><td class="stats-county-name">${c.name}</td>${cells}</tr>`;
