@@ -120,6 +120,13 @@
     });
   }
 
+  let syncedUser = null;
+  function ownsLocalProgress() {       // the saved progress on this browser belongs to whoever first signed in on it
+    const owner = localStorage.getItem("progressOwner");
+    if (!owner) { localStorage.setItem("progressOwner", session.user.id); return true; }
+    return owner === session.user.id;
+  }
+
   async function syncLocal() {
     const lookup = window.findCountyForAccount;
     if (!lookup) return;
@@ -130,7 +137,7 @@
       const county = lookup(countyId);
       if (!county) continue;
       for (const [mode, status] of Object.entries(modes || {})) {
-        if ((status === true || status === "clean" || status === "retry") && MODES.includes(mode)) {
+        if ((status === true || status === "clean") && MODES.includes(mode)) {
           rows.push({ user_id: session.user.id, county_id: countyId, state_key: county.stateKey, mode });
         }
       }
@@ -202,8 +209,8 @@
     }
   }
 
-  async function refresh() {
-    if (!window.findCountyForAccount) { setTimeout(refresh, 300); return; }   // wait for the game script to load
+  async function refreshOnce() {
+    if (!window.findCountyForAccount) { setTimeout(refreshOnce, 300); return; }   // wait for the game script to load
     const { data } = await sb.auth.getSession();
     lastKnownPoints = null;
     lastKnownConcentratedEffort = null;
@@ -214,8 +221,11 @@
       profile = r.data;
     }
     if (session && profile) {
-      await syncLocal();
-      await syncRuns();
+      if (syncedUser !== session.user.id && ownsLocalProgress()) {
+        await syncLocal();
+        await syncRuns();
+      }
+      syncedUser = session.user.id;
       await checkConcentratedEffort();
       if (openBtn) openBtn.title = "Signed in as " + profile.username;
     } else if (openBtn) {
@@ -224,15 +234,35 @@
     updateWho();
   }
 
+  let refreshing = null, refreshAgain = false;
+  function refresh() {                 // page load and the SIGNED_IN event can both ask at once: run one at a time
+    if (refreshing) { refreshAgain = true; return refreshing; }
+    refreshing = refreshOnce().finally(() => {
+      refreshing = null;
+      if (refreshAgain) { refreshAgain = false; refresh(); }
+    });
+    return refreshing;
+  }
+
+  const isOffline = e => !e.code && /fetch|network|load failed/i.test(e.message || "") || e.status === 401 || e.code === "PGRST301";
   async function flush() {
     if (!queue.length || !session) return;
     const rows = queue.splice(0, queue.length);
-    const { error } = await sb.from("completions").upsert(rows, { onConflict: "user_id,county_id,mode", ignoreDuplicates: true });
-    if (error) { console.warn("completion upload failed:", error.message); if (error.code !== "23503") queue.unshift(...rows); }
-    else {
-      updateWho();
-      await checkConcentratedEffort();
+    const put = list => sb.from("completions").upsert(list, { onConflict: "user_id,county_id,mode", ignoreDuplicates: true });
+    const { error } = await put(rows);
+    if (error) {
+      console.warn("completion upload failed:", error.message);
+      if (isOffline(error)) { queue.unshift(...rows); return; }          // connection problem: keep them for later
+      for (const row of rows) {                                           // otherwise find the bad row so it can't block the good ones
+        const r = await put([row]);
+        if (r.error) {
+          console.warn("dropping a rejected completion:", row.county_id, row.mode, r.error.message);
+          if (isOffline(r.error)) queue.push(row);
+        }
+      }
     }
+    updateWho();
+    await checkConcentratedEffort();
   }
 
     async function updateWho() {

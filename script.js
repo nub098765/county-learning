@@ -764,7 +764,11 @@ function unitWord(plural) {
 }
 
 function applyUnitWords() {
-  document.querySelectorAll("[data-unit]").forEach(el => { el.textContent = unitWord(el.dataset.unit === "plural"); });
+  document.querySelectorAll("[data-unit]").forEach(el => {
+    let w = unitWord(el.dataset.unit === "plural");
+    if (el.hasAttribute("data-cap")) w = w.charAt(0).toUpperCase() + w.slice(1);   // sentence-start spots
+    el.textContent = w;
+  });
   const s = document.getElementById("county-search");
   if (s) s.placeholder = `Search ${unitWord(true)}…`;
 }
@@ -846,6 +850,7 @@ const MODE_LABELS = {
 };
 let activeStateKeys = [];
 let selectedCounties = [];
+let gameIsPartial = false;     // true when some counties were excluded: no points, and nothing is marked learned
 let currentGameRunId = null;
 let targetPool = [];
 let currentTarget = null;
@@ -1380,7 +1385,7 @@ const DEFAULT_SETTINGS = {
   showHoverNames: true,
   autoScrollToState: true,
   autoZoom: true,
-  reviewArrowsOn: false
+  reviewArrowsOn: true
 };
 let gameSettings = { ...DEFAULT_SETTINGS, ...readStoredJson("gameSettings", {}) };
 function saveSettings() { localStorage.setItem("gameSettings", JSON.stringify(gameSettings)); }
@@ -1612,6 +1617,7 @@ const countyListItems = document.getElementById("county-list-items");
 const hoverTooltip = document.getElementById("county-hover-tooltip");
 let countyPaths = document.querySelectorAll(".county");
 const svgMaps = document.querySelectorAll(".state-map");
+
 
 
 const STATE_MAP_DIR = "maps/";
@@ -1848,7 +1854,6 @@ zoomArrowsBtn.addEventListener("click", (e) => {
   e.stopPropagation();
   gameSettings.reviewArrowsOn = gameSettings.reviewArrowsOn !== true;
   saveSettings();
-  const cb = document.getElementById("toggle-review-arrows"); if (cb) cb.checked = gameSettings.reviewArrows;
   updateZoomControls();
   if (typeof reviewReposition === "function") reviewReposition();
 });
@@ -2330,7 +2335,7 @@ function initTheme() {
       gameSettings.darkMode = systemPrefersDark.matches;
     }
   } else {
-    gameSettings.darkMode = systemPrefersDark.matches;
+    gameSettings.darkMode = true;
   }
   applySettings();
 }
@@ -2401,6 +2406,11 @@ function initUsMap(holder, { isSelected, toggle }) {
   });
   const els = [...holder.querySelectorAll("[data-code]")];
   els.forEach(el => {
+    if (el.dataset.name && !el.querySelector(":scope > title")) {   // hovering a box (not just the land) names the state
+      const tt = document.createElementNS("http://www.w3.org/2000/svg", "title");
+      tt.textContent = el.dataset.name;
+      el.prepend(tt);
+    }
     const key = keyByName[(el.dataset.name || "").toLowerCase()];
     const built = !!(key && document.getElementById(stateData[key].svgId));
     el.classList.add(built ? "built" : "unbuilt");
@@ -3216,6 +3226,10 @@ btnResetProgress.addEventListener("click", async () => {
   localStorage.removeItem("studyLearned");
   localStorage.removeItem(STUDY_KEY);
   localStorage.removeItem("countyMistakes");
+  localStorage.removeItem("perfectTimes");
+  localStorage.removeItem("stateRunBests");
+  localStorage.removeItem("progressOwner");
+  perfectTimes = {};
   renderStateListUI();
   renderCountyCheckboxes();
   renderStatsPanel();
@@ -3533,6 +3547,7 @@ function showUnlockToast(title, detail, badge = {}) {
 window.showUnlockToast = showUnlockToast;
 
 function markCountyLearned(countyId, mode, viaRetryMissed) {
+  if (gameIsPartial) return;
   const earnedPoints = !viaRetryMissed && currentAttemptMistakes === 0;
   const newStatus = earnedPoints ? "clean" : "retry";
   const current = getCountyLearnedStatus(countyId, mode);
@@ -4386,6 +4401,14 @@ if (btnDeselectAll) {
 }
 
 
+const btnSelectAllCounties = document.getElementById("btn-select-all-counties");
+if (btnSelectAllCounties) {
+  btnSelectAllCounties.addEventListener("click", () => {
+    document.querySelectorAll(".county-checkbox").forEach(cb => { cb.checked = true; });
+    updateSetupPlayButton();
+  });
+}
+
 function updateSetupPlayButton() {
   if (!btnStartGame) return;
 
@@ -4423,6 +4446,7 @@ if (btnStartGame) {
       selectedCounties = [...allActiveCounties];
     }
 
+    gameIsPartial = selectedCounties.length < allActiveCounties.length;
 
     if (selectedCounties.length === 0) return;
 
@@ -4448,6 +4472,8 @@ if (btnQuitGame) {
   });
 }
 
+const btnRestart = document.getElementById("btn-restart");
+if (btnRestart) btnRestart.addEventListener("click", () => { if (!reviewMode) initGame(selectedCounties); });
 
 if (btnToggleCountyList) {
   btnToggleCountyList.addEventListener("click", () => {
@@ -5502,14 +5528,9 @@ function handleCountyClick(pathEl) {
       countyElements.forEach(el => {
         el.classList.remove("typing-highlight", "correct-recovered", "correct", "found", "just-found");
         el.getAnimations().forEach(a => a.cancel());
-        if (recovered) {
-          el.classList.add("correct-recovered", "found");
-          el.style.pointerEvents = "none";
-          return;
-        }
         const dark = document.body.classList.contains("dark-mode");
         const rest = dark ? "#3a3a34" : "#e8e4d9";
-        const peak = dark ? "#5fcf5f" : "#2d5a27";
+        const peak = recovered ? (dark ? "#f0c030" : "#d4a017") : (dark ? "#5fcf5f" : "#2d5a27");   // yellow flash after a miss, then back to blank
         el.animate([{ fill: rest, offset: 0 }, { fill: peak, offset: 0.12 }, { fill: rest, offset: 1 }], { duration: 400, easing: "linear" });
       });
     } else {
@@ -5597,7 +5618,7 @@ function registerWrongTypedGuess() {
   currentRunHadMistake = true;
   if (currentTarget) markStateMistake(currentTarget.stateKey);
   else activeStateKeys.forEach(k => { if (targetPool.some(c => c.stateKey === k)) markStateMistake(k); });   // List: a typo can't be pinned on one state, so it counts against every state still unfinished
-  if (selectedMode === "type-strict" || selectedMode === "mc") scoreWrong++;
+  if (selectedMode === "type-strict" || selectedMode === "mc" || selectedMode === "type-hard") scoreWrong++;
   currentAttemptMistakes++;
   playSound("wrong");
 
@@ -6076,9 +6097,9 @@ function showSummaryModal() {
 
 
     const totalAttempts = scoreRight + scoreWrong;
-    const accuracy = selectedMode === "tuc"
-    ? (totalTargetsCount > 0 ? Math.round((scoreRight / totalTargetsCount) * 100) : 0)   // TUC: out of every county, not just the ones you tried
-    : (totalAttempts > 0 ? Math.round((scoreRight / totalAttempts) * 100) : 0);
+    const accDenom = selectedMode === "tuc" ? totalTargetsCount : totalAttempts;   // TUC: out of every county, not just the ones you tried
+    let accuracy = accDenom > 0 ? Math.round((scoreRight / accDenom) * 100) : 0;
+    if (accDenom > 0 && scoreRight < accDenom) accuracy = Math.min(accuracy, 99);   // 254/255 must not round up to "100%"
 
 
   if (summaryPercentage) summaryPercentage.textContent = `${accuracy}%`;
@@ -6327,7 +6348,7 @@ document.addEventListener("keydown", e => {
   let chosen = null;
 
   function updateSkip() {
-    learnWrap.classList.toggle("hidden", !(chosen && chosen.kind === "learn" && chosen.mode !== "review"));
+    learnWrap.classList.toggle("hidden", !(chosen && chosen.kind === "learn" && chosen.mode !== "review" && activeStateKeys.length > 0));   // nothing (not even the box) until a state is picked
     skipWrap.classList.toggle("hidden", !(chosen && chosen.kind === "learn" && chosen.mode !== "review" && activeStateKeys.length > 0));
     msg.textContent = "";
   }

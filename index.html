@@ -21,7 +21,7 @@
     b.classList.add("no-transition");
     try {
       var saved = localStorage.getItem("darkMode");
-      var dark = saved !== null ? JSON.parse(saved) : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var dark = saved !== null ? JSON.parse(saved) : true;
       if (dark) b.classList.add("dark-mode");
     } catch (e) {}
     window.addEventListener("load", function () {
@@ -77,7 +77,7 @@
        <p class="subtitle">How would you like to learn the US, county by county?</p>
        <div class="home-columns">
          <div class="home-col"><h2>Play</h2><div class="mode-options"><button type="button" class="btn-mode mode-pin" data-home-mode="pin" aria-pressed="false"><strong>Pin</strong><span>Click the county you are given; once found, it stays filled.</span></button><button type="button" class="btn-mode mode-pin" data-home-mode="pin-hard" aria-pressed="false"><strong>Flash</strong><span>Click the county you are given; once found, it flashes briefly.</span></button><button type="button" class="btn-mode mode-mc" data-home-mode="mc" aria-pressed="false"><strong>Multiple-Choice</strong><span>Pick the highlighted county's name from four options.</span></button><button type="button" class="btn-mode mode-list" data-home-mode="type" aria-pressed="false"><strong>List</strong><span>Type any county, in any order, and see how many you can list.</span></button><button type="button" class="btn-mode mode-type" data-home-mode="type-strict" aria-pressed="false"><strong>Type</strong><span>Type the name of a specific highlighted county and press Enter.</span></button><button type="button" class="btn-mode mode-type" data-home-mode="type-hard" aria-pressed="false"><strong>Identify</strong><span>Click a county, then type its name and press Enter.</span></button></div></div>
-         <div class="home-col"><h2>Learn</h2><div class="mode-options"><button type="button" class="btn-mode mode-pin" data-home-learn="pin" aria-pressed="false"><strong>Pin</strong><span>Learn five at a time, then click each county on the map.</span></button><button type="button" class="btn-mode mode-mc" data-home-learn="mc" aria-pressed="false"><strong>Multiple-Choice</strong><span>Learn five at a time, then pick the right name from four options.</span></button><button type="button" class="btn-mode mode-type" data-home-learn="type" aria-pressed="false"><strong>Type</strong><span>Learn five at a time, then type each county's name.</span></button><button type="button" class="btn-mode mode-all" data-home-learn="all" aria-pressed="false"><strong>All</strong><span>Learn five at a time, then multiple-choice, typing, and pinning.</span><button type="button" class="btn-mode mode-list" data-home-learn="review" aria-pressed="false"><strong>Review</strong><span>Hover over counties to see their names. No quiz, no score.</span></button></button></div></div>
+         <div class="home-col"><h2>Learn</h2><div class="mode-options"><button type="button" class="btn-mode mode-pin" data-home-learn="pin" aria-pressed="false"><strong>Pin</strong><span>Learn five at a time, then click each county on the map.</span></button><button type="button" class="btn-mode mode-mc" data-home-learn="mc" aria-pressed="false"><strong>Multiple-Choice</strong><span>Learn five at a time, then pick the right name from four options.</span></button><button type="button" class="btn-mode mode-type" data-home-learn="type" aria-pressed="false"><strong>Type</strong><span>Learn five at a time, then type each county's name.</span></button><button type="button" class="btn-mode mode-all" data-home-learn="all" aria-pressed="false"><strong>All</strong><span>Learn five at a time, then multiple-choice, typing, and pinning.</span></button><button type="button" class="btn-mode mode-list" data-home-learn="review" aria-pressed="false"><strong>Review</strong><span>Hover over counties to see their names. No quiz, no score.</span></button></div></div>
        </div>
        <button id="btn-start-game" class="btn-launch" disabled title="Select at least one state to play.">Play</button>
        <button type="button" class="btn-ultimate" data-home-mode="tuc" aria-pressed="false">The Ultimate Challenge</button>
@@ -85,7 +85,7 @@
        <div class="home-options">
       <label id="home-skip-wrap" class="study-skip hidden"><input type="checkbox" id="home-skip-learned" checked> <span>Skip <span data-unit="plural">counties</span> I've already learned</span></label>
       <label id="home-learn-count-wrap" class="study-skip home-slider hidden">
-        <span><span data-unit="plural">Counties</span> per round: <strong id="home-learn-count-out">5</strong></span>
+        <span><span data-unit="plural" data-cap>Counties</span> per round: <strong id="home-learn-count-out">5</strong></span>
         <input type="range" id="home-learn-count" min="4" max="8" step="1" value="5">
       </label>
          <div id="county-options-panel" class="county-panel hidden">
@@ -101,6 +101,7 @@
      <div id="checkbox-container" class="checkbox-container hidden">
        <div id="suggestion-box" class="hidden" style="margin-bottom: 0.8rem; font-size: 0.85rem; width: 100%; display: flex; justify-content: center; gap: 0.5rem;">
          <button id="btn-select-suggested" type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Select your 5 best-known</button>
+         <button id="btn-select-all-counties" type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Select All</button>
          <button id="btn-deselect-all" type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Deselect All</button>
        </div>
     
@@ -814,6 +815,7 @@
  <section id="screen-game" class="screen">
    <div class="game-header">
      <button id="btn-quit-game" class="btn-secondary">Quit</button>
+     <button id="btn-restart" class="btn-secondary">Restart</button>
      <button id="btn-give-up" class="btn-secondary">Give Up</button>
      <button id="btn-forfeit-target" class="btn-secondary" title="Count this county as missed and move on to the next one">Forfeit This One</button>
      <button id="btn-toggle-county-list" class="btn-secondary hidden">Show List</button>
@@ -1062,9 +1064,9 @@
    </form>
  </div>
 </div>
-<div id="modal-county-list" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="county-list-title">
+<div id="modal-county-list" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-county-list-title">
  <div class="modal-content county-list-modal-content">
-   <h2 id="county-list-title">All County Equivalents</h2>
+   <h2 id="modal-county-list-title">All County Equivalents</h2>
    <input type="search" id="all-counties-search" class="county-list-search" placeholder="Search counties or states…" autocomplete="off">
       <label class="county-list-option"><input type="checkbox" id="all-counties-include-state" checked> Include state names in search</label>
    <p id="all-counties-count" class="county-list-count"></p>
