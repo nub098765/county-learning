@@ -3992,6 +3992,14 @@ body.dark-mode .lb-tab { border-color: #3f3f38; }
 body.dark-mode .lb-tab.on { background: #fdeca6; border-color: #fdeca6; color: #242420; }
 a.lb-tab:hover { background: rgba(128,128,128,.18); text-decoration: none; }
 .lb-table td a, .lb-table td a:visited { color: inherit; }
+#lb-online-count { display: flex; justify-content: flex-end; align-items: center; gap: .45rem; margin: .65rem .9rem 0; font-size: .78rem; opacity: .75; }
+.online-dot { display: inline-block; width: .55rem; height: .55rem; flex: none; vertical-align: middle; border-radius: 50%; background: #28a745; box-shadow: 0 0 0 2px rgba(40,167,69,.14); }
+.lb-table .online-dot { margin-right: .45rem; }
+.lb-online-count .online-dot { width: .5rem; height: .5rem; }
+.lb-online-count.presence-unavailable .online-dot { background: #888; box-shadow: none; }
+.profile-online-status { display: flex; justify-content: center; align-items: center; gap: .4rem; min-height: 1.1rem; margin: 0 0 .65rem; font-size: .8rem; opacity: .75; }
+.profile-online-status:not(.is-online) .online-dot { background: #888; box-shadow: none; }
+.profile-online-status.presence-unavailable .online-dot { background: transparent; border: 1px solid #888; box-shadow: none; }
 
 .unlock-toasts {
   position: fixed;

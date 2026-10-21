@@ -18,7 +18,7 @@
   if (lbBtn) lbBtn.addEventListener("click", () => { location.href = "leaderboard.html"; });
   if (!window.supabase) return;
 
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sb = window.countellectSupabase || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let session = null, profile = null, queue = [], timer = 0, lastKnownPoints = null;
   let lastKnownConcentratedEffort = null;
 

@@ -7,7 +7,7 @@
   const $ = id => document.getElementById(id);
   const mk = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
   if (!window.supabase) { $("lb-msg").textContent = "Couldn't load the service. Check your connection and reload."; return; }
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sb = window.countellectSupabase || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let rows = [], myName = null;
   const focusName = new URLSearchParams(location.search).get("u");
@@ -42,6 +42,12 @@
       const a = mk("a", "profile-link", r.username);
       a.href = "profile.html?u=" + encodeURIComponent(r.username);
       const who = document.createElement("td");
+      if (window.countellectIsOnline?.(r.username)) {
+        const dot = mk("span", "online-dot", "");
+        dot.setAttribute("aria-label", "Online");
+        dot.title = "Online";
+        who.append(dot);
+      }
       who.append(a);
       if (r.has_tuc) who.append(" 🏆");
       tr.append(mk("td", "", r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : String(r.rank)), who, mk("td", "", Number(r.points).toLocaleString()));
@@ -56,6 +62,22 @@
     const m = matches();
     if (m.length === 1) location.href = "profile.html?u=" + encodeURIComponent(m[0].username);
   });
+
+  function renderOnlineCount() {
+    const status = $("lb-online-count");
+    const count = window.countellectOnlineUsers?.size || 0;
+    const text = window.countellectPresenceAvailable === null
+      ? "Checking online status…"
+      : window.countellectPresenceAvailable
+        ? `${count} ${count === 1 ? "player" : "players"} online`
+        : "Online status unavailable";
+    status.lastElementChild.textContent = text;
+    status.classList.toggle("presence-unavailable", !window.countellectPresenceAvailable);
+    render();
+  }
+
+  window.addEventListener("countellect-presence-change", renderOnlineCount);
+  renderOnlineCount();
 
   async function yourRank() {
     const { data } = await sb.auth.getSession();

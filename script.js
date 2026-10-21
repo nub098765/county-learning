@@ -4739,7 +4739,11 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   clearMostRecentCorrect();
   reviewMode = false;
   if (typeInput) { typeInput.disabled = false; typeInput.placeholder = "Type a county name…"; }
-  if (tucDesig) { tucDesig.disabled = false; tucDesig.value = ""; tucDesig.classList.add("hidden"); }
+  if (tucDesig) {
+    tucDesig.disabled = false;
+    tucDesig.value = selectedMode === "tuc" ? "County" : "";
+    tucDesig.classList.add("hidden");
+  }
   [btnGiveUp, btnGameSettings].forEach(b => b && b.classList.remove("hidden"));
   targetPool = [...countiesToPlay];
   currentGameRunId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -5766,7 +5770,7 @@ function tucWaitForPick() {
   currentTarget = null;
   document.querySelectorAll(".county.typing-highlight").forEach(el => el.classList.remove("typing-highlight"));
   if (typeInput) { typeInput.value = ""; typeInput.disabled = true; typeInput.placeholder = "Click a county first"; }
-  if (tucDesig) { tucDesig.value = ""; tucDesig.disabled = true; tucDesig.classList.toggle("hidden", selectedMode !== "tuc"); }
+  if (tucDesig) { tucDesig.disabled = true; tucDesig.classList.toggle("hidden", selectedMode !== "tuc"); }
   refreshSpecialCharsBar();
   if (typeInputBox) typeInputBox.classList.remove("hidden");     // keep the box in place (dimmed) so the card never changes height
   if (typeInputBox) typeInputBox.classList.add("tuc-waiting");
@@ -5791,7 +5795,7 @@ function tucPick(pathEl) {
   if (typeInputBox) typeInputBox.classList.remove("hidden", "tuc-waiting");
   refreshSpecialCharsBar();
   if (typeInput) {
-  if (tucDesig) { tucDesig.disabled = false; tucDesig.value = ""; tucDesig.classList.toggle("hidden", selectedMode !== "tuc"); }
+  if (tucDesig) { tucDesig.disabled = false; tucDesig.classList.toggle("hidden", selectedMode !== "tuc"); }
     typeInput.disabled = false;
     typeInput.placeholder = "Type its name";
     typeInput.value = "";
@@ -5809,7 +5813,6 @@ function tucSubmit() {
     return;
   }
   if (!tucAccepts(c, typeInput.value, tucDesig ? tucDesig.value : "")) { tucFail(c, typeInput.value); return; }
-  if (tucDesig) tucDesig.value = "";
   scoreRight++;
   playSound("correct");
   getCountyElements(c.id).forEach(el => {

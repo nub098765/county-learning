@@ -13,9 +13,20 @@
   const mk = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
   const say = t => { $("p-msg").textContent = t || ""; };
   const show = (id, on) => $(id).classList.toggle("hidden", !on);
+  let profilePresence = null;
+  function renderProfilePresence() {
+    if (!profilePresence) return;
+    const online = window.countellectIsOnline?.(profilePresence.username) || false;
+    profilePresence.status.classList.toggle("is-online", online);
+    profilePresence.status.classList.toggle("presence-unavailable", window.countellectPresenceAvailable === false);
+    profilePresence.status.lastElementChild.textContent = window.countellectPresenceAvailable === null
+      ? "Checking status…"
+      : !window.countellectPresenceAvailable ? "Status unavailable" : online ? "Online now" : "Offline";
+  }
+  window.addEventListener("countellect-presence-change", renderProfilePresence);
 
   if (!window.supabase) { say("Couldn't load the sign-in service. Check your connection and reload."); return; }
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sb = window.countellectSupabase || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // Special badges shown at the bottom right of a player's profile picture. Add a line per player: lowercase username -> badge.
   // Example:  "somename": { src: "special-badge.png", label: "What this badge is" },
@@ -462,7 +473,8 @@
 
   function badgeMedal(a) {
     const el = mk("div", "medal achievement " + (a.earned ? "gold" : "locked"));
-    el.title = a.label + (a.sub ? " — " + a.sub : "");
+    el.title = a.label + (a.sub ? " — " + a.sub : "") +
+      (a.earnedAt ? " — Earned " + new Date(a.earnedAt).toLocaleDateString() : "");
     const svg = discSvg(a.earned ? a.color : TIER_RING.locked, !a.earned);
     const fillColor = a.earned ? a.color : "currentColor";
     if (a.splitStates) {
@@ -568,12 +580,11 @@
   async function fetchCompletions(userId) {
     const rows = [];
     for (let from = 0; ; from += 1000) {
-      const { data, error } = await sb.from("completions").select("county_id, state_key, mode, completed_at").eq("user_id", userId).order("completed_at").range(from, from + 999);
-      if (error) return null;
-      rows.push(...data);
-      if (data.length < 1000) break;
+      const result = await sb.from("completions").select("county_id, state_key, mode, completed_at, game_run_id").eq("user_id", userId).order("completed_at").range(from, from + 999);
+      if (result.error) return result;
+      rows.push(...(result.data || []));
+      if (!result.data || result.data.length < 1000) return { data: rows, error: null };
     }
-    return rows;
   }
 
   async function fetchStateRuns(userId) {
@@ -756,71 +767,184 @@
     return grid;
   }
 
-   function buildCharts(userId, tiles, w, who, stateRuns) {
+  function buildCharts(tiles, w, who, stateRuns, rows, tucCompletedAt) {
     const box = mk("div", "pc");
     const bars = mk("section", "pc-sec");
     bars.append(mk("h3", "pc-title", "Counties by mode"), modeBars(tiles));
-     const overlap = mk("section", "pc-sec");
-     box.append(bars, overlap);
-     const hist = mk("section", "pc-sec");
-     box.append(hist);
-     fetchCompletions(userId).then(async rows => {
-       if (!rows) {
-         overlap.append(mk("p", "pc-note", "Couldn't load mode overlap data."));
-         hist.remove();
-         return;
-       }
-       overlap.replaceChildren(modeOverlap(rows, tiles));
-       if (!rows.length) { hist.remove(); return; }
-       const first = {}, perDay = {};
-      rows.forEach(r => {
-        const k = dayKey(r.completed_at);
-        perDay[k] = (perDay[k] || 0) + 1;
-        if (!first[r.county_id] || k < first[r.county_id]) first[r.county_id] = k;
-      });
-      const newPerDay = {};
-      Object.values(first).forEach(k => { newPerDay[k] = (newPerDay[k] || 0) + 1; });
-      let n = 0;
-      const days = Object.keys(newPerDay).sort().map(k => ({ key: k, n: (n += newPerDay[k]) }));
-
-      const pair = mk("div", "pc-pair");
-      const left = mk("div", "pc-half");
-      left.append(mk("h3", "pc-title", "Counties found over time"), lineChart(days, "counties", true));
-      pair.append(left);
-      hist.append(pair);
-
-      let tucDay = null;
-      if (who.has_tuc) {
-        const t = await sb.from("tuc_completions").select("completed_at").eq("user_id", userId).maybeSingle();
-        if (t.data) tucDay = dayKey(t.data.completed_at);
-      }
-      const pts = pointsDays(rows, tiles, w, who, tucDay, stateRuns);
-      let note = "Progress from before tracking began is counted on the first day shown.";
-      if (pts.days.length) {
-        const right = mk("div", "pc-half");
-        right.append(mk("h3", "pc-title", "Points over time"), lineChart(pts.days, "points", true));
-        pair.append(right);
-        note = pts.note;
-      }
-      hist.append(mk("p", "pc-note", note), mk("h3", "pc-title", "Recent activity"), activityGrid(perDay));
+    const overlap = mk("section", "pc-sec");
+    box.append(bars, overlap);
+    const hist = mk("section", "pc-sec");
+    box.append(hist);
+    overlap.replaceChildren(modeOverlap(rows, tiles));
+    if (!rows.length) { hist.remove(); return box; }
+    const first = {}, perDay = {};
+    rows.forEach(r => {
+      const k = dayKey(r.completed_at);
+      perDay[k] = (perDay[k] || 0) + 1;
+      if (!first[r.county_id] || k < first[r.county_id]) first[r.county_id] = k;
     });
+    const newPerDay = {};
+    Object.values(first).forEach(k => { newPerDay[k] = (newPerDay[k] || 0) + 1; });
+    let n = 0;
+    const days = Object.keys(newPerDay).sort().map(k => ({ key: k, n: (n += newPerDay[k]) }));
+
+    const pair = mk("div", "pc-pair");
+    const left = mk("div", "pc-half");
+    left.append(mk("h3", "pc-title", "Counties found over time"), lineChart(days, "counties", true));
+    pair.append(left);
+    hist.append(pair);
+
+    const tucDay = tucCompletedAt ? dayKey(tucCompletedAt) : null;
+    const pts = pointsDays(rows, tiles, w, who, tucDay, stateRuns);
+    let note = "Progress from before tracking began is counted on the first day shown.";
+    if (pts.days.length) {
+      const right = mk("div", "pc-half");
+      right.append(mk("h3", "pc-title", "Points over time"), lineChart(pts.days, "points", true));
+      pair.append(right);
+      note = pts.note;
+    }
+    hist.append(mk("p", "pc-note", note), mk("h3", "pc-title", "Recent activity"), activityGrid(perDay));
     return box;
   }
+
+  function achievementUnlockDates(tiles, stateRuns, completions, weights, tucCompletedAt) {
+    const compareDates = (a, b) => Date.parse(a) - Date.parse(b);
+    const minDate = dates => dates.filter(Boolean).sort(compareDates)[0] || null;
+    const maxDate = dates => {
+      const valid = dates.filter(Boolean).sort(compareDates);
+      return valid.length ? valid[valid.length - 1] : null;
+    };
+    const tileByState = new Map(tiles.map(tile => [tile.key, tile]));
+    const firstRunByState = new Map();
+    const firstRunByMode = new Map();
+    const fastRunByState = new Map();
+
+    stateRuns.forEach(run => {
+      if (!MODES.includes(run.mode) || !run.completed_at || !tileByState.has(run.state_key)) return;
+      const stateRunsByMode = firstRunByState.get(run.state_key) || new Map();
+      const previous = stateRunsByMode.get(run.mode);
+      if (!previous || compareDates(run.completed_at, previous) < 0) stateRunsByMode.set(run.mode, run.completed_at);
+      firstRunByState.set(run.state_key, stateRunsByMode);
+
+      const modeRuns = firstRunByMode.get(run.mode) || new Map();
+      const firstForState = modeRuns.get(run.state_key);
+      if (!firstForState || compareDates(run.completed_at, firstForState) < 0) modeRuns.set(run.state_key, run.completed_at);
+      firstRunByMode.set(run.mode, modeRuns);
+
+      const tile = tileByState.get(run.state_key);
+      if (Number(run.time_ms) <= tile.total * 3000) {
+        const fastDate = fastRunByState.get(run.state_key);
+        if (!fastDate || compareDates(run.completed_at, fastDate) < 0) fastRunByState.set(run.state_key, run.completed_at);
+      }
+    });
+
+    const goldDateByState = new Map();
+    const firstModeDateByState = new Map();
+    tiles.forEach(tile => {
+      const modeDates = [...(firstRunByState.get(tile.key) || new Map()).values()];
+      if (modeDates.length === MODES.length) goldDateByState.set(tile.key, maxDate(modeDates));
+      if (modeDates.length) firstModeDateByState.set(tile.key, minDate(modeDates));
+    });
+    const goldDates = [...goldDateByState.values()].sort(compareDates);
+    const dates = {
+      "Participation Trophy": minDate([...firstRunByState.values()].flatMap(runs => [...runs.values()])),
+      "Gold Star": goldDates[0] || null,
+      "Getting Them Over With": maxDate(["district_of_columbia", "guam"].map(key => goldDateByState.get(key))),
+      "Gold Ring": goldDates[4] || null,
+      "Gold Necklace": goldDates[9] || null,
+      "Gold Rush": goldDates[24] || null,
+      "County Master": goldDates[56] || null,
+      "Jack of All Trades": maxDate(tiles.map(tile => firstModeDateByState.get(tile.key))),
+      "No Time to Waste": maxDate(tiles.map(tile => fastRunByState.get(tile.key))),
+      "County God": tucCompletedAt || null
+    };
+
+    const allModeDates = {};
+    MODES.forEach(mode => {
+      const modeDates = firstRunByMode.get(mode);
+      allModeDates[mode] = maxDate(tiles.map(tile => modeDates?.get(tile.key)));
+    });
+    dates["Put Your Finger On It"] = allModeDates.pin;
+    dates["Know It in a Flash"] = allModeDates["pin-hard"];
+    dates["Made The Right Choice"] = allModeDates.mc;
+    dates["Checking It Twice"] = allModeDates.type;
+    dates["Infinite Monkey Theorem"] = allModeDates["type-strict"];
+    dates["This One Is Washington"] = allModeDates["type-hard"];
+
+    const pointEvents = [];
+    const countyCounts = new Map();
+    const runPointTotals = new Map();
+    completions.forEach(row => {
+      const tile = tileByState.get(row.state_key);
+      const weight = weights[row.mode] || 0;
+      if (!tile || !weight || !row.completed_at) return;
+      const countyKey = `${row.state_key}|${row.mode}`;
+      const count = (countyCounts.get(countyKey) || 0) + 1;
+      countyCounts.set(countyKey, count);
+      if (count <= tile.total) pointEvents.push({ at: row.completed_at, points: tile.mult * weight });
+      if (row.game_run_id) {
+        const runId = row.game_run_id;
+        const total = (runPointTotals.get(runId) || 0) + tile.mult * weight;
+        runPointTotals.set(runId, total);
+        if (total >= 1000 && !dates["Concentrated Effort"]) dates["Concentrated Effort"] = row.completed_at;
+      }
+    });
+
+    firstRunByState.forEach((modeDates, stateKey) => {
+      const tile = tileByState.get(stateKey);
+      const earnedModes = [...modeDates.values()].sort(compareDates);
+      [[1, BADGE_WEIGHTS.bronze], [3, BADGE_WEIGHTS.silver], [6, BADGE_WEIGHTS.gold]].forEach(([threshold, weight]) => {
+        if (earnedModes.length >= threshold) {
+          pointEvents.push({
+            at: earnedModes[threshold - 1],
+            points: tile.total * tile.mult * weight
+          });
+        }
+      });
+    });
+    if (tucCompletedAt) pointEvents.push({ at: tucCompletedAt, points: ULTIMATE_CHALLENGE_POINTS });
+    pointEvents.sort((a, b) => compareDates(a.at, b.at));
+
+    let totalPoints = 0;
+    const pointThresholds = [
+      [1000, "Which One's Nebraska?"],
+      [2500, "Amateur Countellectual"],
+      [5000, "Getting the Hang of It"],
+      [10000, "You Know Your Stuff"],
+      [25000, "Intermediate Countellectual"],
+      [50000, "County Connoisseur"],
+      [100000, "State Savant"],
+      [150000, "Pro Countellectual"],
+      [200000, "Addicted"],
+      [MAX_POINTS - ULTIMATE_CHALLENGE_POINTS, "You See Counties in Your Dreams"],
+      [MAX_POINTS, "Point God"]
+    ];
+    pointEvents.forEach(event => {
+      totalPoints += event.points;
+      pointThresholds.forEach(([threshold, label]) => {
+        if (!dates[label] && totalPoints >= threshold) dates[label] = event.at;
+      });
+    });
+    return dates;
+  }
+
   /* ---------- the profile itself ---------- */
   async function showProfile(userId) {
     const view = $("p-view");
     view.replaceChildren(mk("p", "info-intro", "Loading…"));
     show("p-view", true);
-    const [who, prog, states, weights, speedRun, stateRuns, concentratedEffort] = await Promise.all([
+    const [who, prog, states, weights, speedRun, stateRuns, concentratedEffort, completions, tucCompletion] = await Promise.all([
       sb.from("leaderboard_with_badges").select("id, username, points, has_tuc").eq("id", userId).maybeSingle(),
       sb.from("user_state_mode").select("state_key, mode, done").eq("user_id", userId),
       sb.from("state_multipliers").select("state_key, name, multiplier, county_count").order("name"),
       sb.from("mode_weights").select("mode, weight"),
       sb.from("state_runs").select("time_ms").eq("user_id", userId).lt("time_ms", 5000).limit(1).maybeSingle(),
       fetchStateRuns(userId),
-      sb.from("concentrated_effort_achievements").select("user_id").eq("user_id", userId).maybeSingle()
+      sb.from("concentrated_effort_achievements").select("user_id").eq("user_id", userId).maybeSingle(),
+      fetchCompletions(userId),
+      sb.from("tuc_completions").select("completed_at").eq("user_id", userId).maybeSingle()
     ]);
-    const err = who.error || prog.error || states.error || weights.error || speedRun.error || stateRuns.error || concentratedEffort.error;
+    const err = who.error || prog.error || states.error || weights.error || speedRun.error || stateRuns.error || concentratedEffort.error || completions.error || tucCompletion.error;
     if (err || !who.data) {
       view.replaceChildren(mk("p", "info-intro", err ? "Couldn't load the profile: " + err.message : "That profile wasn't found."));
       return;
@@ -868,6 +992,13 @@
     head.append(mk("div", "profile-avatar", who.data.username.slice(0, 1).toUpperCase()),
                 mk("h2", "profile-name", who.data.username), ptsEl, bar,
                 mk("div", "profile-pct", pctText));
+    const onlineStatus = mk("div", "profile-online-status");
+    const onlineDot = mk("span", "online-dot", "");
+    onlineDot.setAttribute("aria-hidden", "true");
+    onlineStatus.append(onlineDot, mk("span", "", ""));
+    profilePresence = { username: who.data.username, status: onlineStatus };
+    renderProfilePresence();
+    head.insertBefore(onlineStatus, ptsEl);
     if (who.data.has_tuc) head.querySelector(".profile-avatar").classList.add("tuc");
     const special = SPECIAL_BADGES[String(who.data.username).toLowerCase()];
     if (special) {
@@ -889,10 +1020,13 @@
     const gold = tiles.filter(t => t.badgeFull === MODES.length).length;
     const modeDone = m => tiles.every(t => t.per.find(x => x.m === m).badgeEarned);
     const stateRunRows = stateRuns.data || [];
+    const completionRows = completions.data || [];
+    const tucCompletedAt = tucCompletion.data?.completed_at || null;
     const fastStateRuns = new Set(stateRunRows
       .filter(run => tiles.some(tile => tile.key === run.state_key && Number(run.time_ms) <= tile.total * 3000))
       .map(run => run.state_key));
     const noTimeToWaste = tiles.length > 0 && tiles.every(tile => fastStateRuns.has(tile.key));
+    const badgeDates = achievementUnlockDates(tiles, stateRunRows, completionRows, w, tucCompletedAt);
     const achievements = [
       { label: "Participation Trophy", sub: "Complete one state in at least one mode", glyph: "★", color: "#b0703c", earned: tiles.some(t => t.badgeFull >= 1) },
       { label: "Gold Star", sub: "Complete one state in all six modes", glyph: "★", color: "#d4a017", earned: gold >= 1 },
@@ -922,7 +1056,14 @@
     { label: "Checking It Twice", sub: "Complete a perfect full-state run in List for every state", glyph: "L", color: MODE_COLOR.type, earned: modeDone("type") },
     { label: "Infinite Monkey Theorem", sub: "Complete a perfect full-state run in Type for every state", glyph: "T", color: MODE_COLOR["type-strict"], earned: modeDone("type-strict") },
     { label: "This One Is Washington", sub: "Complete a perfect full-state run in Identify for every state", glyph: "I", color: MODE_COLOR["type-hard"], earned: modeDone("type-hard") },
-    ].sort((a, b) => b.earned - a.earned);
+    ].map((badge, index) => ({ ...badge, earnedAt: badgeDates[badge.label] || null, originalOrder: index }))
+      .sort((a, b) => {
+        if (a.earned !== b.earned) return a.earned ? -1 : 1;
+        if (a.earnedAt && b.earnedAt) return Date.parse(a.earnedAt) - Date.parse(b.earnedAt) || a.originalOrder - b.originalOrder;
+        if (a.earnedAt) return -1;
+        if (b.earnedAt) return 1;
+        return a.originalOrder - b.originalOrder;
+      });
 
     const byPts = (a, b) => b.badgeFull - a.badgeFull || b.pts - a.pts || a.name.localeCompare(b.name);
     const stateOrder = [
@@ -942,7 +1083,7 @@
       shelf(`Achievements · ${achievements.filter(a => a.earned).length} of ${achievements.length}`, achievements.map(badgeMedal)),
       shelf(`States · ${tiles.filter(t => t.badgeFull > 0).length} of ${tiles.length}`, stateOrder.map(stateMedal)));
 
-   view.replaceChildren(head, buildMap(tiles), buildCharts(userId, tiles, w, who.data, stateRuns.data || []), sections);
+   view.replaceChildren(head, buildMap(tiles), buildCharts(tiles, w, who.data, stateRunRows, completionRows, tucCompletedAt), sections);
     fitShapes(view);
     fitNames(view);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitShapes(view); fitNames(view); });

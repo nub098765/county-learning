@@ -31,10 +31,14 @@
       <tbody></tbody>
     </table>
     <p id="lb-msg" class="info-intro"></p>
+    <div id="lb-online-count" class="lb-online-count" role="status" aria-live="polite">
+      <span class="online-dot" aria-hidden="true"></span><span>Connecting…</span>
+    </div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="online-presence.js"></script>
 <script src="leaderboard.js"></script>
 <script>
   try {

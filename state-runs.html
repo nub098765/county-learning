@@ -52,11 +52,12 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="online-presence.js"></script>
 <script>
 (function () {
   const SUPABASE_URL = "https://jgwhnidtjnuufdjcmqdv.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impnd2huaWR0am51dWZkamNtcWR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxOTE4MDgsImV4cCI6MjEwNzc2NzgwOH0.SsIHfT9TFvAYthQbwcD_Ee6W9T9a8yqlD2HfiAbcgCk";
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sb = window.countellectSupabase || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const MODE_LABELS = { pin: "Pin", "pin-hard": "Flash", mc: "Multiple Choice", type: "List", "type-strict": "Type", "type-hard": "Identify" };
   const MODES = Object.keys(MODE_LABELS);
   const stateSel = document.getElementById("sr-state"), modesEl = document.getElementById("sr-modes"), searchEl = document.getElementById("sr-search");
@@ -95,6 +96,13 @@
       const a = document.createElement("a");
       a.textContent = names[r.uid] || "Player";
       a.href = "profile.html?u=" + encodeURIComponent(names[r.uid] || "");
+      if (window.countellectIsOnline?.(names[r.uid])) {
+        const dot = document.createElement("span");
+        dot.className = "online-dot";
+        dot.setAttribute("aria-label", "Online");
+        dot.title = "Online";
+        c2.append(dot);
+      }
       c2.append(a);
       const c3 = document.createElement("td"); c3.textContent = fmt(r.ms);
       tr.append(c1, c2, c3);
@@ -126,6 +134,7 @@
   }
   stateSel.addEventListener("change", render);
   searchEl.addEventListener("input", render);
+  window.addEventListener("countellect-presence-change", render);
   load();
 })();
 </script>
