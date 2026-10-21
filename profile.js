@@ -22,7 +22,6 @@
   const CHANNEL_OWNER = { src: "special-badge.png", label: "Channel Owner" };
   const SPECIAL_BADGES = {
     "mellohihellohi": CHANNEL_OWNER,
-    "phil": CHANNEL_OWNER,
     "stalgoodman": CHANNEL_OWNER,
     "nub098765": CHANNEL_OWNER,
   };
