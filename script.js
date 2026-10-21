@@ -1363,7 +1363,7 @@ let countyProgress = readStoredJson("countyProgress", {});
 let countyMistakes = readStoredJson("countyMistakes", {});
 let perfectTimes = readStoredJson("perfectTimes", {});
 const DEFAULT_SETTINGS = {
-  darkMode: false,
+  darkMode: true,
   highContrast: false,
   soundVolume: 50,
   speedrunMode: false,
@@ -5470,10 +5470,14 @@ function reportFinishedState(stateKey, timeMs) {
     const store = JSON.parse(localStorage.getItem("stateRunBests") || "{}") || {};
     const k = `${stateKey}|${mode}`;
     if (!(store[k] <= timeMs)) { store[k] = Math.round(timeMs); localStorage.setItem("stateRunBests", JSON.stringify(store)); }
-  } catch (e) {}
+  } catch (e) {
+    console.warn("Couldn't save this perfect state run locally:", e);
+  }
 
   if (!window.reportStateRun) return;
-  stateRunChain = stateRunChain.then(() => window.reportStateRun(stateKey, mode, timeMs)).catch(() => {});   // one at a time, in order
+  stateRunChain = stateRunChain.then(() => window.reportStateRun(stateKey, mode, timeMs)).catch(error => {
+    console.warn("Couldn't report this perfect state run:", error);
+  });   // one at a time, in order
 }
 
 function markStateIfDone(stateKey) {
@@ -6026,7 +6030,9 @@ function bindCountyInteractivity(path) {
   path.addEventListener("mouseenter", () => {
     if (!isGameActive || (selectedMode !== "type-hard" && selectedMode !== "tuc")) return;
     const p = path.parentNode;
-    if (p && p.lastElementChild !== path && !path.classList.contains("found")) p.appendChild(path);
+    if (!p || p.lastElementChild === path || path.classList.contains("found")) return;
+    if (!path.classList.contains("typing-highlight") && p.querySelector(".county.typing-highlight")) return;
+    p.appendChild(path);
   });
   path.addEventListener("pointerdown", (e) => {
     if (!gameSettings.speedrunMode) return;

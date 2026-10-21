@@ -141,7 +141,7 @@
 <script>
   try {
     var saved = localStorage.getItem("darkMode");
-    var dark = saved !== null ? JSON.parse(saved) : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var dark = saved !== null ? JSON.parse(saved) : true;
     if (dark) document.body.classList.add("dark-mode");
   } catch (e) {}
 </script>

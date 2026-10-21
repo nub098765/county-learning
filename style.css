@@ -1038,7 +1038,7 @@ body.scale-states-by-size .map-box {
 
 .county {
  fill: #e8e4d9;
- stroke: #2b4c32;
+ stroke: #6b6b5f;
  stroke-width: 1.25px;
  vector-effect: non-scaling-stroke;
  cursor: pointer;
@@ -1057,7 +1057,7 @@ body.scale-states-by-size .map-box {
 
 
 .county:focus-visible {
- outline: 2px dashed #1b3818;
+ outline: 2px dashed #6b6b5f;
  outline-offset: 2px;
 }
 
@@ -2866,8 +2866,8 @@ body.dark-mode .icon-btn:hover { filter: brightness(1.25); }
 .home-col .btn-mode { width: 100%; padding: 0.55rem 0.75rem; }
 .home-col .btn-mode strong { font-size: 1rem; }
 .home-col .btn-mode span { font-size: 0.82rem; font-weight: 400; opacity: 0.9; }
-.btn-mode.mode-mc { border-left-color: #5fb04a; }
-.btn-mode.mode-all { border-left-color: #e0736b; }
+.btn-mode.mode-mc { border-left-color: var(--mode-mc); }
+.btn-mode.mode-all { border-left-color: var(--mode-all); }
 .btn-mode.selected { outline: 2px solid #e8892b; outline-offset: 1px; }
 body.dark-mode .btn-mode.selected { outline-color: #fdeca6; }
 .home-map-wrap { position: relative; }
@@ -3941,12 +3941,12 @@ body.dark-mode .pmap .us-map.by-mode .us-labels text {
 
 /* mode colors: the profile map's colors are the master set, so the menu buttons use the same ones */
 :root {
-  --mode-pin: #3b82f6;      /* Pin */
-  --mode-flash: #8b5cf6;    /* Flash */
-  --mode-mc: #f59e0b;       /* Multiple-Choice */
-  --mode-list: #14b8a6;     /* List */
-  --mode-identify: #ec4899; /* Identify */
-  --mode-type: #ef4444;     /* Type */
+  --mode-pin: #5277a5;
+  --mode-flash: #8a6ca8;
+  --mode-mc: #c38a3f;
+  --mode-list: #4b7d94;
+  --mode-identify: #b8667d;
+  --mode-type: #c56855;
 }
 body .btn-mode.btn-mode[data-home-mode="pin"],        body .btn-mode.btn-mode[data-mode="pin"],        body .btn-mode.btn-mode[data-home-learn="pin"] { border-left-color: var(--mode-pin); }
 body .btn-mode.btn-mode[data-home-mode="pin-hard"],   body .btn-mode.btn-mode[data-mode="pin-hard"]   { border-left-color: var(--mode-flash); }
@@ -3957,7 +3957,7 @@ body .btn-mode.btn-mode[data-home-mode="type-strict"], body .btn-mode.btn-mode[d
 body .btn-mode.btn-mode[data-study-mode="pin"]        { border-left-color: var(--mode-pin); }
 
 /* Learn column: Type matches Play's Type, All is green, Review is white */
-:root { --mode-all: #4caf50; --mode-review: #cfcfcf; }
+:root { --mode-all: #b58b43; --mode-review: #cfc8bd; }
 body.dark-mode { --mode-review: #ffffff; }
 body .btn-mode.btn-mode[data-home-learn="type"],  body .btn-mode.btn-mode[data-study-mode="type"]  { border-left-color: var(--mode-type); }
 body .btn-mode.btn-mode[data-home-learn="all"],   body .btn-mode.btn-mode[data-study-mode="all"]   { border-left-color: var(--mode-all); }
@@ -4139,7 +4139,7 @@ body.dark-mode .more-item:hover, body.dark-mode .more-item:focus-visible { backg
 .profile-rank { display: inline-block; margin-top: .4rem; }
 
 
-.btn-mode:hover, .icon-btn:hover, .home-who:hover { background-color: #f3f1ea; filter: none; }
+.btn-mode:hover, .icon-btn:hover, .home-who:hover { background-color: #f3f1ea; color: #242420; filter: none; }
 body.dark-mode .btn-mode:hover, body.dark-mode .icon-btn:hover, body.dark-mode .home-who:hover { background-color: #333; filter: none; }
 
 #btn-toggle-county-list { width: 8.5rem; min-width: 0; flex: none; text-align: center; white-space: nowrap; }

@@ -211,18 +211,23 @@
 
   async function refreshOnce() {
     if (!window.findCountyForAccount) { setTimeout(refreshOnce, 300); return; }   // wait for the game script to load
-    const { data } = await sb.auth.getSession();
+    const { data, error: sessionError } = await sb.auth.getSession();
+    if (sessionError) {
+      console.warn("Couldn't check your sign-in before syncing progress:", sessionError.message);
+      return;
+    }
     lastKnownPoints = null;
     lastKnownConcentratedEffort = null;
     session = data.session;
     profile = null;
     if (session) {
       const r = await sb.from("profiles").select("id, username").eq("id", session.user.id).maybeSingle();
+      if (r.error) console.warn("Couldn't load your profile before syncing progress:", r.error.message);
       profile = r.data;
     }
     if (session && profile) {
-      if (syncedUser !== session.user.id && ownsLocalProgress()) {
-        await syncLocal();
+      if (ownsLocalProgress()) {
+        if (syncedUser !== session.user.id) await syncLocal();
         await syncRuns();
       }
       syncedUser = session.user.id;
@@ -310,6 +315,7 @@
   };
 
   window.reportStateRun = async (stateKey, mode, ms) => {
+    if (!session || !profile) await refresh();
     if (!session || !profile || !MODES.includes(mode) || !(ms > 0)) return;
     const timeMs = Math.round(ms);
     const badgeProgressBefore = await loadBadgeProgress();
@@ -371,4 +377,6 @@
 
   sb.auth.onAuthStateChange(evt => { if (evt === "SIGNED_IN" || evt === "SIGNED_OUT") { if (evt === "SIGNED_OUT") queue = []; refresh(); } });
   window.addEventListener("load", refresh);
+  window.addEventListener("focus", refresh);
+  window.addEventListener("online", refresh);
 })();
