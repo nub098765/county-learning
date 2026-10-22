@@ -5583,9 +5583,9 @@ function handleCountyClick(pathEl) {
         const rest = dark ? "#3a3a34" : "#e8e4d9";
         const highContrast = document.body.classList.contains("high-contrast");
         const recoveryColors = highContrast
-          ? ["#ffcc00", "#ff8800", "#ff1744"]
-          : dark ? ["#e0b030", "#f28c28", "#ef5350"] : ["#d4a017", "#e67e22", "#c62828"];
-        const peak = recovered ? recoveryColors[Math.min(3, recoveryMissCount) - 1] : (dark ? "#5fcf5f" : "#2d5a27");
+          ? ["#d8b34b", "#ff8800", "#ff1744"]
+          : dark ? ["#d8b34b", "#f28c28", "#ef5350"] : ["#d8b34b", "#e67e22", "#c62828"];
+        const peak = recovered ? recoveryColors[Math.min(3, recoveryMissCount) - 1] : "#38592c";
         el.animate([{ fill: rest, offset: 0 }, { fill: peak, offset: 0.12 }, { fill: rest, offset: 1 }], { duration: 400, easing: "linear" });
       });
     } else {

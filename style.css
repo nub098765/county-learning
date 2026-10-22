@@ -1096,18 +1096,18 @@ body.scale-states-by-size .map-box {
 
 
 .county.found {
- fill: #4a7c59;
+ fill: #38592c;
 }
 
 
 .county.correct-recovered {
- fill: #d4a017 !important;
+ fill: #d8b34b !important;
 }
 body.dark-mode .county.correct-recovered {
- fill: #e0b030 !important;
+ fill: #d8b34b !important;
 }
 body.high-contrast .county.correct-recovered {
- fill: #ffcc00 !important;
+ fill: #d8b34b !important;
 }
 .county.correct-recovered.recovered-miss-2 {
  fill: #e67e22 !important;
@@ -1301,7 +1301,7 @@ body.dark-mode .county {
 
 
 .county.correct {
- fill: #2d5a27 !important;
+ fill: #38592c !important;
 }
 .county.wrong {
  fill: #6b2d5c !important;
@@ -1309,7 +1309,7 @@ body.dark-mode .county {
 
 
 body.high-contrast .county.correct {
- fill: #008800 !important;
+ fill: #38592c !important;
 }
 body.high-contrast .county.wrong {
  fill: #ff0055 !important;
@@ -3395,8 +3395,8 @@ body.dark-mode .record-runs li.is-best span:last-child { color: #7bc47f; }
 #screen-records .btn-back { margin: 0 0 0.75rem; }
 #screen-records h2 { margin: 0 0 0.5rem; }
 
-.county.correct.just-found { fill: #8fd17f !important; }
-body.high-contrast .county.correct.just-found { fill: #66ff66 !important; }
+.county.correct.just-found { fill: #38592c !important; }
+body.high-contrast .county.correct.just-found { fill: #38592c !important; }
 
 .map-box { scroll-margin-top: 7rem; }
 

@@ -59,6 +59,20 @@
     }
   }
 
+  async function insertStateRun(run) {
+    const result = await sb.from("state_runs").insert(run);
+    if (!result.error || result.error.code !== "23505") return result;
+    const existing = await sb.from("state_runs")
+      .select("id")
+      .eq("user_id", run.user_id)
+      .eq("state_key", run.state_key)
+      .eq("mode", run.mode)
+      .eq("game_run_id", run.game_run_id)
+      .maybeSingle();
+    if (existing.error) return existing;
+    return existing.data ? { error: null } : result;
+  }
+
   async function checkConcentratedEffort() {
     if (!session || !profile) return;
     const result = await sb.from("concentrated_effort_achievements")
@@ -184,13 +198,13 @@
         fastestExisting.set(stateMode, pendingTime);
       }
       if (existingGameRuns.has(key)) continue;
-      const result = await sb.from("state_runs").upsert({
+      const result = await insertStateRun({
         user_id: session.user.id,
         state_key: run.state_key,
         mode: run.mode,
-        time_ms: Math.round(Number(run.time_ms)),
+        time_ms: pendingTime,
         game_run_id: run.game_run_id
-      }, { onConflict: "user_id,state_key,mode,game_run_id", ignoreDuplicates: true });
+      });
       if (result.error) {
         console.warn(`Couldn't upload saved run ${run.state_key} / ${run.mode}:`, result.error.message);
         retryPending.push(run);
@@ -393,9 +407,12 @@
       if (existing.error) console.warn("Couldn't check Speed Is Key progress:", existing.error.message);
       else firstSpeedRun = !existing.data;
     }
-    const { error } = await sb.from("state_runs").upsert({ user_id: session.user.id, state_key: stateKey, mode, time_ms: timeMs, game_run_id: gameRunId }, {
-      onConflict: "user_id,state_key,mode,game_run_id",
-      ignoreDuplicates: true
+    const { error } = await insertStateRun({
+      user_id: session.user.id,
+      state_key: stateKey,
+      mode,
+      time_ms: timeMs,
+      game_run_id: gameRunId
     });
     if (error) { console.warn("run upload failed:", error.message); return false; }
     notifyBadgeUnlocks(badgeProgressBefore, await loadBadgeProgress());
