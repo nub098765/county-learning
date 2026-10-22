@@ -2,6 +2,8 @@
   "use strict";
   const SUPABASE_URL = "https://jgwhnidtjnuufdjcmqdv.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impnd2huaWR0am51dWZkamNtcWR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxOTE4MDgsImV4cCI6MjEwNzc2NzgwOH0.SsIHfT9TFvAYthQbwcD_Ee6W9T9a8yqlD2HfiAbcgCk";
+  const A = window.ACHIEVEMENTS || {};
+  const BA = window.CountellectBadge;
   const MODES = ["pin", "pin-hard", "mc", "type", "type-strict", "type-hard"];
   const MODE_LABEL = { pin: "Pin", "pin-hard": "Flash", mc: "Multiple-Choice", type: "List", "type-strict": "Type", "type-hard": "Identify" };
   const MODE_LETTER = { pin: "P", "pin-hard": "F", mc: "MC", type: "L", "type-strict": "T", "type-hard": "I" };
@@ -239,7 +241,7 @@
 
      /* ---------- how points work (opens from the button in the top corner) ---------- */
   // each state's name colours from the points sheet: [background, text]
-  const STATE_STYLE = {"Alabama":["00491C","D9EAD3"],"Alaska":["6DFEFE","674EA7"],"American Samoa":["767576","E6CCE6"],"Arizona":["8A9CC6","E3E9FC"],"Arkansas":["BEC86F","990000"],"California":["FB85FD","351C75"],"Colorado":["00856D","D0E0E3"],"Connecticut":["FFC0C1","4C1130"],"Delaware":["0000A1","FFE599"],"District of Columbia":["670011","9FC5E8"],"Florida":["E4F73A","38761D"],"Georgia":["FF553D","FFF8ED"],"Guam":["5050F5","C9DAF8"],"Hawaii":["4FEEA5","674EA7"],"Idaho":["F7CE00","7F6000"],"Illinois":["FFF281","1155CC"],"Indiana":["D4AA77","990000"],"Iowa":["E7FFA9","7F6000"],"Kansas":["B0E8B5","85200C"],"Kentucky":["1897B4","CFE2F3"],"Louisiana":["803499","EAD1DC"],"Maine":["FB9163","FFF2CC"],"Maryland":["FC2E5B","FFF2CC"],"Massachusetts":["CD70FF","F0D4FF"],"Michigan":["95DF15","274E13"],"Minnesota":["FFC294","434343"],"Mississippi":["7F0E54","D5A6BD"],"Missouri":["17C5E4","0000A1"],"Montana":["C6DBE8","A61C00"],"Nebraska":["C11A36","CFE2F3"],"Nevada":["FFE7BC","666666"],"New Hampshire":["FF3DA8","420027"],"New Jersey":["5D4033","F9CB9C"],"New Mexico":["F1AB13","990000"],"New York":["FF8181","783F04"],"North Carolina":["006597","F4CCCC"],"North Dakota":["6C5BCA","FFE599"],"Northern Mariana Islands":["44FF00","7F6000"],"Ohio":["FFA33B","FFF2CC"],"Oklahoma":["A15F39","F4CCCC"],"Oregon":["BD6E63","FCD7D0"],"Pennsylvania":["D6C040","1C4587"],"Puerto Rico":["FBD573","CC0000"],"Rhode Island":["008A28","CFE2F3"],"South Carolina":["68CAD5","134F5C"],"South Dakota":["87CAF3","1155CC"],"Tennessee":["F05400","FCE5CD"],"Texas":["798830","FFF2CC"],"United States Minor Outlying Islands":["C3C3C3","666666"],"United States Virgin Islands":["C62FD0","EAD1DC"],"Utah":["F0781D","FFDBB7"],"Vermont":["0089F1","D9EAD3"],"Virginia":["B390DB","EFE8FF"],"Washington":["87B9A3","1C4587"],"West Virginia":["355850","FCE5CD"],"Wisconsin":["E9BAF5","741B47"],"Wyoming":["8C607E","FCE5CD"]};
+  const STATE_STYLE = BA.STATE_STYLE;
   const MULT_BG = { 0: "#F4CCCC", 1: "#FFF2CC", 2: "#D9EAD3", 3: "#CFE2F3", 4: "#D9D2E9" };
   const POINT_HEAD = Object.fromEntries(MODES.map(mode => [mode, [MODE_COLOR[mode], "#fff"]]));
 
@@ -359,79 +361,8 @@
 
     // shrink long state names until they fit on two lines
    /* ---------- medals ---------- */
-  const TIER = n => n >= MODES.length ? "gold" : n >= 3 ? "silver" : n >= 1 ? "bronze" : "locked";
-  const TIER_RING = { gold: "#d4a017", silver: "#b8c0cc", bronze: "#b0703c", locked: "rgba(128,128,128,.55)" };
-    // American Samoa is drawn as islands far apart, so its badge shows just Tutuila (plus little Aunu'u beside it).
-  // The rule keeps only shapes that sit left of x = 750 on the map, which is Tutuila; Manu'a, Swains and Rose are farther right.
-  const BADGE_ONLY = {
-    "American Samoa": shape => {
-      const nums = shape.match(/-?\d+\.?\d*/g).map(Number);
-      let maxX = -Infinity;
-      for (let i = 0; i < nums.length; i += 2) maxX = Math.max(maxX, nums[i]);
-      return maxX < 750;
-    }
-  };
-  // Hand-picked, high-detail outlines for badges where the home-screen map is too coarse
-  const SHAPE_OVERRIDE = window.SHAPE_EXTRA || {};   // detailed outlines from dc-shape.js
-  let stateShapes = null;
-  function shapeFor(name) {
-    if (SHAPE_OVERRIDE[name]) return SHAPE_OVERRIDE[name];
-    if (!stateShapes) {
-      stateShapes = {};
-      const t = document.createElement("div");
-      t.innerHTML = window.US_MAP_SVG || "";
-           t.querySelectorAll("path.us-st").forEach(p => {
-        const n = p.dataset.name;
-        let d = p.getAttribute("d");
-        const keep = BADGE_ONLY[n];
-        if (keep) d = (d.match(/M[^M]*/g) || []).filter(keep).join("");
-        stateShapes[n] = (stateShapes[n] || "") + d;   // joins a state's pieces; BADGE_ONLY trims the ones listed above
-      });
-    }
-    return stateShapes[name] || null;
-  }
-
-  function discSvg(ringColor, locked) {
-    const svg = svgEl("svg", { viewBox: "0 0 100 100", class: "medal-disc" });
-    svg.append(
-      svgEl("circle", { cx: 50, cy: 50, r: 46, class: "medal-face" }),
-      svgEl("circle", locked
-        ? { cx: 50, cy: 50, r: 46, class: "medal-ring", fill: "none", stroke: ringColor, "stroke-width": 3, "stroke-dasharray": "3 5" }
-        : { cx: 50, cy: 50, r: 46, class: "medal-ring", fill: "none", stroke: ringColor, "stroke-width": 5 }));
-    return svg;
-  }
-
-    // the home map is a conic projection, so every state is drawn tilted. This turns each one back upright.
-  const STATE_LON = {Alabama:-86.8, Arizona:-111.7, Arkansas:-92.4, California:-119.5, Colorado:-105.5, Connecticut:-72.7,
-    Delaware:-75.5, "District of Columbia":-77.0, Florida:-82.4, Georgia:-83.4, Idaho:-114.6, Illinois:-89.2, Indiana:-86.3,
-    Iowa:-93.5, Kansas:-98.4, Kentucky:-85.3, Louisiana:-92.0, Maine:-69.2, Maryland:-76.8, Massachusetts:-71.8,
-    Michigan:-84.5, Minnesota:-94.3, Mississippi:-89.7, Missouri:-92.5, Montana:-110.0, Nebraska:-99.8, Nevada:-116.6,
-    "New Hampshire":-71.6, "New Jersey":-74.5, "New Mexico":-106.1, "New York":-75.5, "North Carolina":-79.4,
-    "North Dakota":-100.5, Ohio:-82.8, Oklahoma:-97.5, Oregon:-120.6, Pennsylvania:-77.8, "Rhode Island":-71.5,
-    "South Carolina":-80.9, "South Dakota":-100.2, Tennessee:-86.3, Texas:-99.3, Utah:-111.7, Vermont:-72.7, Virginia:-78.8,
-    Washington:-120.5, "West Virginia":-80.6, Wisconsin:-89.9, Wyoming:-107.5};
-  const tiltOf = name => (name in STATE_LON && !SHAPE_OVERRIDE[name]) ? 0.6029 * (STATE_LON[name] + 96) : 0;
-    // the round badge: tier ring with the state's shape inside
-  function badgeSvg(t) {
-    const tier = TIER(t.badgeFull), locked = tier === "locked";
-    const st = STATE_STYLE[t.name];
-    const svg = discSvg(TIER_RING[tier], locked);
-    const d = shapeFor(t.name);
-    if (d) {
-      const inner = svgEl("svg", { x: 20, y: 20, width: 60, height: 60, viewBox: "0 0 100 100", preserveAspectRatio: "xMidYMid meet", class: "medal-shape" });
-      const tilt = tiltOf(t.name);
-      const g = svgEl("g", {});
-      g.append(svgEl("path", {
-        d, "fill-rule": "evenodd", "vector-effect": "non-scaling-stroke", "stroke-width": 1,
-        fill: locked ? "none" : "#" + (st ? st[0] : "888888"),
-        stroke: locked ? "currentColor" : "none",                 // no outline once it's coloured (locked ones keep a faint one so you can see them)
-        ...(tilt ? { transform: `rotate(${tilt})` } : {})
-      }));
-      inner.append(g);
-      svg.append(inner);
-    }
-    return svg;
-  }
+  const { TIER, TIER_RING, discSvg, shapeFor } = BA;
+  const badgeSvg = t => BA.badgeSvg(t.name, t.badgeFull);
 
   function stateMedal(t) {
     const tier = TIER(t.badgeFull);
@@ -961,17 +892,17 @@
 
     let totalPoints = 0;
     const pointThresholds = [
-      [1000, "Which One's Nebraska?"],
-      [2500, "Amateur Countellectual"],
-      [5000, "Getting the Hang of It"],
-      [10000, "You Know Your Stuff"],
-      [25000, "Intermediate Countellectual"],
-      [50000, "County Connoisseur"],
-      [100000, "State Savant"],
-      [150000, "Pro Countellectual"],
-      [200000, "Addicted"],
-      [MAX_POINTS - ULTIMATE_CHALLENGE_POINTS, "You See Counties in Your Dreams"],
-      [MAX_POINTS, "Point God"]
+      [1000, A.pts1000.label],
+      [2500, A.pts2500.label],
+      [5000, A.pts5000.label],
+      [10000, A.pts10000.label],
+      [25000, A.pts25000.label],
+      [50000, A.pts50000.label],
+      [100000, A.pts100000.label],
+      [150000, A.pts150000.label],
+      [200000, A.pts200000.label],
+      [MAX_POINTS - ULTIMATE_CHALLENGE_POINTS, A.ptsNoTuc.label],
+      [MAX_POINTS, A.pointGod.label]
     ];
     pointEvents.forEach(event => {
       totalPoints += event.points;
@@ -1083,34 +1014,34 @@
     const noTimeToWaste = tiles.length > 0 && tiles.every(tile => fastStateRuns.has(tile.key));
     const badgeDates = achievementUnlockDates(tiles, stateRunRows, completionRows, w, tucCompletedAt);
     const achievements = [
-      { label: "Participation Trophy", sub: "Complete one state in at least one mode", glyph: "★", color: "#b0703c", earned: tiles.some(t => t.badgeFull >= 1) },
-      { label: "Gold Star", sub: "Complete one state in all six modes", glyph: "★", color: "#d4a017", earned: gold >= 1 },
-      { label: "Getting Them Over With", sub: "Complete District of Columbia and Guam in all six modes", glyph: "1", color: "#d4a017", splitStates: ["District of Columbia", "Guam"], earned: ["district_of_columbia", "guam"].every(key => tiles.some(t => t.key === key && t.badgeFull === MODES.length)) },
-      { label: "Gold Ring", sub: "Complete five states in all six modes", glyph: "★5", color: "#d4a017", earned: gold >= 5 },
-      { label: "Gold Necklace", sub: "Complete ten states in all six modes", glyph: "★10", color: "#d4a017", earned: gold >= 10 },
-      { label: "Gold Rush", sub: "Complete twenty-five states in all six modes", glyph: "★25", color: "#d4a017", earned: gold >= 25 },
-      { label: "County Master", sub: "Complete every state in all six modes", glyph: "★57", color: "#d4a017", earned: gold >= 57 },
-      { label: "Which One's Nebraska?", sub: "Get 1,000 points", glyph: "1K", color: "#6FA3D8", earned: pts >= 1000 },
-      { label: "Amateur Countellectual", sub: "Get 2,500 points", glyph: "2.5K", color: "#6FA3D8", earned: pts >= 2500 },
-      { label: "Getting the Hang of It", sub: "Get 5,000 points", glyph: "5K", color: "#6FA3D8", earned: pts >= 5000 },
-      { label: "You Know Your Stuff", sub: "Get 10,000 points", glyph: "10K", color: "#6FA3D8", earned: pts >= 10000 },
-      { label: "Intermediate Countellectual", sub: "Get 25,000 points", glyph: "25K", color: "#6FA3D8", earned: pts >= 25000 },
-      { label: "County Connoisseur", sub: "Get 50,000 points", glyph: "50K", color: "#6FA3D8", earned: pts >= 50000 },
-      { label: "State Savant", sub: "Get 100,000 points", glyph: "100K", color: "#6FA3D8", earned: pts >= 100000 },
-      { label: "Pro Countellectual", sub: "Get 150,000 points", glyph: "150K", color: "#6FA3D8", earned: pts >= 150000 },
-      { label: "Addicted", sub: "Get 200,000 points", glyph: "200K", color: "#6FA3D8", earned: pts >= 200000 },
-      { label: "You See Counties in Your Dreams", sub: "Get all points possible without the Ultimate Challenge",glyph: "234K", color: "#6FA3D8", earned: pts >= MAX_POINTS - ULTIMATE_CHALLENGE_POINTS },
-      { label: "County God", sub: "Beat the Ultimate Challenge", icon: "flame", color: "#CE4E2C", earned: !!who.data.has_tuc },
-      { label: "Point God", sub: "Get all points possible", glyph: "500K", color: "#6FA3D8", earned: pts >= MAX_POINTS },
-      { label: "Jack of All Trades", sub: "Complete a perfect full-state run in at least one mode for every state", glyph: "1×57", color: "#6FA3D8", earned: tiles.every(t => t.badgeFull > 0) },
-      { label: "Concentrated Effort", sub: "Earn 1,000 points from a single game", glyph: "1K in 1", color: "#6FA3D8", earned: !!concentratedEffort.data },
-      { label: "No Time to Waste", sub: "Complete at least one perfect run for every state at a pace of three seconds or less per county", glyph: "⏱⏱⏱", color: "#6FA3D8", earned: noTimeToWaste },
-     { label: "Put Your Finger On It", sub: "Complete a perfect full-state run in Pin for every state", glyph: "P", color: MODE_COLOR.pin, earned: modeDone("pin") },
-    { label: "Know It in a Flash", sub: "Complete a perfect full-state run in Flash for every state", glyph: "F", color: MODE_COLOR["pin-hard"], earned: modeDone("pin-hard") },
-    { label: "Made The Right Choice", sub: "Complete a perfect full-state run in Multiple-Choice for every state", glyph: "MC", color: MODE_COLOR.mc, earned: modeDone("mc") },
-    { label: "Checking It Twice", sub: "Complete a perfect full-state run in List for every state", glyph: "L", color: MODE_COLOR.type, earned: modeDone("type") },
-    { label: "Infinite Monkey Theorem", sub: "Complete a perfect full-state run in Type for every state", glyph: "T", color: MODE_COLOR["type-strict"], earned: modeDone("type-strict") },
-    { label: "This One Is Washington", sub: "Complete a perfect full-state run in Identify for every state", glyph: "I", color: MODE_COLOR["type-hard"], earned: modeDone("type-hard") },
+      { ...A.participation, color: "#b0703c", earned: tiles.some(t => t.badgeFull >= 1) },
+      { ...A.goldStar, color: "#d4a017", earned: gold >= 1 },
+      { ...A.overWith, color: "#d4a017", splitStates: ["District of Columbia", "Guam"], earned: ["district_of_columbia", "guam"].every(key => tiles.some(t => t.key === key && t.badgeFull === MODES.length)) },
+      { ...A.goldRing, color: "#d4a017", earned: gold >= 5 },
+      { ...A.goldNecklace, color: "#d4a017", earned: gold >= 10 },
+      { ...A.goldRush, color: "#d4a017", earned: gold >= 25 },
+      { ...A.countyMaster, color: "#d4a017", earned: gold >= 57 },
+      { ...A.pts1000, color: "#6FA3D8", earned: pts >= 1000 },
+      { ...A.pts2500, color: "#6FA3D8", earned: pts >= 2500 },
+      { ...A.pts5000, color: "#6FA3D8", earned: pts >= 5000 },
+      { ...A.pts10000, color: "#6FA3D8", earned: pts >= 10000 },
+      { ...A.pts25000, color: "#6FA3D8", earned: pts >= 25000 },
+      { ...A.pts50000, color: "#6FA3D8", earned: pts >= 50000 },
+      { ...A.pts100000, color: "#6FA3D8", earned: pts >= 100000 },
+      { ...A.pts150000, color: "#6FA3D8", earned: pts >= 150000 },
+      { ...A.pts200000, color: "#6FA3D8", earned: pts >= 200000 },
+      { ...A.ptsNoTuc, color: "#6FA3D8", earned: pts >= MAX_POINTS - ULTIMATE_CHALLENGE_POINTS },
+      { ...A.countyGod,icon: "flame", color: "#CE4E2C", earned: !!who.data.has_tuc },
+      { ...A.pointGod, color: "#6FA3D8", earned: pts >= MAX_POINTS },
+      { ...A.jack, color: "#6FA3D8", earned: tiles.every(t => t.badgeFull > 0) },
+      { ...A.effort, color: "#6FA3D8", earned: !!concentratedEffort.data },
+      { ...A.noTime, color: "#6FA3D8", earned: noTimeToWaste },
+     { ...A.mode_pin, color: MODE_COLOR.pin, earned: modeDone("pin") },
+    { ...A["mode_pin-hard"], color: MODE_COLOR["pin-hard"], earned: modeDone("pin-hard") },
+    { ...A.mode_mc, color: MODE_COLOR.mc, earned: modeDone("mc") },
+    { ...A.mode_type, color: MODE_COLOR.type, earned: modeDone("type") },
+    { ...A["mode_type-strict"], color: MODE_COLOR["type-strict"], earned: modeDone("type-strict") },
+    { ...A["mode_type-hard"], color: MODE_COLOR["type-hard"], earned: modeDone("type-hard") },
     ].map((badge, index) => ({ ...badge, earnedAt: badgeDates[badge.label] || null, originalOrder: index }))
       .sort((a, b) => {
         if (a.earned !== b.earned) return a.earned ? -1 : 1;

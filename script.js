@@ -3490,7 +3490,7 @@ function createUnlockMedal(badge) {
   svg.append(face, lockedRing, earnedRing);
 
   if (badge.stateKey) {
-    renderStateUnlockShape(svg, badge.stateKey);
+    renderStateUnlockShape(svg, badge);
   } else if (badge.flame) {
     const flame = document.createElementNS(UNLOCK_SVG_NS, "path");
     flame.setAttribute("d", "M50 22 C58 34 71 41 67 58 C65 69 58 76 50 76 C42 76 35 69 33 58 C31 50 37 45 41 39 C43 45 46 47 50 45 C53 39 51 31 50 22 Z");
@@ -3510,74 +3510,15 @@ function createUnlockMedal(badge) {
   return svg;
 }
 
-async function renderStateUnlockShape(medal, stateKey) {
-  const state = stateData[stateKey];
-  if (!state) return;
+// draws the state's badge shape (the same art the profile uses, from badge-art.js) inside a toast's medal
+async function renderStateUnlockShape(medal, badge) {
+  const name = badge.stateName || (stateData[badge.stateKey] && stateData[badge.stateKey].name) || "";
   try {
-    let paths;
-    let sourceBox;
-    if (stateKey === "american_samoa") {
-      const outlines = [...document.querySelectorAll('.us-st[data-name="American Samoa"]')];
-      if (!outlines.length) throw new Error("The profile map has no American Samoa outline");
-      sourceBox = outlines[0].ownerSVGElement.viewBox.baseVal;
-      paths = outlines.map(path => {
-        const d = path.getAttribute("d") || "";
-        const tutuilaAndAunuU = (d.match(/M[^M]*/g) || []).filter(part => {
-          const coordinates = part.match(/-?\d+\.?\d*/g);
-          if (!coordinates) return false;
-          let maxX = -Infinity;
-          for (let i = 0; i < coordinates.length; i += 2) maxX = Math.max(maxX, Number(coordinates[i]));
-          return maxX < 750;
-        });
-        return { path, d: tutuilaAndAunuU.join("") };
-      }).filter(item => item.d);
-    } else {
-      await ensureStateMaps([stateKey]);
-      const source = document.getElementById(state.svgId);
-      if (!source) throw new Error(`No county map found for ${state.name}`);
-      sourceBox = source.viewBox.baseVal;
-      paths = [...source.querySelectorAll(".county")].map(path => ({ path }));
-    }
-    if (!paths.length) throw new Error(`No badge outline found for ${state.name}`);
-
-    const group = document.createElementNS(UNLOCK_SVG_NS, "g");
-    group.setAttribute("class", "unlock-medal-state-shape");
-    paths.forEach(({ path, d }) => {
-      const shape = path.cloneNode(false);
-      shape.removeAttribute("id");
-      shape.removeAttribute("class");
-      if (d !== undefined) shape.setAttribute("d", d);
-      shape.style.cssText = "fill:var(--unlock-color);stroke:none";
-      group.append(shape);
-    });
-    const measureSvg = document.createElementNS(UNLOCK_SVG_NS, "svg");
-    measureSvg.setAttribute("viewBox", `${sourceBox.x} ${sourceBox.y} ${sourceBox.width} ${sourceBox.height}`);
-    measureSvg.setAttribute("width", "1000");
-    measureSvg.setAttribute("height", "1000");
-    measureSvg.style.cssText = "position:fixed;left:-10000px;top:-10000px;visibility:hidden";
-    measureSvg.append(group);
-    let bounds;
-    try {
-      document.body.append(measureSvg);
-      bounds = group.getBBox();
-    } finally {
-      measureSvg.remove();
-      group.remove();
-    }
-    const shapeView = document.createElementNS(UNLOCK_SVG_NS, "svg");
-    shapeView.setAttribute("x", "17");
-    shapeView.setAttribute("y", "17");
-    shapeView.setAttribute("width", "66");
-    shapeView.setAttribute("height", "66");
-    shapeView.setAttribute("viewBox", `${sourceBox.x} ${sourceBox.y} ${sourceBox.width} ${sourceBox.height}`);
-    shapeView.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    if (bounds.width > 0 && bounds.height > 0) {
-      const padding = Math.max(bounds.width, bounds.height) * 0.04;
-      const fittedViewBox = `${bounds.x - padding} ${bounds.y - padding} ${bounds.width + padding * 2} ${bounds.height + padding * 2}`;
-      shapeView.setAttribute("viewBox", fittedViewBox);
-    }
-    shapeView.append(group);
-    medal.append(shapeView);
+    const art = window.CountellectBadge;
+    if (!art || !(await art.ready())) throw new Error("badge art didn't load");
+    const shape = art.stateShape(name, false, "unlock-medal-state-shape");
+    if (!shape) throw new Error(`No badge outline found for ${name}`);
+    medal.append(shape);
   } catch (error) {
     console.warn("Couldn't draw the state badge in its unlock notification:", error);
     const fallback = document.createElementNS(UNLOCK_SVG_NS, "text");
@@ -3587,7 +3528,7 @@ async function renderStateUnlockShape(medal, stateKey) {
     fallback.setAttribute("dominant-baseline", "central");
     fallback.setAttribute("class", "unlock-medal-glyph");
     fallback.setAttribute("font-size", "24");
-    fallback.textContent = state.name.slice(0, 2).toUpperCase();
+    fallback.textContent = name.slice(0, 2).toUpperCase();
     medal.append(fallback);
   }
 }

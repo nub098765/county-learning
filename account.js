@@ -1,6 +1,7 @@
 /* The game page's side of accounts: it only reports what you find. Signing in and profiles live on profile.html. */
 (function () {
   "use strict";
+  const ACH = window.ACHIEVEMENTS || {};
   const SUPABASE_URL = "https://jgwhnidtjnuufdjcmqdv.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impnd2huaWR0am51dWZkamNtcWR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxOTE4MDgsImV4cCI6MjEwNzc2NzgwOH0.SsIHfT9TFvAYthQbwcD_Ee6W9T9a8yqlD2HfiAbcgCk";
   const MODES = ["pin", "pin-hard", "mc", "type", "type-hard", "type-strict"];
@@ -83,8 +84,8 @@
     }
     const earned = !!result.data;
     if (lastKnownConcentratedEffort === false && earned && window.showUnlockToast) {
-      window.showUnlockToast("Concentrated Effort", "Earn 1,000 points from a single game", {
-        glyph: "1K in 1",
+      window.showUnlockToast(ACH.effort.label, ACH.effort.sub, {
+        glyph: ACH.effort.glyph,
         color: "#6FA3D8"
       });
     }
@@ -103,33 +104,30 @@
         const tierColor = { Bronze: "#b0703c", Silver: "#b8c0cc", Gold: "#d4a017" }[currentTier];
         window.showUnlockToast(state.name, currentTier, {
           stateKey: state.key,
+          stateName: state.name,
           color: tierColor
         });
       }
     });
 
     const achievements = [
-      { label: "Gold Star", threshold: 1, detail: "Perfect runs in all 6 modes of one state", glyph: "★" },
-      { label: "Gold Ring", threshold: 5, detail: "Perfect runs in all 6 modes of 5 states", glyph: "★5" },
-      { label: "Gold Necklace", threshold: 10, detail: "Perfect runs in all 6 modes of 10 states", glyph: "★10" },
-      { label: "Gold Rush", threshold: 25, detail: "Perfect runs in all 6 modes of 25 states", glyph: "★25" },
-      { label: "County Master", threshold: 57, detail: "Perfect full-state runs in every mode of every state", glyph: "★57" }
+      { key: "goldStar", threshold: 1 },
+      { key: "goldRing", threshold: 5 },
+      { key: "goldNecklace", threshold: 10 },
+      { key: "goldRush", threshold: 25 },
+      { key: "countyMaster", threshold: 57 }
     ];
     achievements
       .filter(item => before.gold < item.threshold && after.gold >= item.threshold)
-      .forEach(item => window.showUnlockToast(item.label, item.detail, { glyph: item.glyph, color: "#d4a017" }));
+      .forEach(item => window.showUnlockToast(ACH[item.key].label, ACH[item.key].sub, { glyph: ACH[item.key].glyph, color: "#d4a017" }));
 
     MODES.forEach(mode => {
       const wasComplete = before.states.every(state => state.modesDone.includes(mode));
       const isComplete = after.states.every(state => state.modesDone.includes(mode));
       if (!wasComplete && isComplete) {
-        const labels = { pin: "Pin", "pin-hard": "Flash", mc: "Multiple-Choice", type: "List", "type-strict": "Type", "type-hard": "Identify" };
         const colors = { pin: "#3b82f6", "pin-hard": "#8b5cf6", mc: "#f59e0b", type: "#14b8a6", "type-hard": "#ec4899", "type-strict": "#ef4444" };
-        const glyphs = { pin: "P", "pin-hard": "F", mc: "MC", type: "L", "type-strict": "T", "type-hard": "I" };
-        window.showUnlockToast(`${labels[mode]} Master`, "Every state done", {
-          glyph: glyphs[mode],
-          color: colors[mode]
-        });
+        const item = ACH["mode_" + mode];
+        if (item) window.showUnlockToast(item.label, item.sub, { glyph: item.glyph, color: colors[mode] });
       }
     });
   }
@@ -341,17 +339,13 @@
     const pts = r.data ? Math.round(Number(r.data.points) || 0) : 0;
     if (lastKnownPoints !== null && pts > lastKnownPoints && window.showUnlockToast) {
       const milestones = [
-        [1000, "Amateur Countellectual", "Get 1,000 points.", "1K"],
-        [10000, "Getting Into It", "Get 10,000 points.", "10K"],
-        [25000, "In the Weeds", "Get 25,000 points.", "25K"],
-        [50000, "County Connoisseur", "Get 50,000 points.", "50K"],
-        [100000, "State Savant", "Get 100,000 points.", "100K"],
-        [233740, "Pro Countellectual", "Get all points possible without the Ultimate Challenge.", "234K"],
-        [500000, "Point God", "Get all points possible.", "500K"]
+        [1000, "pts1000"], [2500, "pts2500"], [5000, "pts5000"], [10000, "pts10000"], [25000, "pts25000"],
+        [50000, "pts50000"], [100000, "pts100000"], [150000, "pts150000"], [200000, "pts200000"],
+        [233740, "ptsNoTuc"], [500000, "pointGod"]
       ];
       milestones
         .filter(([threshold]) => lastKnownPoints < threshold && pts >= threshold)
-        .forEach(([, label, detail, glyph]) => window.showUnlockToast(label, detail, { glyph, color: "#6FA3D8" }));
+        .forEach(([, key]) => window.showUnlockToast(ACH[key].label, ACH[key].sub, { glyph: ACH[key].glyph, color: "#6FA3D8" }));
     }
     lastKnownPoints = pts;
     document.getElementById("home-who-name").textContent = profile.username;
@@ -382,7 +376,7 @@
     if (!session || !profile || !MODES.includes(mode) || !(ms > 0) || !gameRunId) return false;
     const timeMs = Math.round(ms);
     const badgeProgressBefore = await loadBadgeProgress();
-    let firstSpeedRun = false, completesNoTimeToWaste = false;
+    let completesNoTimeToWaste = false;
     const countyCount = window.countyCountForAccount && window.countyCountForAccount(stateKey);
     if (countyCount && timeMs <= countyCount * 3000) {
       const [stateResult, runsResult] = await Promise.all([
@@ -402,11 +396,6 @@
         completesNoTimeToWaste = !wasComplete && states.length > 0 && states.every(state => qualifyingStates.has(state.state_key));
       }
     }
-    if (timeMs < 10000) {
-      const existing = await sb.from("state_runs").select("time_ms").eq("user_id", session.user.id).lt("time_ms", 10000).limit(1).maybeSingle();
-      if (existing.error) console.warn("Couldn't check Speed Is Key progress:", existing.error.message);
-      else firstSpeedRun = !existing.data;
-    }
     const { error } = await insertStateRun({
       user_id: session.user.id,
       state_key: stateKey,
@@ -417,11 +406,8 @@
     if (error) { console.warn("run upload failed:", error.message); return false; }
     notifyBadgeUnlocks(badgeProgressBefore, await loadBadgeProgress());
     updateWho();
-    if (firstSpeedRun && window.showUnlockToast) {
-      window.showUnlockToast("Speed Is Key", "Perfect state run under 10 seconds", { glyph: "⏱", color: "#6FA3D8" });
-    }
     if (completesNoTimeToWaste && window.showUnlockToast) {
-      window.showUnlockToast("No Time to Waste", "A perfect run for every state at three seconds per county or less", { glyph: "⏱⏱⏱", color: "#6FA3D8" });
+      window.showUnlockToast(ACH.noTime.label, ACH.noTime.sub, { glyph: ACH.noTime.glyph, color: "#6FA3D8" });
     }
     return true;
   };

@@ -1,0 +1,32 @@
+/* Single source of truth for achievement names, descriptions and glyphs.
+   Used by profile.js (badges) and account.js (unlock toasts). Rename things here only. */
+window.ACHIEVEMENTS = {
+  participation:  { label: "Participation Trophy", sub: "Complete one state in at least one mode", glyph: "★" },
+  goldStar:       { label: "Gold Star", sub: "Complete one state in all six modes", glyph: "★" },
+  overWith:       { label: "Getting Them Over With", sub: "Complete District of Columbia and Guam in all six modes", glyph: "1" },
+  goldRing:       { label: "Gold Ring", sub: "Complete five states in all six modes", glyph: "★5" },
+  goldNecklace:   { label: "Gold Necklace", sub: "Complete ten states in all six modes", glyph: "★10" },
+  goldRush:       { label: "Gold Rush", sub: "Complete twenty-five states in all six modes", glyph: "★25" },
+  countyMaster:   { label: "County Master", sub: "Complete every state in all six modes", glyph: "★57" },
+  pts1000:        { label: "Which One's Nebraska?", sub: "Get 1,000 points", glyph: "1K" },
+  pts2500:        { label: "Amateur Countellectual", sub: "Get 2,500 points", glyph: "2.5K" },
+  pts5000:        { label: "Getting the Hang of It", sub: "Get 5,000 points", glyph: "5K" },
+  pts10000:       { label: "You Know Your Stuff", sub: "Get 10,000 points", glyph: "10K" },
+  pts25000:       { label: "Intermediate Countellectual", sub: "Get 25,000 points", glyph: "25K" },
+  pts50000:       { label: "County Connoisseur", sub: "Get 50,000 points", glyph: "50K" },
+  pts100000:      { label: "State Savant", sub: "Get 100,000 points", glyph: "100K" },
+  pts150000:      { label: "Pro Countellectual", sub: "Get 150,000 points", glyph: "150K" },
+  pts200000:      { label: "Addicted", sub: "Get 200,000 points", glyph: "200K" },
+  ptsNoTuc:       { label: "You See Counties in Your Dreams", sub: "Get all points possible without the Ultimate Challenge", glyph: "234K" },
+  countyGod:      { label: "County God", sub: "Beat the Ultimate Challenge" },
+  pointGod:       { label: "Point God", sub: "Get all points possible", glyph: "500K" },
+  jack:           { label: "Jack of All Trades", sub: "Complete a perfect full-state run in at least one mode for every state", glyph: "1×57" },
+  effort:         { label: "Concentrated Effort", sub: "Earn 1,000 points from a single game", glyph: "1K in 1" },
+  noTime:         { label: "No Time to Waste", sub: "Complete at least one perfect run for every state at a pace of three seconds or less per county", glyph: "⏱⏱⏱" },
+  mode_pin:           { label: "Put Your Finger On It", sub: "Complete a perfect full-state run in Pin for every state", glyph: "P" },
+  "mode_pin-hard":    { label: "Know It in a Flash", sub: "Complete a perfect full-state run in Flash for every state", glyph: "F" },
+  mode_mc:            { label: "Made The Right Choice", sub: "Complete a perfect full-state run in Multiple-Choice for every state", glyph: "MC" },
+  mode_type:          { label: "Checking It Twice", sub: "Complete a perfect full-state run in List for every state", glyph: "L" },
+  "mode_type-strict": { label: "Infinite Monkey Theorem", sub: "Complete a perfect full-state run in Type for every state", glyph: "T" },
+  "mode_type-hard":   { label: "This One Is Washington", sub: "Complete a perfect full-state run in Identify for every state", glyph: "I" }
+};
