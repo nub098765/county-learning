@@ -52,7 +52,7 @@
   async function loadStateRuns(userId) {
     const rows = [];
     for (let from = 0; ; from += 1000) {
-      const result = await sb.from("state_runs").select("state_key, mode, time_ms, completed_at").eq("user_id", userId).order("completed_at").order("state_key").range(from, from + 999);
+      const result = await sb.from("state_runs").select("id, state_key, mode, time_ms, completed_at, game_run_id").eq("user_id", userId).order("completed_at").order("state_key").order("mode").order("id").range(from, from + 999);
       if (result.error) return result;
       rows.push(...(result.data || []));
       if (!result.data || result.data.length < 1000) return { data: rows, error: null };
@@ -69,7 +69,7 @@
     }
     const earned = !!result.data;
     if (lastKnownConcentratedEffort === false && earned && window.showUnlockToast) {
-      window.showUnlockToast("Concentrated Effort", "Earn 1,000 county points from a single game", {
+      window.showUnlockToast("Concentrated Effort", "Earn 1,000 points from a single game", {
         glyph: "1K in 1",
         color: "#6FA3D8"
       });
@@ -150,6 +150,63 @@
 
   async function syncRuns() {
     if (!window.countyCountForAccount) return;
+    const existingResult = await loadStateRuns(session.user.id);
+    if (existingResult.error) { console.warn("Couldn't check saved state runs:", existingResult.error.message); return; }
+    const fastestExisting = new Map();
+    (existingResult.data || []).forEach(run => {
+      const key = `${run.state_key}|${run.mode}`;
+      const time = Number(run.time_ms);
+      if (time > 0 && (!fastestExisting.has(key) || time < fastestExisting.get(key))) {
+        fastestExisting.set(key, time);
+      }
+    });
+    const existingGameRuns = new Set((existingResult.data || [])
+      .filter(run => run.game_run_id)
+      .map(run => `${run.state_key}|${run.mode}|${run.game_run_id}`));
+    let pendingRuns = [];
+    try {
+      pendingRuns = JSON.parse(localStorage.getItem("pendingStateRuns") || "[]");
+      if (!Array.isArray(pendingRuns)) throw new Error("Expected a list of pending runs.");
+    } catch (error) {
+      console.warn("Couldn't read locally saved state runs:", error);
+      return;
+    }
+    const retryPending = [];
+    for (const run of pendingRuns) {
+      const key = `${run.state_key}|${run.mode}|${run.game_run_id}`;
+      const stateMode = `${run.state_key}|${run.mode}`;
+      if (!MODES.includes(run.mode) || !(Number(run.time_ms) > 0) || !run.game_run_id || window.countyCountForAccount(run.state_key) == null) {
+        retryPending.push(run);
+        continue;
+      }
+      const pendingTime = Math.round(Number(run.time_ms));
+      if (!fastestExisting.has(stateMode) || pendingTime < fastestExisting.get(stateMode)) {
+        fastestExisting.set(stateMode, pendingTime);
+      }
+      if (existingGameRuns.has(key)) continue;
+      const result = await sb.from("state_runs").upsert({
+        user_id: session.user.id,
+        state_key: run.state_key,
+        mode: run.mode,
+        time_ms: Math.round(Number(run.time_ms)),
+        game_run_id: run.game_run_id
+      }, { onConflict: "user_id,state_key,mode,game_run_id", ignoreDuplicates: true });
+      if (result.error) {
+        console.warn(`Couldn't upload saved run ${run.state_key} / ${run.mode}:`, result.error.message);
+        retryPending.push(run);
+      } else {
+        existingGameRuns.add(key);
+      }
+    }
+    if (retryPending.length !== pendingRuns.length) {
+      localStorage.setItem("pendingStateRuns", JSON.stringify(retryPending));
+    }
+    const backfillStatus = await sb.rpc("can_import_legacy_state_runs");
+    if (backfillStatus.error) {
+      console.warn("Couldn't check legacy run import eligibility:", backfillStatus.error.message);
+      return;
+    }
+    if (!backfillStatus.data) return;
     let times = {};
     try {
       times = JSON.parse(localStorage.getItem("perfectTimes") || "{}") || {};
@@ -157,10 +214,13 @@
       console.warn("Couldn't read your saved perfect runs:", error);
       return;
     }
-    const existingResult = await loadStateRuns(session.user.id);
-    if (existingResult.error) { console.warn("Couldn't check saved state runs:", existingResult.error.message); return; }
-    const existing = new Set((existingResult.data || []).map(run => `${run.state_key}|${run.mode}`));
-    const rows = [];
+    const localBestTimes = new Map();
+    const addLocalBest = (stateKey, mode, timeMs) => {
+      const time = Math.round(Number(timeMs));
+      if (!MODES.includes(mode) || !(time > 0) || window.countyCountForAccount(stateKey) == null) return;
+      const key = `${stateKey}|${mode}`;
+      if (!localBestTimes.has(key) || time < localBestTimes.get(key)) localBestTimes.set(key, time);
+    };
     const skipped = [];
     for (const [key, list] of Object.entries(times)) {
       const [states, mode, count] = key.split("|");
@@ -176,37 +236,26 @@
       }
       const best = Math.min(...(list || []).map(r => Number(r.time)).filter(t => t > 0));
       if (!isFinite(best)) continue;
-      for (const stateKey of stateKeys) {
-        const recordKey = `${stateKey}|${mode}`;
-        if (existing.has(recordKey)) continue;
-        existing.add(recordKey);
-        rows.push({ user_id: session.user.id, state_key: stateKey, mode, time_ms: Math.round(best) });
-      }
+      for (const stateKey of stateKeys) addLocalBest(stateKey, mode, best);
     }
     // per-state records kept by the game (a state counts on its own, whatever else happened in that run)
     let bests = {};
-    try { bests = JSON.parse(localStorage.getItem("stateRunBests") || "{}") || {}; } catch (e) {}
+    try { bests = JSON.parse(localStorage.getItem("stateRunBests") || "{}") || {}; } catch (error) {
+      console.warn("Couldn't read your saved per-state runs:", error);
+      return;
+    }
     for (const [recordKey, ms] of Object.entries(bests)) {
       const [stateKey, mode] = recordKey.split("|");
-      if (!MODES.includes(mode) || existing.has(recordKey) || !(Number(ms) > 0)) continue;
-      if (window.countyCountForAccount(stateKey) == null) continue;
-      existing.add(recordKey);
-      rows.push({ user_id: session.user.id, state_key: stateKey, mode, time_ms: Math.round(Number(ms)) });
+      addLocalBest(stateKey, mode, ms);
     }
+    const rows = [...localBestTimes].flatMap(([key, time_ms]) => {
+      if (fastestExisting.has(key) && fastestExisting.get(key) <= time_ms) return [];
+      const [state_key, mode] = key.split("|");
+      return [{ state_key, mode, time_ms }];
+    });
     if (skipped.length) console.warn("Some saved perfect runs don't cover every selected state's counties:", skipped);
-    if (rows.length) {
-      const { error } = await sb.from("state_runs").insert(rows);
-      if (error) {
-        // one rejected row fails the whole batch, so retry one at a time: the good ones go in, and the console says exactly why each bad one didn't
-        console.warn("Batch upload of past runs failed, retrying one at a time:", error.message);
-        const failed = [];
-        for (const row of rows) {
-          const r = await sb.from("state_runs").insert(row);
-          if (r.error) failed.push(`${row.state_key} / ${row.mode}: ${r.error.message}`);
-        }
-        if (failed.length) console.warn(`${failed.length} past runs were rejected:`, failed);
-      }
-    }
+    const { error } = await sb.rpc("import_legacy_state_run_bests", { p_runs: rows });
+    if (error) console.warn("Couldn't import your saved past runs:", error.message);
   }
 
   async function refreshOnce() {
@@ -314,9 +363,9 @@
     if (window.showUnlockToast) window.showUnlockToast("The Ultimate Challenge", "Beat it.", { flame: true, color: "#CE4E2C" });
   };
 
-  window.reportStateRun = async (stateKey, mode, ms) => {
+  window.reportStateRun = async (stateKey, mode, ms, gameRunId) => {
     if (!session || !profile) await refresh();
-    if (!session || !profile || !MODES.includes(mode) || !(ms > 0)) return;
+    if (!session || !profile || !MODES.includes(mode) || !(ms > 0) || !gameRunId) return false;
     const timeMs = Math.round(ms);
     const badgeProgressBefore = await loadBadgeProgress();
     let firstSpeedRun = false, completesNoTimeToWaste = false;
@@ -344,8 +393,11 @@
       if (existing.error) console.warn("Couldn't check Speed Is Key progress:", existing.error.message);
       else firstSpeedRun = !existing.data;
     }
-    const { error } = await sb.from("state_runs").insert({ user_id: session.user.id, state_key: stateKey, mode, time_ms: timeMs });
-    if (error) { console.warn("run upload failed:", error.message); return; }
+    const { error } = await sb.from("state_runs").upsert({ user_id: session.user.id, state_key: stateKey, mode, time_ms: timeMs, game_run_id: gameRunId }, {
+      onConflict: "user_id,state_key,mode,game_run_id",
+      ignoreDuplicates: true
+    });
+    if (error) { console.warn("run upload failed:", error.message); return false; }
     notifyBadgeUnlocks(badgeProgressBefore, await loadBadgeProgress());
     updateWho();
     if (firstSpeedRun && window.showUnlockToast) {
@@ -354,6 +406,7 @@
     if (completesNoTimeToWaste && window.showUnlockToast) {
       window.showUnlockToast("No Time to Waste", "A perfect run for every state at three seconds per county or less", { glyph: "⏱⏱⏱", color: "#6FA3D8" });
     }
+    return true;
   };
     // Reset progress: wipe this account's saved completions. Points, badges and the leaderboard are all worked out from them.
   window.accountIsSignedIn = () => !!(session && profile);

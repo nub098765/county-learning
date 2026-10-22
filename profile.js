@@ -31,10 +31,13 @@
   // Special badges shown at the bottom right of a player's profile picture. Add a line per player: lowercase username -> badge.
   // Example:  "somename": { src: "special-badge.png", label: "What this badge is" },
   const CHANNEL_OWNER = { src: "special-badge.png", label: "Channel Owner" };
+  const WRENCH = { src: "wrench-special-badge.svg", label: "Playtester" };
   const SPECIAL_BADGES = {
     "mellohihellohi": CHANNEL_OWNER,
     "stalgoodman": CHANNEL_OWNER,
     "nub098765": CHANNEL_OWNER,
+    "phil": WRENCH,
+    "daydownerrr": WRENCH,
   };
 
   const wantedName = new URLSearchParams(location.search).get("u");   // profile.html?u=name shows that player
@@ -590,7 +593,7 @@
   async function fetchStateRuns(userId) {
     const rows = [];
     for (let from = 0; ; from += 1000) {
-      const result = await sb.from("state_runs").select("state_key, mode, time_ms, completed_at").eq("user_id", userId).order("completed_at").order("state_key").range(from, from + 999);
+      const result = await sb.from("state_runs").select("id, state_key, mode, time_ms, completed_at, game_run_id").eq("user_id", userId).order("completed_at").order("state_key").order("mode").order("id").range(from, from + 999);
       if (result.error) return result;
       rows.push(...(result.data || []));
       if (!result.data || result.data.length < 1000) return { data: rows, error: null };
@@ -873,7 +876,7 @@
 
     const pointEvents = [];
     const countyCounts = new Map();
-    const runPointTotals = new Map();
+    const concentratedEffortEvents = [];
     completions.forEach(row => {
       const tile = tileByState.get(row.state_key);
       const weight = weights[row.mode] || 0;
@@ -883,24 +886,43 @@
       countyCounts.set(countyKey, count);
       if (count <= tile.total) pointEvents.push({ at: row.completed_at, points: tile.mult * weight });
       if (row.game_run_id) {
-        const runId = row.game_run_id;
-        const total = (runPointTotals.get(runId) || 0) + tile.mult * weight;
-        runPointTotals.set(runId, total);
-        if (total >= 1000 && !dates["Concentrated Effort"]) dates["Concentrated Effort"] = row.completed_at;
+        concentratedEffortEvents.push({ at: row.completed_at, runId: row.game_run_id, points: tile.mult * weight });
       }
     });
 
-    firstRunByState.forEach((modeDates, stateKey) => {
+    const firstRunRowByStateMode = new Map();
+    stateRuns.forEach(run => {
+      const key = `${run.state_key}|${run.mode}`;
+      if (!run.completed_at || !MODES.includes(run.mode) || !tileByState.has(run.state_key)) return;
+      if (!firstRunRowByStateMode.has(key)) firstRunRowByStateMode.set(key, run);
+    });
+    const badgeRunsByState = new Map();
+    firstRunRowByStateMode.forEach(run => {
+      const runs = badgeRunsByState.get(run.state_key) || [];
+      runs.push(run);
+      badgeRunsByState.set(run.state_key, runs);
+    });
+    badgeRunsByState.forEach((runs, stateKey) => {
       const tile = tileByState.get(stateKey);
-      const earnedModes = [...modeDates.values()].sort(compareDates);
+      runs.sort((a, b) => compareDates(a.completed_at, b.completed_at) || a.mode.localeCompare(b.mode));
       [[1, BADGE_WEIGHTS.bronze], [3, BADGE_WEIGHTS.silver], [6, BADGE_WEIGHTS.gold]].forEach(([threshold, weight]) => {
-        if (earnedModes.length >= threshold) {
-          pointEvents.push({
-            at: earnedModes[threshold - 1],
-            points: tile.total * tile.mult * weight
-          });
-        }
+        const run = runs[threshold - 1];
+        if (!run) return;
+        pointEvents.push({ at: run.completed_at, points: tile.total * tile.mult * weight });
+        if (!run.game_run_id) return;
+        concentratedEffortEvents.push({
+          at: run.completed_at,
+          runId: run.game_run_id,
+          points: tile.total * tile.mult * weight
+        });
       });
+    });
+    concentratedEffortEvents.sort((a, b) => compareDates(a.at, b.at));
+    const concentratedEffortTotals = new Map();
+    concentratedEffortEvents.forEach(event => {
+      const total = (concentratedEffortTotals.get(event.runId) || 0) + event.points;
+      concentratedEffortTotals.set(event.runId, total);
+      if (total >= 1000 && !dates["Concentrated Effort"]) dates["Concentrated Effort"] = event.at;
     });
     if (tucCompletedAt) pointEvents.push({ at: tucCompletedAt, points: ULTIMATE_CHALLENGE_POINTS });
     pointEvents.sort((a, b) => compareDates(a.at, b.at));
@@ -949,6 +971,7 @@
       view.replaceChildren(mk("p", "info-intro", err ? "Couldn't load the profile: " + err.message : "That profile wasn't found."));
       return;
     }
+    document.title = who.data.username;
 
     const w = {};
     (weights.data || []).forEach(r => { w[r.mode] = r.weight; });
@@ -1121,6 +1144,7 @@
     if (busy) { again = true; return; }
     busy = true;
     try {
+      document.title = "Profile · Countellect";
       say("");
       const { data } = await sb.auth.getSession();
       session = data.session; me = null;

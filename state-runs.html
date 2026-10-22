@@ -64,7 +64,7 @@
   const tbody = document.querySelector("#sr-table tbody"), table = document.getElementById("sr-table"), msg = document.getElementById("sr-msg");
   let runs = [], names = {}, me = null, mode = "pin";
 
-  const stateName = k => k.replace(/[_-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const stateName = k => k.replace(/[_-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase()).replace(/\bOf\b/g, "of");
   function fmt(ms) {
     const m = Math.floor(ms / 60000), s = Math.floor(ms % 60000 / 1000), t = ms % 1000;
     return m + ":" + String(s).padStart(2, "0") + "." + String(t).padStart(3, "0");
@@ -113,9 +113,21 @@
   async function load() {
     const s = await sb.auth.getSession();
     me = s.data.session ? s.data.session.user.id : null;
-    const r = await sb.from("state_runs").select("user_id, state_key, mode, time_ms").order("time_ms", { ascending: true }).limit(5000);
-    if (r.error) { msg.textContent = "Couldn\u2019t load the runs."; table.classList.add("hidden"); return; }
-    runs = r.data || [];
+    runs = [];
+    for (let from = 0; ; from += 1000) {
+      const r = await sb.from("state_runs")
+        .select("id, user_id, state_key, mode, time_ms")
+        .order("time_ms", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, from + 999);
+      if (r.error) {
+        msg.textContent = "Couldn\u2019t load the runs: " + r.error.message;
+        table.classList.add("hidden");
+        return;
+      }
+      runs.push(...(r.data || []));
+      if (!r.data || r.data.length < 1000) break;
+    }
     const ids = [...new Set(runs.map(x => x.user_id))];
     for (let i = 0; i < ids.length; i += 100) {
       const l = await sb.from("leaderboard_with_badges").select("id, username").in("id", ids.slice(i, i + 100));

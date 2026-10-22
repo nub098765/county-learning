@@ -71,6 +71,14 @@
          <div class="home-map-hint" aria-hidden="true">Choose a mode first &rarr;</div>
        </div>
        <div id="setup-picked" class="us-picked" aria-live="polite"></div>
+       <div id="state-stats-panel" class="state-stats-panel hidden">
+         <div class="stats-panel-actions">
+           <span class="stats-panel-title">State progress tables</span>
+           <div class="stats-view-toggle" role="group" aria-label="Which progress to show"><button type="button" data-stats-view="play" aria-pressed="true">Play</button><button type="button" data-stats-view="learn" aria-pressed="false">Learn</button></div>
+           <button type="button" id="btn-hide-all-stats" class="btn-secondary">Hide all</button>
+         </div>
+         <div id="state-stats-sections"></div>
+       </div>
      </div>
      <div class="home-right">
        <h1>Countellect</h1>
@@ -99,10 +107,12 @@
 
 
      <div id="checkbox-container" class="checkbox-container hidden">
-       <div id="suggestion-box" class="hidden" style="margin-bottom: 0.8rem; font-size: 0.85rem; width: 100%; display: flex; justify-content: center; gap: 0.5rem;">
-         <button id="btn-select-suggested" type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Select your 5 best-known</button>
-         <button id="btn-select-all-counties" type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Select All</button>
-         <button id="btn-deselect-all" type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Deselect All</button>
+       <div class="county-checkbox-actions">
+         <div id="suggestion-box" class="hidden">
+           <button id="btn-select-suggested" type="button" class="btn-secondary">Select your 5 best-known</button>
+         </div>
+         <button id="btn-select-all-counties" type="button" class="btn-secondary">Select all</button>
+         <button id="btn-deselect-all" type="button" class="btn-secondary">Deselect all</button>
        </div>
     
        <input type="search" id="county-search" class="list-search" placeholder="Search counties…" aria-label="Search counties to exclude" autocomplete="off" spellcheck="false">
@@ -114,14 +124,6 @@
        
        
      </div>
-   </div>
-   <div id="state-stats-panel" class="state-stats-panel hidden">
-     <div class="stats-panel-actions">
-       <span class="stats-panel-title">State progress tables</span>
-       <div class="stats-view-toggle" role="group" aria-label="Which progress to show"><button type="button" data-stats-view="play" aria-pressed="true">Play</button><button type="button" data-stats-view="learn" aria-pressed="false">Learn</button></div>
-       <button type="button" id="btn-hide-all-stats" class="btn-secondary">Hide all</button>
-     </div>
-     <div id="state-stats-sections"></div>
    </div>
  </section>
 
@@ -192,6 +194,7 @@
              <li><a href="#setting-show-state-in-prompt" class="toc-item-link">Show State in Prompt</a></li>
              <li><a href="#setting-reveal-answer" class="toc-item-link">Reveal Answer After Mistakes</a></li>
              <li><a href="#setting-speedrun" class="toc-item-link">Speedrun Mode (Pin modes)</a></li>
+             <li><a href="#setting-flash-repeat-click-guard" class="toc-item-link">Flash Repeat-Click Guard</a></li>
            </ul>
          </li>
          <li class="toc-section">
@@ -351,6 +354,16 @@
 <p class="setting-desc">Register a guess the instant you press down on a county, instead of waiting for you to release.</p>
 </div>
 <input type="checkbox" id="toggle-speedrun">
+</div>
+<div class="setting-item" id="setting-flash-repeat-click-guard">
+<div class="setting-text">
+<label for="slider-flash-repeat-click-guard">Flash Repeat-Click Guard</label>
+<p class="setting-desc">Ignore clicks on the same county within this interval in Flash mode. Set to 0 to disable.</p>
+</div>
+<div class="setting-range-control">
+<input type="range" id="slider-flash-repeat-click-guard" min="0" max="1000" value="250" step="50">
+<output id="flash-repeat-click-guard-value" for="slider-flash-repeat-click-guard">250 ms</output>
+</div>
 </div>
          </div>
        </section>

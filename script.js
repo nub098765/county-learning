@@ -1366,6 +1366,7 @@ const DEFAULT_SETTINGS = {
   darkMode: true,
   highContrast: false,
   soundVolume: 50,
+  flashRepeatClickGuardMs: 250,
   speedrunMode: false,
   instantTypeCheck: true,
   hideStatsByDefault: true,
@@ -1388,6 +1389,9 @@ const DEFAULT_SETTINGS = {
   reviewArrowsOn: true
 };
 let gameSettings = { ...DEFAULT_SETTINGS, ...readStoredJson("gameSettings", {}) };
+gameSettings.flashRepeatClickGuardMs = Number.isFinite(Number(gameSettings.flashRepeatClickGuardMs))
+  ? Math.min(1000, Math.max(0, Number(gameSettings.flashRepeatClickGuardMs)))
+  : DEFAULT_SETTINGS.flashRepeatClickGuardMs;
 function saveSettings() { localStorage.setItem("gameSettings", JSON.stringify(gameSettings)); }
 
 // One row per simple setting control: which element, which gameSettings key,
@@ -1403,6 +1407,7 @@ const SETTING_CONTROLS = [
   } },
   { id: "toggle-contrast", key: "highContrast", ...asCheckbox, after: () => applySettings() },
   { id: "slider-sound", key: "soundVolume", event: "input", ...asNumber },
+  { id: "slider-flash-repeat-click-guard", key: "flashRepeatClickGuardMs", event: "input", ...asNumber, after: () => updateFlashRepeatClickGuardValue() },
   { id: "toggle-speedrun", key: "speedrunMode", ...asCheckbox },
   { id: "toggle-stopwatch", key: "showStopwatch", ...asCheckbox },
   { id: "toggle-instant-check", key: "instantTypeCheck", ...asCheckbox },
@@ -1429,6 +1434,10 @@ const SETTING_CONTROLS = [
   { id: "toggle-auto-scroll", key: "autoScrollToState", ...asCheckbox },
   { id: "toggle-auto-zoom", key: "autoZoom", ...asCheckbox },
 ];
+function updateFlashRepeatClickGuardValue() {
+  const output = document.getElementById("flash-repeat-click-guard-value");
+  if (output) output.textContent = `${gameSettings.flashRepeatClickGuardMs} ms`;
+}
 if (gameSettings.revealAnswerAfterMistakes === undefined) gameSettings.revealAnswerAfterMistakes = true;
 if (gameSettings.scaleStatesBySize === undefined) gameSettings.scaleStatesBySize = false;
 if (gameSettings.useDividersForFewStates === undefined) gameSettings.useDividersForFewStates = true;
@@ -2313,6 +2322,7 @@ function applySettings() {
     const el = document.getElementById(c.id);
     if (el) c.write(el, gameSettings[c.key]);
   });
+  updateFlashRepeatClickGuardValue();
   syncStAbbrevSettingUI();
   applyTucSettingsLock();
   if (inputBestKnownCount) inputBestKnownCount.value = String(gameSettings.bestKnownCount);
@@ -4419,8 +4429,10 @@ function updateSetupPlayButton() {
     const specificRadio = document.querySelector('input[name="specific-counties"]:checked');
     const isSpecificYes = specificRadio ? specificRadio.value === "yes" : false;
     const reviewChosen = !!document.querySelector("#home-layout.review-chosen");
-    if (isSpecificYes && !reviewChosen && document.querySelectorAll(".county-checkbox:checked").length < 1) {
-     blockedReason = `Select at least one ${unitWord(false)} to play, or choose "No" to play them all.`;
+    const checkboxes = document.querySelectorAll(".county-checkbox");
+    if (isSpecificYes && !reviewChosen && checkboxes.length > 0 &&
+        document.querySelectorAll(".county-checkbox:checked").length === checkboxes.length) {
+     blockedReason = `Unselect at least one ${unitWord(false)} to play, or choose "No" to play them all.`;
     }
   }
 
@@ -4712,7 +4724,7 @@ function enterReviewMode() {
   hideHoverTooltip();
   document.querySelectorAll(".map-box.state-done").forEach(b => b.classList.remove("state-done"));
   countyPaths.forEach(path => {
-    path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered", "typing-highlight", "given-up-missed", "just-found");
+    path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", ...RECOVERY_MISS_CLASSES, "flash-correct-recovered", "typing-highlight", "given-up-missed", "just-found");
     path.style.pointerEvents = "auto";
     path.setAttribute("tabindex", "0");
     path.setAttribute("role", "button");
@@ -4737,6 +4749,7 @@ function startReview() {
 
 function initGame(countiesToPlay, isRetryMissedRun = false) {
   clearMostRecentCorrect();
+  lastFlashRepeatClickAt.clear();
   reviewMode = false;
   if (typeInput) { typeInput.disabled = false; typeInput.placeholder = "Type a county name…"; }
   if (tucDesig) {
@@ -4785,7 +4798,7 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   document.body.dataset.playMode = selectedMode;
 
   countyPaths.forEach(path => {
-    path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", "flash-correct-recovered", "typing-highlight", "given-up-missed", "just-found");
+    path.classList.remove("correct", "wrong", "flash-correct", "found", "correct-recovered", ...RECOVERY_MISS_CLASSES, "flash-correct-recovered", "typing-highlight", "given-up-missed", "just-found");
     path.style.pointerEvents = (TYPE_MODES.has(selectedMode) && selectedMode !== "type-hard") ? "none" : "auto";
     path.setAttribute("tabindex", "0");
     path.setAttribute("role", "button");
@@ -5464,18 +5477,32 @@ function reportFinishedState(stateKey, timeMs) {
   const selectedIds = new Set(selectedCounties.map(c => c.id));
   if (state.counties.some(c => !selectedIds.has(c.id))) return;      // this state has no excluded counties
   const mode = selectedMode;
-
-  // keep a local copy per state, so a failed upload (or signing in later) can be retried by the backfill
+  const gameRunId = currentGameRunId;
+  const pendingRun = { state_key: stateKey, mode, time_ms: Math.round(timeMs), game_run_id: gameRunId };
   try {
-    const store = JSON.parse(localStorage.getItem("stateRunBests") || "{}") || {};
-    const k = `${stateKey}|${mode}`;
-    if (!(store[k] <= timeMs)) { store[k] = Math.round(timeMs); localStorage.setItem("stateRunBests", JSON.stringify(store)); }
-  } catch (e) {
-    console.warn("Couldn't save this perfect state run locally:", e);
+    const pending = JSON.parse(localStorage.getItem("pendingStateRuns") || "[]");
+    if (!pending.some(run => run.game_run_id === gameRunId && run.state_key === stateKey && run.mode === mode)) {
+      pending.push(pendingRun);
+      localStorage.setItem("pendingStateRuns", JSON.stringify(pending));
+    }
+  } catch (error) {
+    console.warn("Couldn't save this perfect state run locally:", error);
   }
-
-  if (!window.reportStateRun) return;
-  stateRunChain = stateRunChain.then(() => window.reportStateRun(stateKey, mode, timeMs)).catch(error => {
+  stateRunChain = stateRunChain.then(async () => {
+    const saved = window.reportStateRun
+      ? await window.reportStateRun(stateKey, mode, timeMs, gameRunId)
+      : false;
+    if (saved) {
+      try {
+        const pending = JSON.parse(localStorage.getItem("pendingStateRuns") || "[]");
+        localStorage.setItem("pendingStateRuns", JSON.stringify(pending.filter(
+          run => !(run.game_run_id === gameRunId && run.state_key === stateKey && run.mode === mode)
+        )));
+      } catch (error) {
+        console.warn("Couldn't clear the locally saved state run:", error);
+      }
+    }
+  }).catch(error => {
     console.warn("Couldn't report this perfect state run:", error);
   });   // one at a time, in order
 }
@@ -5490,6 +5517,14 @@ function markStateIfDone(stateKey) {
   if (activeStateKeys.length < 2) return;
   const box = document.querySelector(`.map-box[data-state="${stateKey}"]`);
   if (box) box.classList.add("state-done");
+}
+
+const lastFlashRepeatClickAt = new Map();
+const RECOVERY_MISS_CLASSES = ["recovered-miss-1", "recovered-miss-2", "recovered-miss-3"];
+
+function applyRecoveredCountyColor(element, missCount) {
+  element.classList.remove(...RECOVERY_MISS_CLASSES);
+  element.classList.add("correct-recovered", RECOVERY_MISS_CLASSES[Math.min(3, Math.max(1, missCount)) - 1]);
 }
 
 function handleCountyClick(pathEl) {
@@ -5509,6 +5544,13 @@ function handleCountyClick(pathEl) {
 
 
   const clickedId = pathEl.dataset.countyId || pathEl.id;
+  if (selectedMode === "pin-hard" && gameSettings.flashRepeatClickGuardMs > 0) {
+    const now = performance.now();
+    const previousClickAt = lastFlashRepeatClickAt.get(clickedId);
+    lastFlashRepeatClickAt.set(clickedId, now);
+    if (previousClickAt !== undefined &&
+        now - previousClickAt < gameSettings.flashRepeatClickGuardMs) return;
+  }
   const clickedCounty = findCountyById(clickedId);
   const clickedName = clickedCounty
     ? (currentTarget && clickedCounty.name === currentTarget.name ? getDisplayName(clickedCounty) : getPlainName(clickedCounty))
@@ -5517,6 +5559,7 @@ function handleCountyClick(pathEl) {
 
   if (clickedId === currentTarget.id) {
     const recovered = currentAttemptMistakes > 0 || currentRunIsRetryMissed;
+    const recoveryMissCount = Math.max(currentAttemptMistakes, currentRunIsRetryMissed ? 1 : 0);
     scoreRight++;
     playSound("correct");
     clearHoverGlow();
@@ -5538,13 +5581,19 @@ function handleCountyClick(pathEl) {
         el.getAnimations().forEach(a => a.cancel());
         const dark = document.body.classList.contains("dark-mode");
         const rest = dark ? "#3a3a34" : "#e8e4d9";
-        const peak = recovered ? (dark ? "#f0c030" : "#d4a017") : (dark ? "#5fcf5f" : "#2d5a27");   // yellow flash after a miss, then back to blank
+        const highContrast = document.body.classList.contains("high-contrast");
+        const recoveryColors = highContrast
+          ? ["#ffcc00", "#ff8800", "#ff1744"]
+          : dark ? ["#e0b030", "#f28c28", "#ef5350"] : ["#d4a017", "#e67e22", "#c62828"];
+        const peak = recovered ? recoveryColors[Math.min(3, recoveryMissCount) - 1] : (dark ? "#5fcf5f" : "#2d5a27");
         el.animate([{ fill: rest, offset: 0 }, { fill: peak, offset: 0.12 }, { fill: rest, offset: 1 }], { duration: 400, easing: "linear" });
       });
     } else {
       countyElements.forEach(el => {
-        el.classList.remove("typing-highlight", "correct-recovered");
-        el.classList.add(recovered ? "correct-recovered" : "correct", "found");
+        el.classList.remove("typing-highlight", "correct-recovered", ...RECOVERY_MISS_CLASSES);
+        if (recovered) applyRecoveredCountyColor(el, recoveryMissCount);
+        else el.classList.add("correct");
+        el.classList.add("found");
         el.style.pointerEvents = "none";
       });
       markMostRecentCorrect([currentTarget]);
@@ -5591,6 +5640,7 @@ function handleCountyClick(pathEl) {
 
 function acceptTypedMatches(matchedCounties) {
   const recovered = currentAttemptMistakes > 0 || currentRunIsRetryMissed;
+  const recoveryMissCount = Math.max(currentAttemptMistakes, currentRunIsRetryMissed ? 1 : 0);
   scoreRight++;
   playSound("correct");
 
@@ -5609,8 +5659,13 @@ function acceptTypedMatches(matchedCounties) {
     markCountyLearned(matchedCounty.id, selectedMode, currentRunIsRetryMissed);
     resolveMissedCounty(matchedCounty);
     getCountyElements(matchedCounty.id).forEach(el => {
-      el.classList.remove("typing-highlight", "correct-recovered");
-      el.classList.add(recovered ? "correct-recovered" : "correct", "found");
+      el.classList.remove("typing-highlight", "correct-recovered", ...RECOVERY_MISS_CLASSES);
+      if (recovered) {
+        applyRecoveredCountyColor(el, recoveryMissCount);
+      } else {
+        el.classList.add("correct");
+      }
+      el.classList.add("found");
       el.style.pointerEvents = "none";
     });
   });
@@ -5644,7 +5699,6 @@ function registerWrongTypedGuess() {
   if (
     gameSettings.revealAnswerAfterMistakes &&
     SINGLE_TARGET_TYPE_MODES.has(selectedMode) &&
-    selectedMode !== "mc" &&
     currentAttemptMistakes >= REVEAL_ANSWER_AFTER_MISTAKES
   ) {
     refreshTargetPrompt(true);

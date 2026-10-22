@@ -282,6 +282,17 @@ body.dark-mode .setting-warning {
  accent-color: #2d5a27;
  cursor: pointer;
 }
+.setting-range-control {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+}
+.setting-range-control output {
+ min-width: 4.5em;
+ text-align: right;
+ font-size: 0.85rem;
+ font-variant-numeric: tabular-nums;
+}
 
 
 .setting-item select {
@@ -750,11 +761,33 @@ body.dark-mode .stats-check-cell.stats-retry {
  background: #f9f9f5;
  padding: 0.75rem;
  border-radius: 8px;
- max-height: 420px;
+ max-height: min(70vh, 720px);
  overflow-y: auto;
 }
 body.dark-mode .checkbox-container {
  background: #1f1f1c;
+}
+.county-checkbox-actions {
+ position: sticky;
+ top: -0.75rem;
+ z-index: 2;
+ display: flex;
+ flex-wrap: wrap;
+ justify-content: center;
+ gap: 0.5rem;
+ width: 100%;
+ padding: 0.2rem 0 0.65rem;
+ background: #f9f9f5;
+}
+body.dark-mode .county-checkbox-actions {
+ background: #1f1f1c;
+}
+#suggestion-box {
+ display: flex;
+}
+.county-checkbox-actions button {
+ padding: 0.2rem 0.5rem;
+ font-size: 0.75rem;
 }
 
 
@@ -971,7 +1004,7 @@ body.scale-states-by-size .map-wrapper {
  flex-direction: row;
  flex-wrap: wrap;
  justify-content: center;
- align-items: stretch;
+ align-items: flex-start;
 }
 
 
@@ -1076,6 +1109,24 @@ body.dark-mode .county.correct-recovered {
 body.high-contrast .county.correct-recovered {
  fill: #ffcc00 !important;
 }
+.county.correct-recovered.recovered-miss-2 {
+ fill: #e67e22 !important;
+}
+body.dark-mode .county.correct-recovered.recovered-miss-2 {
+ fill: #f28c28 !important;
+}
+body.high-contrast .county.correct-recovered.recovered-miss-2 {
+ fill: #ff8800 !important;
+}
+.county.correct-recovered.recovered-miss-3 {
+ fill: #c62828 !important;
+}
+body.dark-mode .county.correct-recovered.recovered-miss-3 {
+ fill: #ef5350 !important;
+}
+body.high-contrast .county.correct-recovered.recovered-miss-3 {
+ fill: #ff1744 !important;
+}
 
 
 .county.wrong {
@@ -1111,7 +1162,7 @@ body.scale-states-by-size .state-map {
  flex: 0 0 var(--w);
  box-sizing: border-box;
  padding: 0.85rem;
- align-self: stretch;
+ align-self: flex-start;
 }
 body.scale-states-by-size .state-map.zoomed {
  padding: 1rem;
@@ -1133,6 +1184,8 @@ body.scale-states-by-size #svg-wisconsin { --w: 450px; }
 
 
 body.scale-states-by-size #svg-alaska { --w: 570px; }
+
+body.scale-states-by-size #svg-northern-mariana-islands { --w: 110px; }
 
 
 .app-container.solo-map .map-wrapper {
@@ -2443,9 +2496,6 @@ body.dark-mode .list-search {
  border-color: #4a7c59;
 }
 .checkbox-container .list-search {
- position: sticky;
- top: 0;
- z-index: 1;
  flex-shrink: 0;
  margin-bottom: 0.25rem;
 }
@@ -2879,7 +2929,7 @@ body.dark-mode .home-map-hint { color: #fdeca6; text-shadow: 0 0 8px rgba(0,0,0,
 .home-layout.no-mode #btn-start-game { opacity: 0.5; }
 .home-right #btn-start-game { margin-top: 1.2rem; }
 .home-right .county-panel { margin-top: 1rem; }
-#screen-home > .state-stats-panel { margin-top: 1.5rem; }
+#screen-home .home-left > .state-stats-panel { max-width: 100%; margin: 1rem 0 1.25rem; }
 @media (max-width: 899px) {
   .home-layout { grid-template-columns: 1fr; }
   .home-right { order: -1; }
@@ -2970,7 +3020,6 @@ body.dark-mode .stats-view-toggle button { background: #242420; color: #fdeca6; 
 body.dark-mode .stats-view-toggle button + button { border-left-color: #444; }
 body.dark-mode .stats-view-toggle button[aria-pressed="true"] { background: #c9741f; color: #fff; }
 
-#screen-home > .state-stats-panel { max-width: 880px; margin-left: auto; margin-right: auto; }
 .stats-table-wrap { display: flex; justify-content: center; padding: 0.2rem 0 0.4rem; }
 .stats-table { width: auto; min-width: min(100%, 26rem); border-collapse: collapse; font-size: 0.82rem; border: 1px solid #cfcfc6; }
 .stats-table th, .stats-table td { border: 1px solid #d8d8d0; padding: 0.45rem 0.8rem; min-width: 5.2rem; }
@@ -2999,8 +3048,6 @@ body.dark-mode .stats-table tbody tr:not(.stats-summary-row):hover .stats-check-
 .stats-table .stats-summary-cell { min-width: 6.2rem; }
 .stats-table th, .stats-table td { padding: 0.45rem 0.65rem; }
 .stats-table-wrap { max-width: 100%; }
-#screen-home > .state-stats-panel { max-width: 960px; }
-
 .mini-mc-box {
   --mc-bg: #fafaf7; --mc-bd: #ccc; --mc-fg: #111;
   --mc-wrong-bg: #f6d5d2; --mc-wrong-bd: #b3261e; --mc-wrong-fg: #7a1812;
@@ -4123,8 +4170,8 @@ body.dark-mode .unlock-toast { background: #292923; color: #f2ecd9; }
   .unlock-medal-face, .unlock-medal-earned-ring, .unlock-medal-glyph, .unlock-medal-state-shape { transition-duration: .01ms; }
 }
 .profile-avatar { position: relative; }
-.profile-avatar-badge { position: absolute; right: -8px; bottom: -8px; width: 28px; height: 28px; border-radius: 50%; box-shadow: 0 0 0 2px #fff; background: #fff; }
-body.dark-mode .profile-avatar-badge { box-shadow: 0 0 0 2px #242420; background: #242420; }
+.profile-avatar-badge { position: absolute; right: -8px; bottom: -8px; width: 28px; height: 28px; border-radius: 50%; outline: 1px solid #bbb; outline-offset: 0; box-shadow: 0 0 0 2px #fff; background: #fff; }
+body.dark-mode .profile-avatar-badge { outline-color: #555; box-shadow: 0 0 0 2px #242420; background: #242420; }
 
 /* top-right: More dropdown */
 .more-wrap { position: relative; }
