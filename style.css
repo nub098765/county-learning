@@ -37,7 +37,7 @@ body.no-transition *::after {
 
 body.dark-mode {
  --county-color-correct: #38592c;
- --county-color-just-found: #889b80;
+ --county-color-just-found: #61a848;
  --county-highlight-fill: #4f6785;
  --county-highlight-outline: #a9ccff;
  background-color: #181816;
@@ -46,7 +46,7 @@ body.dark-mode {
 
 body.high-contrast {
  --county-color-correct: #221b59;
- --county-color-just-found: #7a769b;
+ --county-color-just-found: #ffffff;
  --county-color-miss-1: #c358ee;
  --county-color-miss-2: #ee6833;
  --county-color-miss-3: #f5d142;
