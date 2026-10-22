@@ -1365,6 +1365,13 @@ let perfectTimes = readStoredJson("perfectTimes", {});
 const DEFAULT_SETTINGS = {
   darkMode: true,
   highContrast: false,
+  countyCorrectColor: "",
+  countyJustFoundColor: "",
+  countyMissOnceColor: "",
+  countyMissTwiceColor: "",
+  countyMissManyColor: "",
+  countyWrongGuessColor: "",
+  countyHighlightColor: "",
   soundVolume: 50,
   flashRepeatClickGuardMs: 250,
   speedrunMode: false,
@@ -1400,6 +1407,19 @@ function saveSettings() { localStorage.setItem("gameSettings", JSON.stringify(ga
 const asCheckbox = { read: el => el.checked, write: (el, v) => { el.checked = v; } };
 const asNumber   = { read: el => Number(el.value), write: (el, v) => { el.value = v; } };
 const asSelect   = { read: el => parseInt(el.value, 10) || 2, write: (el, v) => { el.value = String(v); } };
+const COUNTY_COLOR_SETTINGS = [
+  { id: "color-county-correct", key: "countyCorrectColor", cssVar: "--county-color-correct" },
+  { id: "color-county-just-found", key: "countyJustFoundColor", cssVar: "--county-color-just-found" },
+  { id: "color-county-miss-1", key: "countyMissOnceColor", cssVar: "--county-color-miss-1" },
+  { id: "color-county-miss-2", key: "countyMissTwiceColor", cssVar: "--county-color-miss-2" },
+  { id: "color-county-miss-3", key: "countyMissManyColor", cssVar: "--county-color-miss-3" },
+  { id: "color-county-wrong", key: "countyWrongGuessColor", cssVar: "--county-color-wrong" },
+  { id: "color-county-highlight", key: "countyHighlightColor", cssVar: "--county-highlight-fill" },
+];
+const isHexColor = value => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
+COUNTY_COLOR_SETTINGS.forEach(({ key }) => {
+  if (!isHexColor(gameSettings[key])) gameSettings[key] = "";
+});
 const SETTING_CONTROLS = [
   { id: "toggle-dark", key: "darkMode", ...asCheckbox, after: () => {
       localStorage.setItem("darkMode", JSON.stringify(gameSettings.darkMode));
@@ -2331,8 +2351,28 @@ function applySettings() {
 
   document.body.classList.toggle("dark-mode", gameSettings.darkMode);
   document.body.classList.toggle("high-contrast", gameSettings.highContrast);
+  COUNTY_COLOR_SETTINGS.forEach(({ id, key, cssVar }) => {
+    const input = document.getElementById(id);
+    if (isHexColor(gameSettings[key])) {
+      document.body.style.setProperty(cssVar, gameSettings[key]);
+      if (key === "countyHighlightColor") {
+        document.body.style.setProperty("--county-highlight-outline", darkenHexColor(gameSettings[key]));
+      }
+    } else {
+      document.body.style.removeProperty(cssVar);
+      if (key === "countyHighlightColor") document.body.style.removeProperty("--county-highlight-outline");
+    }
+    if (input) input.value = isHexColor(gameSettings[key])
+      ? gameSettings[key]
+      : getComputedStyle(document.body).getPropertyValue(cssVar).trim();
+  });
   updateMapLayoutMode();
   updateMapGridColumns();
+}
+
+function darkenHexColor(color) {
+  const channels = color.slice(1).match(/.{2}/g).map(channel => Math.round(parseInt(channel, 16) * 0.55));
+  return "#" + channels.map(channel => channel.toString(16).padStart(2, "0")).join("");
 }
 
 
@@ -3179,6 +3219,49 @@ SETTING_CONTROLS.forEach(c => {
     if (c.after) c.after();
   });
 });
+
+COUNTY_COLOR_SETTINGS.forEach(({ id, key, cssVar }) => {
+  const input = document.getElementById(id);
+  if (!input) return;
+  input.addEventListener("input", () => {
+    gameSettings[key] = input.value;
+    document.body.style.setProperty(cssVar, input.value);
+    if (key === "countyHighlightColor") {
+      document.body.style.setProperty("--county-highlight-outline", darkenHexColor(input.value));
+    }
+    saveSettings();
+  });
+});
+document.getElementById("btn-reset-county-colors")?.addEventListener("click", () => {
+  COUNTY_COLOR_SETTINGS.forEach(({ key }) => { gameSettings[key] = ""; });
+  saveSettings();
+  applySettings();
+});
+document.querySelectorAll("[data-reset-county-color]").forEach(button => {
+  button.addEventListener("click", () => {
+    const key = button.dataset.resetCountyColor;
+    if (!COUNTY_COLOR_SETTINGS.some(setting => setting.key === key)) return;
+    gameSettings[key] = "";
+    saveSettings();
+    applySettings();
+  });
+});
+document.getElementById("btn-county-color-lighter-correct")?.addEventListener("click", () => {
+  const correctColor = getComputedStyle(document.body).getPropertyValue("--county-color-correct").trim();
+  if (!isHexColor(correctColor)) {
+    console.error("Cannot derive the lighter correct color: the current correct color is not a hex value.", correctColor);
+    return;
+  }
+  gameSettings.countyJustFoundColor = lightenHexColor(correctColor, 0.4);
+  saveSettings();
+  applySettings();
+});
+
+function lightenHexColor(color, amount) {
+  const channels = color.slice(1).match(/.{2}/g)
+    .map(channel => Math.round(parseInt(channel, 16) * (1 - amount) + 255 * amount));
+  return "#" + channels.map(channel => channel.toString(16).padStart(2, "0")).join("");
+}
 
 
 function updateBestKnownButtonLabel() {
@@ -5581,11 +5664,15 @@ function handleCountyClick(pathEl) {
         el.getAnimations().forEach(a => a.cancel());
         const dark = document.body.classList.contains("dark-mode");
         const rest = dark ? "#3a3a34" : "#e8e4d9";
-        const highContrast = document.body.classList.contains("high-contrast");
-        const recoveryColors = highContrast
-          ? ["#d8b34b", "#ff8800", "#ff1744"]
-          : dark ? ["#d8b34b", "#f28c28", "#ef5350"] : ["#d8b34b", "#e67e22", "#c62828"];
-        const peak = recovered ? recoveryColors[Math.min(3, recoveryMissCount) - 1] : "#38592c";
+        const colors = getComputedStyle(document.body);
+        const recoveryColors = [
+          colors.getPropertyValue("--county-color-miss-1").trim(),
+          colors.getPropertyValue("--county-color-miss-2").trim(),
+          colors.getPropertyValue("--county-color-miss-3").trim()
+        ];
+        const peak = recovered
+          ? recoveryColors[Math.min(3, recoveryMissCount) - 1]
+          : colors.getPropertyValue("--county-color-correct").trim();
         el.animate([{ fill: rest, offset: 0 }, { fill: peak, offset: 0.12 }, { fill: rest, offset: 1 }], { duration: 400, easing: "linear" });
       });
     } else {

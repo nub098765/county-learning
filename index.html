@@ -166,6 +166,7 @@
            <ul class="toc-items" id="toc-items-appearance">
              <li><a href="#setting-dark-mode" class="toc-item-link">Dark Mode</a></li>
              <li><a href="#setting-high-contrast" class="toc-item-link">High-Contrast Colors</a></li>
+             <li><a href="#setting-county-colors" class="toc-item-link">County Feedback Colors</a></li>
              <li><a href="#setting-sound-volume" class="toc-item-link">Sound Volume</a></li>
            </ul>
          </li>
@@ -254,6 +255,47 @@
 <p class="setting-desc">Use bolder, more distinct colors for correct and incorrect counties.</p>
 </div>
 <input type="checkbox" id="toggle-contrast">
+</div>
+<div class="setting-item" id="setting-county-colors">
+<div class="setting-text">
+<span class="setting-title">County Feedback Colors</span>
+<p class="setting-desc">Choose map colors for answers and mistakes. “Just found” marks your most recently correct county.</p>
+<div class="county-color-controls">
+<div class="county-color-control">
+<label for="color-county-correct">Correct</label><input type="color" id="color-county-correct">
+<button type="button" class="county-color-reset" data-reset-county-color="countyCorrectColor">Reset</button>
+</div>
+<div class="county-color-control">
+<label for="color-county-just-found">Just found</label><input type="color" id="color-county-just-found">
+<button type="button" class="county-color-reset" data-reset-county-color="countyJustFoundColor">Reset</button>
+<span class="county-color-tooltip-anchor">
+<button type="button" id="btn-county-color-lighter-correct" aria-label="Make Just found a lighter version of Correct" aria-describedby="county-color-lighter-tooltip">Lighter</button>
+<span id="county-color-lighter-tooltip" class="county-color-tooltip" role="tooltip">Set Just found to a lighter version of Correct</span>
+</span>
+</div>
+<div class="county-color-control">
+<label for="color-county-miss-1">Missed once</label><input type="color" id="color-county-miss-1">
+<button type="button" class="county-color-reset" data-reset-county-color="countyMissOnceColor">Reset</button>
+</div>
+<div class="county-color-control">
+<label for="color-county-miss-2">Missed twice</label><input type="color" id="color-county-miss-2">
+<button type="button" class="county-color-reset" data-reset-county-color="countyMissTwiceColor">Reset</button>
+</div>
+<div class="county-color-control">
+<label for="color-county-miss-3">Missed 3+ times</label><input type="color" id="color-county-miss-3">
+<button type="button" class="county-color-reset" data-reset-county-color="countyMissManyColor">Reset</button>
+</div>
+<div class="county-color-control">
+<label for="color-county-wrong">Wrong guess</label><input type="color" id="color-county-wrong">
+<button type="button" class="county-color-reset" data-reset-county-color="countyWrongGuessColor">Reset</button>
+</div>
+<div class="county-color-control">
+<label for="color-county-highlight">Target highlight</label><input type="color" id="color-county-highlight">
+<button type="button" class="county-color-reset" data-reset-county-color="countyHighlightColor">Reset</button>
+</div>
+</div>
+<button type="button" id="btn-reset-county-colors" class="btn-secondary">Reset all colors</button>
+</div>
 </div>
 <div class="setting-item" id="setting-sound-volume">
 <div class="setting-text">

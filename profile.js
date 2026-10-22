@@ -76,6 +76,38 @@
       }
     });
     const boxes = [...svg.querySelectorAll(".us-box")];
+    const centerOf = path => {
+      const coordinates = (path.getAttribute("d").match(/-?\d+\.?\d*/g) || []).map(Number);
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (let i = 0; i + 1 < coordinates.length; i += 2) {
+        minX = Math.min(minX, coordinates[i]);
+        maxX = Math.max(maxX, coordinates[i]);
+        minY = Math.min(minY, coordinates[i + 1]);
+        maxY = Math.max(maxY, coordinates[i + 1]);
+      }
+      return [(minX + maxX) / 2, (minY + maxY) / 2];
+    };
+    const statePaths = [...svg.querySelectorAll("path.us-st")];
+    boxes.forEach(box => {
+      const x = parseFloat(box.getAttribute("x")), y = parseFloat(box.getAttribute("y"));
+      const width = parseFloat(box.getAttribute("width")), height = parseFloat(box.getAttribute("height"));
+      const statePath = statePaths.find(path => {
+        const [centerX, centerY] = centerOf(path);
+        return centerX >= x && centerX <= x + width && centerY >= y && centerY <= y + height;
+      });
+      const territoryLabel = labels.find(label => {
+        if (label.style.textAnchor !== "start") return false;
+        const labelX = parseFloat(label.getAttribute("x")), labelY = parseFloat(label.getAttribute("y"));
+        return Math.abs(x - (labelX - 3.1)) < 1 && Math.abs(y - (labelY - 4.5)) < 1.5;
+      });
+      const stateName = statePath?.dataset.name || territoryLabel?.dataset.name;
+      if (!stateName) return;
+      const title = document.createElementNS(SVGNS, "title");
+      title.textContent = stateName;
+      box.prepend(title);
+      box.style.pointerEvents = "all";
+      box.style.cursor = "default";
+    });
 
     const showMode = mode => {
       fills.forEach(({ t, r }) => {

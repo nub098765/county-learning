@@ -4,6 +4,14 @@
 
 
 body {
+ --county-color-correct: #1e4b0e;
+ --county-color-just-found: #78936e;
+ --county-color-miss-1: #d8b34b;
+ --county-color-miss-2: #d98151;
+ --county-color-miss-3: #e86767;
+ --county-color-wrong: #6b2d5c;
+ --county-highlight-fill: #93b0da;
+ --county-highlight-outline: #0f3f8f;
  position: relative;
  background-color: #fdeca6;
  font-family: 'Roboto Serif', Georgia, serif;
@@ -28,8 +36,23 @@ body.no-transition *::after {
 
 
 body.dark-mode {
+ --county-color-correct: #38592c;
+ --county-color-just-found: #889b80;
+ --county-highlight-fill: #4f6785;
+ --county-highlight-outline: #a9ccff;
  background-color: #181816;
  color: #fdeca6;
+}
+
+body.high-contrast {
+ --county-color-correct: #221b59;
+ --county-color-just-found: #7a769b;
+ --county-color-miss-1: #c358ee;
+ --county-color-miss-2: #ee6833;
+ --county-color-miss-3: #f5d142;
+ --county-color-wrong: #ff0055;
+ --county-highlight-fill: #3d85ff;
+ --county-highlight-outline: #002a80;
 }
 
 
@@ -252,6 +275,86 @@ body.dark-mode .setting-item {
  text-align: left;
 }
 
+.county-color-controls {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+ gap: 0.45rem 1rem;
+ margin: 0.5rem 0;
+}
+.setting-title {
+ font-weight: 400;
+}
+.county-color-control {
+ display: flex;
+ align-items: center;
+ gap: 0.4rem;
+ min-width: 0;
+}
+.county-color-control label {
+ flex: 1;
+ font-size: 0.85rem;
+ cursor: pointer;
+}
+.county-color-control input[type="color"] {
+ width: 2.5rem;
+ flex: 0 0 2.5rem;
+ height: 2rem;
+ padding: 0.15rem;
+ border: 1px solid #ccc;
+ border-radius: 6px;
+ background: transparent;
+ cursor: pointer;
+}
+body.dark-mode .county-color-control input[type="color"] {
+ border-color: #555;
+}
+.county-color-control button {
+ flex: 0 0 auto;
+ padding: 0.3rem 0.45rem;
+ font-size: 0.72rem;
+}
+.county-color-tooltip-anchor {
+ position: relative;
+ display: inline-flex;
+}
+.county-color-tooltip {
+ position: absolute;
+ top: calc(100% + 8px);
+ left: 50%;
+ z-index: 100000;
+ width: max-content;
+ max-width: calc(100vw - 1rem);
+ padding: 0.35rem 0.65rem;
+ border-radius: 6px;
+ background: #111;
+ color: #fdeca6;
+ font-family: system-ui, -apple-system, sans-serif;
+ font-size: 0.8rem;
+ font-weight: 600;
+ line-height: 1.35;
+ text-align: center;
+ white-space: nowrap;
+ transform: translateX(-50%);
+ pointer-events: none;
+ opacity: 0;
+ visibility: hidden;
+ transition: opacity 0.12s ease, visibility 0.12s ease;
+}
+.county-color-tooltip-anchor:hover .county-color-tooltip,
+.county-color-tooltip-anchor:focus-within .county-color-tooltip {
+ opacity: 1;
+ visibility: visible;
+}
+body.dark-mode .county-color-tooltip {
+ background: #fdeca6;
+ color: #111;
+}
+#setting-county-colors .setting-text {
+ flex: 1;
+}
+#btn-reset-county-colors {
+ flex: 0 0 auto;
+}
 
 .setting-desc {
  font-size: 0.75rem;
@@ -1096,41 +1199,23 @@ body.scale-states-by-size .map-box {
 
 
 .county.found {
- fill: #38592c;
+ fill: var(--county-color-correct);
 }
 
 
 .county.correct-recovered {
- fill: #d8b34b !important;
-}
-body.dark-mode .county.correct-recovered {
- fill: #d8b34b !important;
-}
-body.high-contrast .county.correct-recovered {
- fill: #d8b34b !important;
+ fill: var(--county-color-miss-1) !important;
 }
 .county.correct-recovered.recovered-miss-2 {
- fill: #e67e22 !important;
-}
-body.dark-mode .county.correct-recovered.recovered-miss-2 {
- fill: #f28c28 !important;
-}
-body.high-contrast .county.correct-recovered.recovered-miss-2 {
- fill: #ff8800 !important;
+ fill: var(--county-color-miss-2) !important;
 }
 .county.correct-recovered.recovered-miss-3 {
- fill: #c62828 !important;
-}
-body.dark-mode .county.correct-recovered.recovered-miss-3 {
- fill: #ef5350 !important;
-}
-body.high-contrast .county.correct-recovered.recovered-miss-3 {
- fill: #ff1744 !important;
+ fill: var(--county-color-miss-3) !important;
 }
 
 
 .county.wrong {
- fill: #c94a29;
+ fill: var(--county-color-wrong);
 }
 
 
@@ -1301,31 +1386,23 @@ body.dark-mode .county {
 
 
 .county.correct {
- fill: #38592c !important;
+ fill: var(--county-color-correct) !important;
+}
+.county.correct.just-found {
+ fill: var(--county-color-just-found) !important;
 }
 .county.wrong {
- fill: #6b2d5c !important;
-}
-
-
-body.high-contrast .county.correct {
- fill: #38592c !important;
-}
-body.high-contrast .county.wrong {
- fill: #ff0055 !important;
+ fill: var(--county-color-wrong) !important;
 }
 
 
 .county.given-up-missed {
- fill: #c94a29 !important;
-}
-body.high-contrast .county.given-up-missed {
- fill: #ff0055 !important;
+ fill: var(--county-color-miss-3) !important;
 }
 
 
-.county { --rest: #e8e4d9; --flash-g: #2d5a27; --flash-y: #d4a017; }
-body.dark-mode .county { --rest: #3a3a34; --flash-g: #5fcf5f; --flash-y: #f0c030; }
+.county { --rest: #e8e4d9; --flash-g: var(--county-color-correct); --flash-y: var(--county-color-miss-1); }
+body.dark-mode .county { --rest: #3a3a34; }
 
 .county.flash-correct {
  animation: flashGreen 0.9s ease-in-out;
@@ -1346,20 +1423,10 @@ body.dark-mode .county { --rest: #3a3a34; --flash-g: #5fcf5f; --flash-y: #f0c030
 body:not([data-play-mode="pin"]):not([data-play-mode="pin-hard"]) .county.typing-highlight,
 body:not([data-play-mode="pin"]):not([data-play-mode="pin-hard"]) .county.typing-highlight path {
  animation: none !important;
- fill: #93b0da;
- stroke: #0f3f8f;
+ fill: var(--county-highlight-fill);
+ stroke: var(--county-highlight-outline);
  stroke-width: 2px !important;
  vector-effect: non-scaling-stroke;
-}
-body.dark-mode:not([data-play-mode="pin"]):not([data-play-mode="pin-hard"]) .county.typing-highlight,
-body.dark-mode:not([data-play-mode="pin"]):not([data-play-mode="pin-hard"]) .county.typing-highlight path {
- fill: #4f6785;
- stroke: #a9ccff;
-}
-body.high-contrast:not([data-play-mode="pin"]):not([data-play-mode="pin-hard"]) .county.typing-highlight,
-body.high-contrast:not([data-play-mode="pin"]):not([data-play-mode="pin-hard"]) .county.typing-highlight path {
- fill: #3d85ff;
- stroke: #002a80;
 }
 
 /* Pin and Flash: the "you missed it 3 times" reveal pulses, like before */
@@ -1369,7 +1436,7 @@ body[data-play-mode="pin-hard"] .county.typing-highlight {
 }
 @keyframes pulseTypingTarget {
  0%, 100% { fill: #e8e4d9; }
- 50% { fill: #3a6ea5; }
+ 50% { fill: var(--county-highlight-fill); }
 }
 body.dark-mode[data-play-mode="pin"] .county.typing-highlight,
 body.dark-mode[data-play-mode="pin-hard"] .county.typing-highlight {
@@ -1377,15 +1444,19 @@ body.dark-mode[data-play-mode="pin-hard"] .county.typing-highlight {
 }
 @keyframes pulseTypingTargetDark {
  0%, 100% { fill: #3a3a34; }
- 50% { fill: #5b8fc9; }
+ 50% { fill: var(--county-highlight-fill); }
 }
 body.high-contrast[data-play-mode="pin"] .county.typing-highlight,
 body.high-contrast[data-play-mode="pin-hard"] .county.typing-highlight {
- animation: pulseTypingTargetHC 1.6s ease-in-out infinite;
+ animation: none !important;
+ fill: var(--county-highlight-fill);
+ stroke: var(--county-highlight-outline);
+ stroke-width: 2px !important;
+ vector-effect: non-scaling-stroke;
 }
 @keyframes pulseTypingTargetHC {
  0%, 100% { fill: #e8e4d9; }
- 50% { fill: #0066ff; }
+ 50% { fill: var(--county-highlight-fill); }
 }
 
 .kalawao-callout-line {
@@ -1912,7 +1983,7 @@ body.dark-mode .info-example[data-demo="pin-hard"] .click-shape {
 }
 @keyframes miniPulseHighlight {
  0%, 100% { fill: #e8e4d9; }
- 50%      { fill: #3a6ea5; }
+ 50%      { fill: var(--county-highlight-fill); }
 }
 body.dark-mode .highlight-shape {
  fill: #3a3a34;
@@ -3140,16 +3211,11 @@ body.dark-mode .zoom-controls button:not(:disabled):hover { background: #3a3a35;
 .locator-map.study-hover .county { pointer-events: auto; }
 .study-hover-layer .study-hover-clone,
 .study-hover-layer .study-hover-clone path {
-  fill: rgba(30, 105, 220, 0.42);
-  stroke: #0f3f8f;
+  fill: var(--county-highlight-fill);
+  stroke: var(--county-highlight-outline);
   stroke-width: 2px !important;
   vector-effect: non-scaling-stroke;
   pointer-events: none;
-}
-body.dark-mode .study-hover-layer .study-hover-clone,
-body.dark-mode .study-hover-layer .study-hover-clone path {
-  fill: rgba(110, 170, 255, 0.4);
-  stroke: #a9ccff;
 }
 .study-hover-tip {
   position: fixed; z-index: 3000; pointer-events: none; white-space: nowrap;
@@ -3395,9 +3461,6 @@ body.dark-mode .record-runs li.is-best span:last-child { color: #7bc47f; }
 #screen-records .btn-back { margin: 0 0 0.75rem; }
 #screen-records h2 { margin: 0 0 0.5rem; }
 
-.county.correct.just-found { fill: #38592c !important; }
-body.high-contrast .county.correct.just-found { fill: #38592c !important; }
-
 .map-box { scroll-margin-top: 7rem; }
 
 .us-map .us-leaders { pointer-events: none; }
@@ -3410,16 +3473,12 @@ body.high-contrast .county.correct.just-found { fill: #38592c !important; }
 .us-map .us-leaders circle:nth-of-type(n) { pointer-events: none; }
 
 .play-glow, .play-glow path {
-  fill: rgba(30, 105, 220, 0.42);
-  stroke: #0f3f8f;
+  fill: var(--county-highlight-fill);
+  stroke: var(--county-highlight-outline);
   stroke-width: 2px !important;
   vector-effect: non-scaling-stroke;
   pointer-events: none;
   animation: none !important;
-}
-body.dark-mode .play-glow, body.dark-mode .play-glow path {
-  fill: rgba(110, 170, 255, 0.4);
-  stroke: #a9ccff;
 }
 
 .map-box.state-done { border-color: #2e9b4f; box-shadow: 0 0 0 3px rgba(46, 155, 79, 0.55); }
@@ -3791,27 +3850,12 @@ body[data-play-mode="type-hard"] .county:not(.found):hover,
 body[data-play-mode="type-hard"] .county:not(.found):hover path,
 body[data-play-mode="tuc"] .county:not(.found):hover,
 body[data-play-mode="tuc"] .county:not(.found):hover path {
-  fill: #93b0da;
-  stroke: #0f3f8f;
+  fill: var(--county-highlight-fill);
+  stroke: var(--county-highlight-outline);
   stroke-width: 2px !important;
   vector-effect: non-scaling-stroke;
   cursor: pointer;
 }
-body.dark-mode[data-play-mode="type-hard"] .county:not(.found):hover,
-body.dark-mode[data-play-mode="type-hard"] .county:not(.found):hover path,
-body.dark-mode[data-play-mode="tuc"] .county:not(.found):hover,
-body.dark-mode[data-play-mode="tuc"] .county:not(.found):hover path {
-  fill: #4f6785;
-  stroke: #a9ccff;
-}
-body.high-contrast[data-play-mode="type-hard"] .county:not(.found):hover,
-body.high-contrast[data-play-mode="type-hard"] .county:not(.found):hover path,
-body.high-contrast[data-play-mode="tuc"] .county:not(.found):hover,
-body.high-contrast[data-play-mode="tuc"] .county:not(.found):hover path {
-  fill: #3d85ff;
-  stroke: #002a80;
-}
-
 /* ---- profile progress charts ---- */
 .pc { margin: 1.4rem 0 0.4rem; text-align: left; }
 .pc-sec { margin-bottom: 1.4rem; }
