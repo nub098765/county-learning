@@ -12,6 +12,23 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<script>
+  /* same dark-mode choice as the game; runs before anything is drawn so the page never flashes light first */
+  (function () {
+    var b = document.body;
+    b.classList.add("no-transition");
+    try {
+      var saved = localStorage.getItem("darkMode");
+      var dark = saved !== null ? JSON.parse(saved) : true;
+      if (dark) b.classList.add("dark-mode");
+    } catch (e) {}
+    window.addEventListener("load", function () {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { b.classList.remove("no-transition"); });
+      });
+    });
+  })();
+</script>
 <div class="app-container wide-settings profile-page">
   <div class="profile-topbar">
     <a class="profile-link" href="index.html">← Back to game</a>
@@ -48,13 +65,5 @@
 <script src="achievements.js"></script>
 <script src="badge-art.js"></script>
 <script src="profile.js"></script>
-<script>
-  /* same dark-mode choice as the game */
-  try {
-    var saved = localStorage.getItem("darkMode");
-    var dark = saved !== null ? JSON.parse(saved) : true;
-    if (dark) document.body.classList.add("dark-mode");
-  } catch (e) {}
-</script>
 </body>
 </html>

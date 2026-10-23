@@ -11,11 +11,28 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<script>
+  /* same dark-mode choice as the game; runs before anything is drawn so the page never flashes light first */
+  (function () {
+    var b = document.body;
+    b.classList.add("no-transition");
+    try {
+      var saved = localStorage.getItem("darkMode");
+      var dark = saved !== null ? JSON.parse(saved) : true;
+      if (dark) b.classList.add("dark-mode");
+    } catch (e) {}
+    window.addEventListener("load", function () {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { b.classList.remove("no-transition"); });
+      });
+    });
+  })();
+</script>
 <div class="app-container wide-settings profile-page">
   <div class="lb-wrap">
     <div class="profile-topbar">
       <a class="profile-link" href="index.html">← Back to game</a>
-      <div class="profile-actions"><a class="profile-link" href="profile.html">My profile</a></div>
+<div class="profile-actions"><a class="profile-link" href="profile.html?points=1">How points work</a><a class="profile-link" href="profile.html">My profile</a></div>
     </div>
 
     <h2>Leaderboard</h2>
@@ -40,12 +57,5 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="online-presence.js"></script>
 <script src="leaderboard.js"></script>
-<script>
-  try {
-    var saved = localStorage.getItem("darkMode");
-    var dark = saved !== null ? JSON.parse(saved) : true;
-    if (dark) document.body.classList.add("dark-mode");
-  } catch (e) {}
-</script>
 </body>
 </html>

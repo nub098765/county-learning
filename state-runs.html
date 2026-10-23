@@ -26,6 +26,23 @@
 </style>
 </head>
 <body>
+<script>
+  /* same dark-mode choice as the game; runs before anything is drawn so the page never flashes light first */
+  (function () {
+    var b = document.body;
+    b.classList.add("no-transition");
+    try {
+      var saved = localStorage.getItem("darkMode");
+      var dark = saved !== null ? JSON.parse(saved) : true;
+      if (dark) b.classList.add("dark-mode");
+    } catch (e) {}
+    window.addEventListener("load", function () {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { b.classList.remove("no-transition"); });
+      });
+    });
+  })();
+</script>
 <div class="app-container wide-settings profile-page">
   <div class="lb-wrap">
     <div class="profile-topbar">
@@ -52,19 +69,18 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="online-presence.js"></script>
 <script>
 (function () {
   const SUPABASE_URL = "https://jgwhnidtjnuufdjcmqdv.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impnd2huaWR0am51dWZkamNtcWR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxOTE4MDgsImV4cCI6MjEwNzc2NzgwOH0.SsIHfT9TFvAYthQbwcD_Ee6W9T9a8yqlD2HfiAbcgCk";
-  const sb = window.countellectSupabase || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const MODE_LABELS = { pin: "Pin", "pin-hard": "Flash", mc: "Multiple Choice", type: "List", "type-strict": "Type", "type-hard": "Identify" };
   const MODES = Object.keys(MODE_LABELS);
   const stateSel = document.getElementById("sr-state"), modesEl = document.getElementById("sr-modes"), searchEl = document.getElementById("sr-search");
   const tbody = document.querySelector("#sr-table tbody"), table = document.getElementById("sr-table"), msg = document.getElementById("sr-msg");
   let runs = [], names = {}, me = null, mode = "pin";
 
-  const stateName = k => k.replace(/[_-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase()).replace(/\bOf\b/g, "of");
+  const stateName = k => k.replace(/[_-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   function fmt(ms) {
     const m = Math.floor(ms / 60000), s = Math.floor(ms % 60000 / 1000), t = ms % 1000;
     return m + ":" + String(s).padStart(2, "0") + "." + String(t).padStart(3, "0");
@@ -96,13 +112,6 @@
       const a = document.createElement("a");
       a.textContent = names[r.uid] || "Player";
       a.href = "profile.html?u=" + encodeURIComponent(names[r.uid] || "");
-      if (window.countellectIsOnline?.(names[r.uid])) {
-        const dot = document.createElement("span");
-        dot.className = "online-dot";
-        dot.setAttribute("aria-label", "Online");
-        dot.title = "Online";
-        c2.append(dot);
-      }
       c2.append(a);
       const c3 = document.createElement("td"); c3.textContent = fmt(r.ms);
       tr.append(c1, c2, c3);
@@ -113,21 +122,9 @@
   async function load() {
     const s = await sb.auth.getSession();
     me = s.data.session ? s.data.session.user.id : null;
-    runs = [];
-    for (let from = 0; ; from += 1000) {
-      const r = await sb.from("state_runs")
-        .select("id, user_id, state_key, mode, time_ms")
-        .order("time_ms", { ascending: true })
-        .order("id", { ascending: true })
-        .range(from, from + 999);
-      if (r.error) {
-        msg.textContent = "Couldn\u2019t load the runs: " + r.error.message;
-        table.classList.add("hidden");
-        return;
-      }
-      runs.push(...(r.data || []));
-      if (!r.data || r.data.length < 1000) break;
-    }
+    const r = await sb.from("state_runs").select("user_id, state_key, mode, time_ms").order("time_ms", { ascending: true }).limit(5000);
+    if (r.error) { msg.textContent = "Couldn\u2019t load the runs."; table.classList.add("hidden"); return; }
+    runs = r.data || [];
     const ids = [...new Set(runs.map(x => x.user_id))];
     for (let i = 0; i < ids.length; i += 100) {
       const l = await sb.from("leaderboard_with_badges").select("id, username").in("id", ids.slice(i, i + 100));
@@ -146,16 +143,8 @@
   }
   stateSel.addEventListener("change", render);
   searchEl.addEventListener("input", render);
-  window.addEventListener("countellect-presence-change", render);
   load();
 })();
-</script>
-<script>
-  try {
-    var saved = localStorage.getItem("darkMode");
-    var dark = saved !== null ? JSON.parse(saved) : true;
-    if (dark) document.body.classList.add("dark-mode");
-  } catch (e) {}
 </script>
 </body>
 </html>

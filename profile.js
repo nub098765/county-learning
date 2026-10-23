@@ -38,8 +38,13 @@
     "mellohihellohi": CHANNEL_OWNER,
     "stalgoodman": CHANNEL_OWNER,
     "nub098765": CHANNEL_OWNER,
+    "sponge99fvuj": CHANNEL_OWNER,
     "phil": WRENCH,
     "daydownerrr": WRENCH,
+    "macheese": WRENCH,
+    "gamergirljimmy": WRENCH,
+    "GoDucks": WRENCH,
+    "NiceShirtBro": WRENCH
   };
 
   const wantedName = new URLSearchParams(location.search).get("u");   // profile.html?u=name shows that player
@@ -337,7 +342,7 @@
     return table;
   }
 
-  async function openPoints() {
+  async function openPoints(returnToLeaderboard) {
     if ($("pp-overlay")) return;
     const overlay = mk("div", "pp-overlay");
     overlay.id = "pp-overlay";
@@ -351,7 +356,7 @@
     overlay.append(card);
     document.body.append(overlay);
     const onKey = e => { if (e.key === "Escape") shut(); };
-    const shut = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
+    const shut = () => { overlay.remove(); document.removeEventListener("keydown", onKey); if (returnToLeaderboard === true) location.href = "leaderboard.html"; };
     document.addEventListener("keydown", onKey);
     close.addEventListener("click", shut);
     overlay.addEventListener("click", e => { if (e.target === overlay) shut(); });
@@ -476,7 +481,7 @@
         if (!d) return;
         const icon = svgEl("svg", {
           x, y, width: 40, height: 40, viewBox: "0 0 100 100",
-          preserveAspectRatio: "xMidYMid meet", class: "medal-shape"
+          preserveAspectRatio: "xMidYMid meet", class: "medal-shape", "data-fit": 50     // small icon: fill its own box
         });
         const group = svgEl("g", {});
         group.append(svgEl("path", {
@@ -518,15 +523,7 @@
   }
 
   // size each state's silhouette to its own outline (needs the medals to be on the page)
-  function fitShapes(root) {
-    root.querySelectorAll("svg.medal-shape").forEach(s => {
-      try {
-        const b = s.querySelector("g").getBBox();
-        const pad = Math.max(b.width, b.height) * 0.04;
-        s.setAttribute("viewBox", `${b.x - pad} ${b.y - pad} ${b.width + 2 * pad} ${b.height + 2 * pad}`);
-      } catch (e) { /* not drawn yet */ }
-    });
-  }
+  const fitShapes = root => BA.fit(root);
 
   // shrink long names until they fit on two lines
   function fitNames(root) {
@@ -1081,13 +1078,63 @@
     await showProfile(r.data.id);
   }
 
+  function openChangePassword() {
+    if ($("pw-overlay")) return;
+    const overlay = mk("div", "pp-overlay");
+    overlay.id = "pw-overlay";
+    const card = mk("div", "pw-card");
+    const field = (label, id) => {
+      const l = mk("label", "pw-field", label), i = mk("input");
+      i.type = "password"; i.id = id; i.autocomplete = id === "pw-old" ? "current-password" : "new-password";
+      l.append(i);
+      return l;
+    };
+    const msg = mk("p", "pw-msg", "");
+    const save = mk("button", "btn-primary", "Change password"); save.type = "button";
+    const cancel = mk("button", "btn-secondary", "Cancel"); cancel.type = "button";
+    const row = mk("div", "pw-buttons"); row.append(save, cancel);
+    card.append(
+      mk("h3", "", "Change password"),
+      field("Current password", "pw-old"),
+      field("New password (6+ characters)", "pw-new"),
+      field("New password again", "pw-new2"),
+      mk("p", "pw-note", "Your account has no email, so a forgotten password can't be reset. Pick one you'll remember."),
+      msg, row);
+    overlay.append(card);
+    document.body.append(overlay);
+    const onKey = e => { if (e.key === "Escape") shut(); };
+    const shut = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
+    document.addEventListener("keydown", onKey);
+    cancel.addEventListener("click", shut);
+    overlay.addEventListener("click", e => { if (e.target === overlay) shut(); });
+    ["pw-old", "pw-new", "pw-new2"].forEach(id => $(id).addEventListener("keydown", e => { if (e.key === "Enter") save.click(); }));
+    $("pw-old").focus();
+
+    save.addEventListener("click", async () => {
+      const oldPw = $("pw-old").value, pw = $("pw-new").value, pw2 = $("pw-new2").value;
+      const fail = t => { msg.textContent = t; };
+      if (!oldPw) return fail("Enter your current password.");
+      if (pw.length < 6) return fail("The new password must be at least 6 characters.");
+      if (pw !== pw2) return fail("The two new passwords don't match.");
+      if (pw === oldPw) return fail("Pick a password that's different from your current one.");
+      save.disabled = true; fail("Checking…");
+      const check = await sb.auth.signInWithPassword({ email: session.user.email, password: oldPw });
+      if (check.error) { save.disabled = false; return fail("Your current password is wrong."); }
+      const { error } = await sb.auth.updateUser({ password: pw });
+      save.disabled = false;
+      if (error) return fail(error.message);
+      shut();
+      say("Password changed.");
+    });
+  }
+
   /* ---------- the buttons in the top corner ---------- */
   function renderActions() {
     const box = $("p-actions");
     const btn = (label, fn, secondary) => { const b = mk("button", secondary ? "btn-secondary" : "", label); b.type = "button"; b.addEventListener("click", fn); return b; };
     const link = (label, href) => { const a = mk("a", "profile-link", label); a.href = href; return a; };
     const items = [];
-    items.push(btn("How points work", openPoints, true));
+    items.push(btn("How points work", () => openPoints(), true));
     const viewing = wantedName || (me && me.username);
     if (viewing) {
       items.push(btn("Copy link", async () => {
@@ -1097,7 +1144,8 @@
     }
     if (!session && wantedName) items.push(link("Sign in", "profile.html"));
     if (session) items.push(btn("Sign out", () => sb.auth.signOut(), true));
-    if (session && me && wantedName && wantedName !== me.username) items.push(link("My profile", "profile.html"));
+    if (session && me && (!wantedName || wantedName === me.username)) items.push(btn("Change password", openChangePassword, true));
+    if (session && me && wantedName && wantedName !== me.username) items.push(btn("My profile", "profile.html"));
     box.replaceChildren(...items);
   }
 
@@ -1171,4 +1219,5 @@
     route();
   });
   route().then(() => { ready = true; });
+  if (new URLSearchParams(location.search).has("points")) openPoints(true);
 })();

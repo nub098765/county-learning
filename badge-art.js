@@ -72,7 +72,7 @@
     const d = shapeFor(name);
     if (!d) return null;
     const st = STATE_STYLE[name];
-    const inner = svgEl("svg", { x: 20, y: 20, width: 60, height: 60, viewBox: "0 0 100 100", preserveAspectRatio: "xMidYMid meet", class: "medal-shape" + (extraClass ? " " + extraClass : "") });
+    const inner = svgEl("svg", { x: 0, y: 0, width: 100, height: 100, viewBox: "0 0 100 100", preserveAspectRatio: "xMidYMid meet", class: "medal-shape" + (extraClass ? " " + extraClass : "") });
     const tilt = tiltOf(name);
     const g = svgEl("g", {});
     g.append(svgEl("path", {
@@ -94,6 +94,34 @@
     return svg;
   }
 
+  // Zooms each state so its farthest point just touches a circle inside the medal ring: every state fills its badge as much as it can.
+  // Needs the shape on the page already (getBBox / getPointAtLength), so call it after appending.
+  const FIT_RADIUS = 35;           // of the medal's 100-unit width; the ring's inner edge is about 43, so this leaves a small gap
+  function fit(root) {
+    const shapes = root.matches && root.matches("svg.medal-shape") ? [root] : [...root.querySelectorAll("svg.medal-shape")];
+    shapes.forEach(s => {
+      try {
+        const g = s.querySelector("g"), path = g.querySelector("path");
+        const bb = g.getBBox();
+        if (!(bb.width > 0 && bb.height > 0)) return;
+        const m = /rotate\(([-\d.eE]+)\)/.exec(path.getAttribute("transform") || "");
+        const a = m ? parseFloat(m[1]) * Math.PI / 180 : 0, cos = Math.cos(a), sin = Math.sin(a);
+        const total = path.getTotalLength(), steps = Math.min(600, Math.max(120, Math.round(total / 2)));
+        const pts = [];
+        for (let i = 0; i <= steps; i++) {
+          const p = path.getPointAtLength(total * i / steps);
+          pts.push([p.x * cos - p.y * sin, p.x * sin + p.y * cos]);     // where the point lands after the upright rotation
+        }
+        const cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2;
+        let r = 0;
+        for (const [x, y] of pts) r = Math.max(r, Math.hypot(x - cx, y - cy));
+        r = Math.max(r, Math.hypot(bb.width, bb.height) / 8);           // never zoom a tiny or odd shape absurdly far
+        const half = r * 50 / (parseFloat(s.getAttribute("data-fit")) || FIT_RADIUS);
+        s.setAttribute("viewBox", `${cx - half} ${cy - half} ${half * 2} ${half * 2}`);
+      } catch (e) { /* not drawn yet */ }
+    });
+  }
+
   // loads the outline files if this page doesn't have them yet (the game page loads them only when a state badge is first needed)
   let loading = null;
   function ready() {
@@ -109,5 +137,5 @@
     return loading;
   }
 
-  window.CountellectBadge = { TIER, TIER_RING, STATE_STYLE, svgEl, discSvg, shapeFor, stateShape, badgeSvg, ready };
+  window.CountellectBadge = { TIER, TIER_RING, STATE_STYLE, svgEl, discSvg, shapeFor, stateShape, badgeSvg, fit, ready };
 })();

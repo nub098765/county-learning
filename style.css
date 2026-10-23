@@ -5,7 +5,7 @@
 
 body {
  --county-color-correct: #1e4b0e;
- --county-color-just-found: #78936e;
+ --county-color-just-found: #61a848;
  --county-color-miss-1: #d8b34b;
  --county-color-miss-2: #d98151;
  --county-color-miss-3: #e86767;
@@ -3893,10 +3893,10 @@ body[data-play-mode="review"] #game-stopwatch,
 body[data-play-mode="review"] #feedback { display: none; }
 body[data-play-mode="review"] #target-prompt .find-label { font-size: 0.95rem; }
 
-.county-hover-tooltip.pinned { position: fixed; z-index: 1050; box-shadow: 0 0 0 2px #5b9bd5; pointer-events: auto; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.county-hover-tooltip.pinned { position: fixed; z-index: 1050; box-shadow: 0 0 0 2px var(--county-highlight-outline, #5b9bd5); pointer-events: auto; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 .county-hover-tooltip.pinned.dragging { cursor: grabbing; }
 .review-arrows { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 1040; opacity: 0.6; overflow: visible; }
-.review-arrows line { stroke: #5b9bd5; stroke-width: 2.5; stroke-linecap: round; }
+.review-arrows line { stroke: var(--county-highlight-outline, #5b9bd5); stroke-width: 2.5; stroke-linecap: round; }
 
 .home-slider { gap: 0.75rem; }
 .home-slider input[type="range"] { width: 9rem; accent-color: #2d5a27; cursor: pointer; }
@@ -4240,3 +4240,140 @@ body[data-play-mode="review"] #btn-restart { display: none; }
 .home-slider > span { display: inline-block; width: 14rem; min-width: 14rem; text-align: left; white-space: nowrap; }
 .home-slider strong { display: inline-block; width: 2ch; min-width: 2ch; text-align: left; font-variant-numeric: tabular-nums; }
 html { scrollbar-gutter: stable; }
+/* ---------- target highlight: always shows, and is a bit see-through ----------
+   --hl-base is whatever colour the county currently is (these rules mirror the fill rules above, same order),
+   and the highlight is blended over it. Because the highlight fill is !important, a county's own colour
+   (correct, wrong, missed...) can no longer cover it up. */
+@property --hl-mix { syntax: "<number>"; inherits: true; initial-value: 70; }
+.county { --hl-base: var(--rest); --hl-strength: 70; }
+/* a county that already has a result colour (green, red, orange...) gets a much stronger highlight, so that colour can't read as winning */
+.county.found { --hl-base: var(--county-color-correct); --hl-strength: 92; }
+.county.correct-recovered { --hl-base: var(--county-color-miss-1); --hl-strength: 92; }
+.county.correct-recovered.recovered-miss-2 { --hl-base: var(--county-color-miss-2); --hl-strength: 92; }
+.county.correct-recovered.recovered-miss-3 { --hl-base: var(--county-color-miss-3); --hl-strength: 92; }
+.county.correct { --hl-base: var(--county-color-correct); --hl-strength: 92; }
+.county.correct.just-found { --hl-base: var(--county-color-just-found); --hl-strength: 92; }
+.county.wrong { --hl-base: var(--county-color-wrong); --hl-strength: 92; }
+.county.given-up-missed { --hl-base: var(--county-color-miss-3); --hl-strength: 92; }
+
+/* (a county flashing "wrong" after a bad guess is left out of all of these, so the wrong colour always wins for those moments) */
+/* List, Type, Identify, Multiple-Choice: steady highlight */
+body:not([data-play-mode="pin"]):not([data-play-mode="pin-hard"]) .county.typing-highlight:not(.wrong),
+body:not([data-play-mode="pin"]):not([data-play-mode="pin-hard"]) .county.typing-highlight:not(.wrong) path {
+ fill: color-mix(in srgb, var(--county-highlight-fill) calc(var(--hl-strength) * 1%), var(--hl-base)) !important;
+}
+/* Pin and Flash reveal: the same pulse as before, blended over the county's own colour */
+body[data-play-mode="pin"] .county.typing-highlight:not(.wrong),
+body[data-play-mode="pin"] .county.typing-highlight:not(.wrong) path,
+body[data-play-mode="pin-hard"] .county.typing-highlight:not(.wrong),
+body[data-play-mode="pin-hard"] .county.typing-highlight:not(.wrong) path {
+ animation: hlPulse 1.6s ease-in-out infinite !important;
+ fill: color-mix(in srgb, var(--county-highlight-fill) calc(var(--hl-mix) * 1%), var(--hl-base)) !important;
+}
+@keyframes hlPulse {
+ 0%, 100% { --hl-mix: 0; }
+ 50% { --hl-mix: var(--hl-strength); }
+}
+/* hovering a missed county in Identify / The Ultimate Challenge */
+body[data-play-mode="type-hard"] .county:hover:not(.wrong),
+body[data-play-mode="type-hard"] .county:hover:not(.wrong) path,
+body[data-play-mode="tuc"] .county:hover:not(.wrong),
+body[data-play-mode="tuc"] .county:hover:not(.wrong) path {
+ fill: color-mix(in srgb, var(--county-highlight-fill) calc(var(--hl-strength) * 1%), var(--hl-base)) !important;
+}
+/* the glow copies drawn on top of a county are see-through too */
+.study-hover-layer .study-hover-clone,
+.study-hover-layer .study-hover-clone path,
+.play-glow, .play-glow path {
+ fill: color-mix(in srgb, var(--county-highlight-fill) 50%, transparent);
+}
+.play-glow.play-glow-strong, .play-glow.play-glow-strong path {
+ fill: color-mix(in srgb, var(--county-highlight-fill) 50%, transparent);
+}
+
+/* the little "List" pill on each map (shown with several states in List mode): readable in light mode, and no dark-gray hover */
+.map-list-btn { color: #1c1c1a; }
+.map-list-btn:hover, .map-list-btn:focus-visible { background: #fff; color: #1c1c1a; border-color: rgba(0, 0, 0, 0.35); }
+body.dark-mode .map-list-btn:hover, body.dark-mode .map-list-btn:focus-visible { background: #242420; color: #fdeca6; border-color: rgba(255, 255, 255, 0.4); }
+
+/* your name and points on the main menu: hovering just underlines the name, no black box */
+.home-who:hover, body.dark-mode .home-who:hover { background: none; color: inherit; }
+
+/* light/dark button: sun while dark, moon while light */
+#btn-theme .theme-moon { display: none; }
+#btn-theme:not(.is-dark) .theme-sun { display: none; }
+#btn-theme:not(.is-dark) .theme-moon { display: block; }
+
+/* ---------- checkboxes: drawn by the site, so they look the same in every browser ---------- */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  --cb: #2d5a27;
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: none;
+  box-sizing: border-box;
+  vertical-align: middle;
+  border: 1.5px solid #9a9a8f;
+  border-radius: 4px;
+  background: #fff center / 78% no-repeat;
+  cursor: pointer;
+  transition: background-color .12s ease, border-color .12s ease;
+}
+input[type="checkbox"]:checked {
+  background-color: var(--cb);
+  border-color: var(--cb);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.6l3.2 3.2L13 4.6' fill='none' stroke='%23fff' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+input[type="checkbox"]:hover:not(:disabled) { border-color: var(--cb); }
+input[type="checkbox"]:focus-visible { outline: 2px solid var(--cb); outline-offset: 2px; }
+input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
+.home-options input[type="checkbox"] { --cb: #e8892b; }
+body.dark-mode input[type="checkbox"] { --cb: #45a049; background-color: #2b2b26; border-color: #6b6b60; }
+body.dark-mode .home-options input[type="checkbox"] { --cb: #e8892b; }
+body.dark-mode input[type="checkbox"]:checked { background-color: var(--cb); border-color: var(--cb); }
+.checkbox-label input[type="checkbox"].county-checkbox { width: 1.1rem; height: 1.1rem; }
+
+/* ---------- scrollbars when zoomed way in on a state: same look as the other scrollbars on the site ---------- */
+.zoom-scroller { scrollbar-width: thin; scrollbar-color: #c9c4b0 rgba(0, 0, 0, 0.06); }
+.zoom-scroller::-webkit-scrollbar { width: 8px; height: 8px; }
+.zoom-scroller::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.06); border-radius: 8px; }
+.zoom-scroller::-webkit-scrollbar-thumb { background: #c9c4b0; border-radius: 8px; }
+.zoom-scroller::-webkit-scrollbar-thumb:hover { background: #b0aa92; }
+.zoom-scroller::-webkit-scrollbar-corner { background: transparent; }
+body.dark-mode .zoom-scroller { scrollbar-color: #5c5a4a #242420; }
+body.dark-mode .zoom-scroller::-webkit-scrollbar-track { background: #242420; }
+body.dark-mode .zoom-scroller::-webkit-scrollbar-thumb { background: #5c5a4a; }
+body.dark-mode .zoom-scroller::-webkit-scrollbar-thumb:hover { background: #fdeca6; }
+
+/* Replace the browser's built-in clear (X) button in search boxes with a themed one */
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-left: 0.4rem;
+  border-radius: 50%;
+  cursor: pointer;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.8 1.8l6.4 6.4M8.2 1.8L1.8 8.2' stroke='%23666' stroke-width='1.5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E") no-repeat center / 9px;
+  background-color: rgba(0, 0, 0, 0.08);
+  transition: background-color 0.15s;
+}
+input[type="search"]::-webkit-search-cancel-button:hover { background-color: rgba(0, 0, 0, 0.16); }
+
+body.dark-mode input[type="search"]::-webkit-search-cancel-button {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.8 1.8l6.4 6.4M8.2 1.8L1.8 8.2' stroke='%23fdeca6' stroke-width='1.5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+  background-color: rgba(253, 236, 166, 0.12);
+}
+body.dark-mode input[type="search"]::-webkit-search-cancel-button:hover { background-color: rgba(253, 236, 166, 0.24); }
+
+.pw-card { background: #fff; color: #1b3818; border-radius: 14px; padding: 1.25rem 1.5rem; width: min(420px, 92vw); display: flex; flex-direction: column; gap: 0.75rem; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35); }
+body.dark-mode .pw-card { background: #242420; color: #fdeca6; }
+.pw-card h3 { margin: 0; }
+.pw-field { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; }
+.pw-field input { font: inherit; padding: 0.5rem 0.7rem; border: 1px solid #ccc; border-radius: 8px; background: #fbfaf6; color: inherit; }
+body.dark-mode .pw-field input { background: #2b2b26; border-color: #3f3f38; }
+.pw-note { font-size: 0.8rem; opacity: 0.7; margin: 0; }
+.pw-msg { min-height: 1.2em; margin: 0; font-size: 0.9rem; font-weight: 600; }
+.pw-buttons { display: flex; gap: 0.5rem; justify-content: flex-end; }
+.review-arrows marker path { fill: var(--county-highlight-outline, #5b9bd5); }

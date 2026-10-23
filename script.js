@@ -3519,6 +3519,9 @@ async function renderStateUnlockShape(medal, badge) {
     const shape = art.stateShape(name, false, "unlock-medal-state-shape");
     if (!shape) throw new Error(`No badge outline found for ${name}`);
     medal.append(shape);
+    // the outline is in map coordinates; size it to fit once it's on the page (the toast may not be in the document for a moment)
+    for (let i = 0; i < 20 && !shape.isConnected; i++) await new Promise(r => setTimeout(r, 25));
+    art.fit(shape);
   } catch (error) {
     console.warn("Couldn't draw the state badge in its unlock notification:", error);
     const fallback = document.createElementNS(UNLOCK_SVG_NS, "text");
@@ -5661,7 +5664,11 @@ function handleCountyClick(pathEl) {
 
 
     pathEl.classList.add("wrong");
-    setTimeout(() => pathEl.classList.remove("wrong"), 600);
+    clearHoverGlow();                          // a hover glow copy would sit on top of the wrong flash
+    setTimeout(() => {
+      pathEl.classList.remove("wrong");
+      if (pathEl.matches(":hover") && hoverGlowAllowed(pathEl)) showHoverGlow(pathEl);
+    }, 600);
   }
 }
 
@@ -6071,7 +6078,9 @@ function showHoverGlow(el) {
     const c = part.cloneNode(true);
     ["id", "tabindex", "role", "aria-label", "data-county-id", "data-name"].forEach(a => c.removeAttribute(a));
     c.querySelectorAll("[id]").forEach(n => n.removeAttribute("id"));
-    c.setAttribute("class", "play-glow");
+    // a county that already has a result colour gets a stronger glow, so its own colour can't hide the highlight
+    const coloured = ["found", "correct", "correct-recovered", "wrong", "given-up-missed"].some(k => part.classList.contains(k));
+    c.setAttribute("class", "play-glow" + (coloured ? " play-glow-strong" : ""));
     c.style.pointerEvents = "none";
     part.parentNode.appendChild(c);
     glowClones.push(c);
@@ -6080,7 +6089,7 @@ function showHoverGlow(el) {
 function hoverGlowAllowed(el) {
   if (!isGameActive) return true;                        // results screen: every county glows
   if (selectedMode !== "pin" && selectedMode !== "pin-hard") return false;
-  return !["found", "correct", "correct-recovered", "typing-highlight"].some(k => el.classList.contains(k));
+  return !el.classList.contains("typing-highlight");     // every colour still highlights; only the pulsing reveal target is left alone
 }
 
 function recordWord(stateKeyList, n) {
@@ -6244,7 +6253,7 @@ if (recentTimesElement) {
 
 
     countyPaths.forEach(path => {
-      path.classList.add("correct");
+      if (!path.classList.contains("correct-recovered")) path.classList.add("correct");   // counties you needed extra tries on keep their yellow / orange / red
       path.style.pointerEvents = "none";
     });
 
@@ -6583,4 +6592,27 @@ document.querySelectorAll(".state-row[data-state] .state-count").forEach(el => {
   menu.addEventListener("click", () => set(false));
   document.addEventListener("click", e => { if (!menu.contains(e.target) && e.target !== btn) set(false); });
   document.addEventListener("keydown", e => { if (e.key === "Escape") set(false); });
+})();
+
+// light / dark button on the main menu: shows a sun while it's dark (click for light) and a moon while it's light
+(function () {
+  const btn = document.getElementById("btn-theme"), box = document.getElementById("toggle-dark");
+  if (!btn || !box) return;
+  const sync = () => {
+    const dark = document.body.classList.contains("dark-mode");
+    btn.classList.toggle("is-dark", dark);
+    const sun = btn.querySelector(".theme-sun"), moon = btn.querySelector(".theme-moon");   // set directly, so it works even without the stylesheet rules
+    if (sun) sun.style.display = dark ? "block" : "none";
+    if (moon) moon.style.display = dark ? "none" : "block";
+    const label = dark ? "Switch to light mode" : "Switch to dark mode";
+    btn.setAttribute("aria-label", label);
+    btn.title = label;
+  };
+  btn.addEventListener("click", () => {
+    box.checked = !box.checked;                           // goes through the same path as the Settings checkbox, so both stay in step
+    box.dispatchEvent(new Event("change", { bubbles: true }));
+    sync();
+  });
+  new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  sync();
 })();
