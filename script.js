@@ -863,6 +863,7 @@ let updateHandle = null;
 let finalTime = 0;
 let pausedByTab = false;
 let missedCounties = new Set();
+let struggledCounties = new Set();   // every county you got wrong at least once this run, even if you found it later (feeds "What you missed")
 let stateMistakes = new Set();
 let stateCompletionTimes = new Map();
 let forfeitedCount = 0;
@@ -4803,6 +4804,7 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   startStopwatch(isRetryMissedRun);
   isGameActive = true;
   missedCounties.clear();
+  struggledCounties.clear();
   stateMistakes.clear();
   stateCompletionTimes = new Map();
   forfeitedCount = 0;
@@ -5602,7 +5604,7 @@ function handleCountyClick(pathEl) {
 
 
     if (feedbackEl) {
-      feedbackEl.textContent = `Correct! That's ${getPlainName(currentTarget)}.`;
+      feedbackEl.textContent = pickFeedback(true, getPlainName(currentTarget));
       feedbackEl.className = "feedback-message success";
     }
 
@@ -5650,12 +5652,13 @@ function handleCountyClick(pathEl) {
 
 
     if (feedbackEl) {
-      feedbackEl.textContent = `Oops! That's ${clickedName}.`;
+      feedbackEl.textContent = pickFeedback(false, clickedName);
       feedbackEl.className = "feedback-message error";
     }
 
 
     missedCounties.add(currentTarget);
+    struggledCounties.add(currentTarget);
 
 
     countyMistakes[currentTarget.id] = (countyMistakes[currentTarget.id] || 0) + 1;
@@ -5690,7 +5693,7 @@ function acceptTypedMatches(matchedCounties) {
 
   if (feedbackEl) {
     if (SINGLE_TARGET_TYPE_MODES.has(selectedMode)) {
-      feedbackEl.textContent = `Correct! That's ${getPlainName(matchedCounties[0])}.`;
+      feedbackEl.textContent = pickFeedback(true, getPlainName(matchedCounties[0]));
     } else {
       feedbackEl.textContent = matchedCounties.length > 1
         ? `Correct! That matched ${matchedCounties.length} ${unitWord(true)}.`
@@ -5735,7 +5738,7 @@ function registerWrongTypedGuess() {
   }
 
   if (currentTarget) {
-    if (selectedMode === "type-strict" || selectedMode === "mc") missedCounties.add(currentTarget);
+    if (selectedMode === "type-strict" || selectedMode === "mc") { missedCounties.add(currentTarget); if (currentTarget) struggledCounties.add(currentTarget); }
     countyMistakes[currentTarget.id] = (countyMistakes[currentTarget.id] || 0) + 1;
     localStorage.setItem("countyMistakes", JSON.stringify(countyMistakes));
   }
@@ -6235,6 +6238,88 @@ function formatTime(ms) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}.${milliseconds.toString().padStart(3, "0")}`;
 }
 
+/* ===== Right/wrong feedback lines. {c} is replaced by the county's name, so every line has it. Add or edit freely. ===== */
+const CORRECT_LINES = [
+  "Correct! That's {c}.", "Nailed it: {c}.", "Yep, that's {c}.", "{c}! Easy.", "{c}. Look at you go.",
+  "Right on, {c}.", "{c} found. Smooth.", "That's {c}. You know your stuff.", "Bingo: {c}.", "{c}, no problem."
+];
+const WRONG_LINES = [
+  "Oops! That's {c}.", "Nope, that one's {c}.", "Close, but that's {c}.", "That's {c}. Try again.",
+  "The map says {c}, not your answer.", "That was {c}. Keep looking.", "Not quite: that's {c}.",
+  "Nice try, but that's {c}.", "You found {c}. Wrong one, though.", "That's {c}. The one you want is still out there."
+];
+/* Special lines for particular counties. Key = the county name in lowercase, without the word "County" (e.g. "kings").
+   Each time that county comes up there's a SPECIAL_CHANCE it uses one of these instead of the normal lines.
+   Add as many as you like; {c} is still replaced by the county's name. */
+const SPECIAL_CHANCE = 0.4;
+const SPECIAL_LINES = {
+  "kings": { ok: ["Yep, {c}. Like you, you king.", "{c}. Long live the king (that's you)."], bad: ["That's {c}. Uneasy lies the head that clicks the crown."] },
+  "queens": { ok: ["{c}. Slay, queen."], bad: ["That's {c}. Not your finest hour, your majesty."] },
+  "orange": { ok: ["{c}. Perfectly ripe."], bad: ["That's {c}. Bit of a sour pick."] },
+  "washington": { ok: ["{c}. Which Washington? Doesn't matter, you got it."], bad: ["That's {c}. There are about 30 of those, to be fair."] },
+  "jefferson": { ok: ["{c}. One of many, and you got this one."], bad: ["That's {c}. They multiply, don't they?"] },
+  "cook": { ok: ["{c}. Now you're cooking."], bad: ["That's {c}. Back to the kitchen."] },
+  "lincoln": { ok: ["{c}. Honest answer, honest Abe."], bad: ["That's {c}. Four score and several misses ago."] },
+  "monroe": { ok: ["{c}. Marilyn would be proud."], bad: ["That's {c}. Not the Monroe you wanted."] },
+  "moore": { ok: ["Waiter, waiter! {c}, please!"], bad: ["Maybe you should practice some {c}."] },
+  "yolo": { ok: ["{c}. You only click once, and you clicked right."], bad: ["{c}. You only click once, and you clicked wrong."]},
+  "garfield": { ok: ["{c}. Lasagna time."], bad: [] },
+  "knox": { ok: ["Knox knox. Who's there? {c}. {c} who? You, correctly."], bad: [] },
+  "kane": { ok: [], bad: ["That's {c}. Not the Citizen kind."] },
+  "uinta": { ok: ["Are {c} geography? You're doing amazing!"], bad: [] },
+  "uintah": { ok: ["Are {c} geography? You're doing amazing!"], bad: [] },
+  "wise": { ok: ["Wise choice. That's {c}."], bad: [] },
+  "story": { ok: ["And that's the story of {c}."], bad: [] },
+  "early": { ok: ["Yep. The {c} bird gets the worm."], bad: [] },
+  "liberty": { ok: ["Give me {c} or give me death."], bad: [] },
+  "houston": { ok: ["{c}, we have the right answer."], bad: ["{c}, we have a problem: this answer is wrong."] },
+  "hamilton": { ok: ["{c} didn't throw away his shot, and neither did you."], bad: [] },
+  "swisher": { ok: ["{c}. Mellohi would be proud of you."], bad: ["That's {c}. Mellohi would be disappointed in you."] }
+};
+const lastFeedbackLine = { ok: "", bad: "" };
+function pickFeedback(ok, county) {
+  const key = ok ? "ok" : "bad";
+  const special = (SPECIAL_LINES[String(county).toLowerCase()] || {})[key];
+  if (special && special.length && Math.random() < SPECIAL_CHANCE) return special[Math.floor(Math.random() * special.length)].replace(/\{c\}/g, county);
+  const pool = (ok ? CORRECT_LINES : WRONG_LINES).filter(l => l !== lastFeedbackLine[key]);
+  const line = pool[Math.floor(Math.random() * pool.length)];
+  lastFeedbackLine[key] = line;
+  return line.replace(/\{c\}/g, county);
+}
+
+/* ===== End-of-game headline: a random message for how well the run went (add or edit lines freely) ===== */
+const GRADE_MESSAGES = [
+  { min: 100, lines: ["Good job!", "Flawless.", "Perfect run.", "Not a single miss.", "Cartographer mode: activated.", "Do you do this in your sleep?", "100%. Show-off.", "Nothing to see here. Perfect."] },
+  { min: 90,  lines: ["So close to perfect.", "Nearly flawless.", "Great run!", "Just a smudge on an A+.", "One or two slipped past you.", "Chef's kiss, minus a pinch.", "Impressive. Annoyingly close, though."] },
+  { min: 75,  lines: ["Not bad.", "Solid run.", "Pretty good!", "You know your stuff. Mostly.", "A few counties are plotting against you.", "Respectable.", "Good, with room to grow."] },
+  { min: 50,  lines: ["You could work on that.", "Halfway there.", "Room for improvement.", "A decent start.", "Some of these were a coin flip, huh?", "The map is winning, but only slightly.", "Keep practicing, it'll stick."] },
+  { min: 25,  lines: ["Rough one.", "That went sideways.", "Those counties fought back.", "Were you guessing?", "Learn mode is right over there.", "Every expert started here.", "The map humbled you today."] },
+  { min: 0,   lines: ["Oof.", "Ouch.", "Did you even look at the map?", "That's one way to do it.", "The counties send their regards.", "Maybe try Learn mode first?", "Bold strategy. Didn't work."] }
+];
+let lastGradeMessage = "";
+function pickGradeMessage(accuracy) {
+  const tier = GRADE_MESSAGES.find(t => accuracy >= t.min) || GRADE_MESSAGES[GRADE_MESSAGES.length - 1];
+  const pool = tier.lines.filter(l => l !== lastGradeMessage);
+  const line = pool[Math.floor(Math.random() * pool.length)] || tier.lines[0];
+  lastGradeMessage = line;
+  return line;
+}
+
+function renderMissedSection(list) {
+  if (!(summaryMissedSection && summaryMissedList) || !list.length) return;
+  const byState = {};
+  list.forEach(c => { (byState[c.stateKey] = byState[c.stateKey] || []).push(c); });
+  const stateKeys = Object.keys(byState).sort((a, b) => (stateData[a]?.name || a).localeCompare(stateData[b]?.name || b));
+  summaryMissedList.innerHTML = stateKeys
+    .map(stateKey => {
+      const stateName = stateData[stateKey]?.name || stateKey;
+      const items = byState[stateKey].slice().sort((a, b) => a.name.localeCompare(b.name)).map(c => `<li>${c.name}</li>`).join("");
+      return `<div class="summary-missed-state"><h4>${stateName}</h4><ul>${items}</ul></div>`;
+    })
+    .join("");
+  summaryMissedSection.classList.remove("hidden");
+}
+
 function showSummaryModal() {
   if (autoZoomedByGame && zoomedMap) exitMapZoom();
   autoZoomedByGame = false;
@@ -6269,12 +6354,7 @@ if (recentTimesElement) {
 }
 
 
-  if (summaryGradeTitle) {
-    if (accuracy === 100) summaryGradeTitle.textContent = "Good job!";
-    else if (accuracy >= 75) summaryGradeTitle.textContent = "Not bad.";
-    else if (accuracy >= 50) summaryGradeTitle.textContent = "You could work on that.";
-    else summaryGradeTitle.textContent = "Oof.";
-  }
+  if (summaryGradeTitle) summaryGradeTitle.textContent = pickGradeMessage(accuracy);
 
 
   const missedArray = Array.from(missedCounties);
@@ -6292,8 +6372,8 @@ if (recentTimesElement) {
         const verb = selectedMode === "type" ? "listed" : "learned";
         summaryMessage.textContent = `You've ${verb} all the ${unitWord(true)} ${where}! Good job!`;
       } else {
-        const mistakes = Math.max(scoreWrong, 1);
-        summaryMessage.textContent = `You found all the ${unitWord(true)} ${where}, but with ${mistakes} mistake${mistakes === 1 ? "" : "s"}. Try for a perfect run!`;
+        const missedN = selectedMode !== "tuc" && struggledCounties.size ? struggledCounties.size : Math.max(scoreWrong, 1);   // counties you missed, not total wrong clicks
+        summaryMessage.textContent = `You missed ${missedN} ${unitWord(missedN !== 1)}. Unlucky.`;
       }
     }
 
@@ -6312,8 +6392,17 @@ if (recentTimesElement) {
     renderStatsPanel();
 
 
+    const struggled = selectedMode === "tuc" ? [] : Array.from(struggledCounties);
+    if (currentRunHadMistake && struggled.length) renderMissedSection(struggled);   // found them all, but these took more than one try
+
     appendModalButton("See Results", "btn-secondary", enableAdmireBar);
-    appendModalButton("Play Again", "btn-primary", () => {
+    if (currentRunHadMistake && struggled.length) {
+      appendModalButton("Retry Missed", "btn-primary", () => {
+        modalSummary.classList.add("hidden");
+        initGame(struggled, true);
+      });
+    }
+    appendModalButton("Play Again", currentRunHadMistake && struggled.length ? "btn-secondary" : "btn-primary", () => {
       modalSummary.classList.add("hidden");
       initGame(selectedCounties);
     });
@@ -6329,26 +6418,7 @@ if (recentTimesElement) {
     if (summaryMessage) {
     summaryMessage.textContent = `You missed ${missedArray.length} ${unitWord(false)} target${missedArray.length > 1 ? 's' : ''}. What would you like to do?`;;
     }
-    if (summaryMissedSection && summaryMissedList) {
-      const byState = {};
-      missedArray.forEach(c => {
-        (byState[c.stateKey] = byState[c.stateKey] || []).push(c);
-      });
-      const stateKeys = Object.keys(byState).sort((a, b) => {
-        const nameA = stateData[a]?.name || a;
-        const nameB = stateData[b]?.name || b;
-        return nameA.localeCompare(nameB);
-      });
-      summaryMissedList.innerHTML = stateKeys
-        .map(stateKey => {
-          const stateName = stateData[stateKey]?.name || stateKey;
-          const sorted = byState[stateKey].sort((a, b) => a.name.localeCompare(b.name));
-          const items = sorted.map(c => `<li>${c.name}</li>`).join("");
-          return `<div class="summary-missed-state"><h4>${stateName}</h4><ul>${items}</ul></div>`;
-        })
-        .join("");
-      summaryMissedSection.classList.remove("hidden");
-    }
+    renderMissedSection(missedArray);
 
 
     appendModalButton("See Results", "btn-secondary", enableAdmireBar);
