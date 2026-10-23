@@ -6252,11 +6252,13 @@ if (recentTimesElement) {
 
 
     if (summaryMessage) {
-      const verb = selectedMode === "type" ? "listed" : "learned";
-      if (activeStateNames.length === 1) {
-      summaryMessage.textContent = `You've ${verb} all the ${unitWord(true)} in ${activeStateNames[0]}! Good job!`;;
+      const where = activeStateNames.length === 1 ? `in ${activeStateNames[0]}` : `across ${activeStateNames.length} states`;
+      if (!currentRunHadMistake) {
+        const verb = selectedMode === "type" ? "listed" : "learned";
+        summaryMessage.textContent = `You've ${verb} all the ${unitWord(true)} ${where}! Good job!`;
       } else {
-        summaryMessage.textContent = `You've ${verb} all the ${unitWord(true)} across ${activeStateNames.length} states! Good job!`;
+        const mistakes = Math.max(scoreWrong, 1);
+        summaryMessage.textContent = `You found all the ${unitWord(true)} ${where}, but with ${mistakes} mistake${mistakes === 1 ? "" : "s"}. Try for a perfect run!`;
       }
     }
 
