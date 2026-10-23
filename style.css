@@ -4285,10 +4285,10 @@ body[data-play-mode="tuc"] .county:hover:not(.wrong) path {
 .study-hover-layer .study-hover-clone,
 .study-hover-layer .study-hover-clone path,
 .play-glow, .play-glow path {
- fill: color-mix(in srgb, var(--county-highlight-fill) 50%, transparent);
+ fill: color-mix(in srgb, var(--county-highlight-fill) 90%, transparent);
 }
 .play-glow.play-glow-strong, .play-glow.play-glow-strong path {
- fill: color-mix(in srgb, var(--county-highlight-fill) 50%, transparent);
+ fill: color-mix(in srgb, var(--county-highlight-fill) 90%, transparent);
 }
 
 /* the little "List" pill on each map (shown with several states in List mode): readable in light mode, and no dark-gray hover */

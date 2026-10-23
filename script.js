@@ -2356,7 +2356,7 @@ function applySettings() {
     if (isHexColor(gameSettings[key])) {
       document.body.style.setProperty(cssVar, gameSettings[key]);
       if (key === "countyHighlightColor") {
-        document.body.style.setProperty("--county-highlight-outline", darkenHexColor(gameSettings[key]));
+        document.body.style.setProperty("--county-highlight-outline", lightenHexColor(gameSettings[key], 0.6));
       }
     } else {
       document.body.style.removeProperty(cssVar);
@@ -2368,11 +2368,6 @@ function applySettings() {
   });
   updateMapLayoutMode();
   updateMapGridColumns();
-}
-
-function darkenHexColor(color) {
-  const channels = color.slice(1).match(/.{2}/g).map(channel => Math.round(parseInt(channel, 16) * 0.55));
-  return "#" + channels.map(channel => channel.toString(16).padStart(2, "0")).join("");
 }
 
 
@@ -3227,7 +3222,7 @@ COUNTY_COLOR_SETTINGS.forEach(({ id, key, cssVar }) => {
     gameSettings[key] = input.value;
     document.body.style.setProperty(cssVar, input.value);
     if (key === "countyHighlightColor") {
-      document.body.style.setProperty("--county-highlight-outline", darkenHexColor(input.value));
+      document.body.style.setProperty("--county-highlight-outline", lightenHexColor(input.value, 0.6));
     }
     saveSettings();
   });
