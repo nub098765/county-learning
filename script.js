@@ -6124,6 +6124,36 @@ function hideHoverTooltip() {
   clearHoverGlow();
 }
 
+/* ===== Blue outlines stay on top in Virginia =====
+   Virginia's independent cities are drawn in a layer after the counties, so their gray outlines paint over a county's
+   blue outline. For counties in that layer, the outline is drawn again as a stroke-only copy directly in the svg,
+   which sits above both layers. Every other map is untouched. */
+function topOutlineFor(el, on, tag) {
+  const layer = el.parentNode;
+  if (!layer || !layer.classList || !layer.classList.contains("va-counties-layer")) return;
+  const svg = el.ownerSVGElement;
+  const key = el.id || (el.dataset && el.dataset.countyId);
+  if (!svg || !key) return;
+  const old = Array.from(svg.children).find(n => n.classList.contains("hl-top") && n.dataset.for === key && n.dataset.tag === tag);
+  if (!on) { if (old) old.remove(); return; }
+  if (old) return;
+  const o = el.cloneNode(false);
+  ["id", "tabindex", "role", "aria-label", "data-county-id", "data-name"].forEach(a => o.removeAttribute(a));
+  o.setAttribute("class", "hl-top");
+  o.setAttribute("data-for", key);
+  o.setAttribute("data-tag", tag);
+  o.style.pointerEvents = "none";
+  svg.appendChild(o);
+}
+new MutationObserver(changes => {
+  for (const ch of changes) {
+    const el = ch.target;
+    if (!el.classList || !el.classList.contains("county")) continue;
+    topOutlineFor(el, el.classList.contains("typing-highlight"), "target");
+    if (el.classList.contains("found")) topOutlineFor(el, false, "hover");
+  }
+}).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class"] });
+
 
 function bindCountyInteractivity(path) {
   // Identify / Ultimate Challenge: lift the hovered county above its neighbours so its outline isn't covered
@@ -6134,6 +6164,11 @@ function bindCountyInteractivity(path) {
     if (!path.classList.contains("typing-highlight") && p.querySelector(".county.typing-highlight")) return;
     p.appendChild(path);
   });
+  // Virginia: the hover outline is drawn again above the city layer
+  path.addEventListener("mouseenter", () => {
+    if (isGameActive && (selectedMode === "type-hard" || selectedMode === "tuc") && !path.classList.contains("found")) topOutlineFor(path, true, "hover");
+  });
+  path.addEventListener("mouseleave", () => topOutlineFor(path, false, "hover"));
   path.addEventListener("pointerdown", (e) => {
     if (!gameSettings.speedrunMode) return;
     if (isZoomGestureStart(e)) return;

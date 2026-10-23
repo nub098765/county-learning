@@ -4377,3 +4377,9 @@ body.dark-mode .pw-field input { background: #2b2b26; border-color: #3f3f38; }
 .pw-msg { min-height: 1.2em; margin: 0; font-size: 0.9rem; font-weight: 600; }
 .pw-buttons { display: flex; gap: 0.5rem; justify-content: flex-end; }
 .review-arrows marker path { fill: var(--county-highlight-outline, #5b9bd5); }
+
+/* Virginia: the blue outline drawn again above the city layer */
+.hl-top { fill: none; stroke: var(--county-highlight-outline); stroke-width: 2px; vector-effect: non-scaling-stroke; pointer-events: none; }
+/* Pin and Flash only pulse the fill for their reveal, so the picked-county copy is hidden there; the hover glow copy still shows */
+body[data-play-mode="pin"] .hl-top:not(.hl-glow),
+body[data-play-mode="pin-hard"] .hl-top:not(.hl-glow) { display: none; }
