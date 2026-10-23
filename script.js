@@ -3874,7 +3874,9 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
   const startY = calloutY + uy * calloutRadius;
 
   const svgNS = "http://www.w3.org/2000/svg";
-  const targetGroup = targetSvg.querySelector("g") || targetSvg;
+  // skip the Virginia counties/cities layers: callouts belong above everything, at the end of the map
+  const targetGroup = Array.from(targetSvg.querySelectorAll("g"))
+    .find(g => !g.classList.contains("va-counties-layer") && !g.classList.contains("va-cities-layer")) || targetSvg;
 
   let defs = targetSvg.querySelector("defs");
   if (!defs) {
@@ -4825,7 +4827,7 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   if (countyListPanel) countyListPanel.classList.add("hidden");
   if (btnForfeitTarget) btnForfeitTarget.classList.toggle("hidden", selectedMode === "type" || selectedMode === "tuc" || selectedMode === "type-hard");
   
-  if (gameStopwatch) gameStopwatch.classList.toggle("hidden", selectedMode === "type" || !gameSettings.showStopwatch);
+  if (gameStopwatch) gameStopwatch.classList.toggle("hidden", !gameSettings.showStopwatch);
   document.querySelectorAll(".map-box.state-done").forEach(b => b.classList.remove("state-done"));
   document.body.dataset.playMode = selectedMode;
 
@@ -5668,10 +5670,12 @@ function handleCountyClick(pathEl) {
     }
 
 
-    pathEl.classList.add("wrong");
+    const wrongParts = getCountyElements(clickedId);        // a county and its callout circle flash together
+    if (!wrongParts.includes(pathEl)) wrongParts.push(pathEl);
+    wrongParts.forEach(el => el.classList.add("wrong"));
     clearHoverGlow();                          // a hover glow copy would sit on top of the wrong flash
     setTimeout(() => {
-      pathEl.classList.remove("wrong");
+      wrongParts.forEach(el => el.classList.remove("wrong"));
       if (pathEl.matches(":hover") && hoverGlowAllowed(pathEl)) showHoverGlow(pathEl);
     }, 600);
   }
@@ -6137,6 +6141,7 @@ function bindCountyInteractivity(path) {
     handleCountyClick(e.currentTarget);
   });
 
+  
   // after the game ends, clicking a county plays its voiceline
   path.addEventListener("click", (e) => {
     if (isGameActive || isZoomGestureStart(e) || Date.now() < suppressClickUntil) return;
@@ -6208,10 +6213,9 @@ function showSummaryModal() {
 
 
   if (summaryPercentage) summaryPercentage.textContent = `${accuracy}%`;
-  if (finalTimeElement) finalTimeElement.textContent = formatTime(finalTime), finalTimeElement.classList.toggle("hidden", selectedMode === "type" || !gameSettings.showStopwatch);
-
+  if (finalTimeElement) finalTimeElement.textContent = formatTime(finalTime), finalTimeElement.classList.toggle("hidden", !gameSettings.showStopwatch);
   const runs = perfectTimes[bestTimeKey()] || [];
-const hideTimes = selectedMode === "type" || !gameSettings.showStopwatch || runs.length === 0;
+const hideTimes = !gameSettings.showStopwatch || runs.length === 0;
 
 if (bestTimeElement) {
   bestTimeElement.classList.toggle("hidden", hideTimes);
