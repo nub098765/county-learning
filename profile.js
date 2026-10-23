@@ -43,8 +43,8 @@
     "daydownerrr": WRENCH,
     "macheese": WRENCH,
     "gamergirljimmy": WRENCH,
-    "GoDucks": WRENCH,
-    "NiceShirtBro": WRENCH
+    "goducks": WRENCH,
+    "niceshirtbro": WRENCH
   };
 
   const wantedName = new URLSearchParams(location.search).get("u");   // profile.html?u=name shows that player
