@@ -1103,6 +1103,27 @@ function layoutVirginiaCallouts(svg) {
 
 
 let virginiaCitiesRaised = false;
+
+// Independent cities go in their own layer, drawn after the counties' layer. Raising a hovered county
+// only reorders it inside its own layer, so it can never end up on top of a city.
+// Counties and independent cities each get their own layer, cities after counties. Raising a hovered
+// county only reorders it inside the counties layer, so it can never end up on top of a city.
+function raiseVirginiaCities(svg) {
+  if (!svg || svg.querySelector(".va-cities-layer") || !svg.querySelector(".county")) return;
+  let cityNames;
+  try { cityNames = new Set([...VA_TWIN_CITIES, ...VA_CITY_BASES]); } catch (e) { return; }   // the lists aren't ready yet; try again next time
+  const NS = "http://www.w3.org/2000/svg";
+  const cityIds = new Set(stateData.virginia.counties.filter(c => cityNames.has(c.name)).map(c => c.id));
+  const all = Array.from(svg.querySelectorAll(":scope > .county"));
+  if (!all.length) return;
+  const countyLayer = document.createElementNS(NS, "g");
+  const cityLayer = document.createElementNS(NS, "g");
+  countyLayer.setAttribute("class", "va-counties-layer");
+  cityLayer.setAttribute("class", "va-cities-layer");
+  svg.insertBefore(countyLayer, all[0]);          // layers sit where the paths were, so anything drawn after them stays after them
+  svg.insertBefore(cityLayer, all[0]);
+  all.forEach(el => (cityIds.has(el.id) ? cityLayer : countyLayer).appendChild(el));
+}
 // extra callouts: [countyId, offsetX, offsetY]  (offsets are in the same units as VIRGINIA_CALLOUTS)
 const EXTRA_CALLOUTS = {
   american_samoa: [
@@ -4009,18 +4030,7 @@ function switchVisibleSvgMap() {
         if (el && el.parentNode) el.parentNode.appendChild(el);
       });
             if (key === "virginia") {
-        if (!virginiaCitiesRaised && targetSvg.querySelector(".county")) {
-          try {
-            const cityNames = new Set([...VA_TWIN_CITIES, ...VA_CITY_BASES]);
-            let moved = 0;
-            stateData.virginia.counties.filter(c => cityNames.has(c.name)).forEach(c => {
-              const el = targetSvg.querySelector(`[id="${c.id}"]`);
-              if (el && el.parentNode) { el.parentNode.appendChild(el); moved++; }   // draw cities on top of the counties around them
-            });
-            console.log("raised VA cities:", moved);
-            if (moved) virginiaCitiesRaised = true;
-          } catch (e) { /* the city lists aren't ready yet; try again next time */ }
-        }
+        raiseVirginiaCities(targetSvg);
           layoutVirginiaCallouts(targetSvg).forEach(([id, ox, oy]) => {
           if (!virginiaCalloutsDone[id]) {
             virginiaCalloutsDone[id] = setupCountyCallout(targetSvg, id, `va-${id}`, ox, oy, 0, 3, 9, "va");

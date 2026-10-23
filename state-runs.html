@@ -119,10 +119,21 @@
     });
   }
 
+    async function fetchAllBests() {
+    const out = [];
+    for (let from = 0; ; from += 1000) {          // pages of 1000, in case there are ever more
+      const r = await sb.from("state_run_bests").select("user_id, state_key, mode, time_ms")
+        .order("user_id").order("state_key").order("mode").range(from, from + 999);
+      if (r.error) return r;
+      out.push(...(r.data || []));
+      if (!r.data || r.data.length < 1000) return { data: out, error: null };
+    }
+  }
+
   async function load() {
     const s = await sb.auth.getSession();
     me = s.data.session ? s.data.session.user.id : null;
-    const r = await sb.from("state_runs").select("user_id, state_key, mode, time_ms").order("time_ms", { ascending: true }).limit(5000);
+    const r = await fetchAllBests();
     if (r.error) { msg.textContent = "Couldn\u2019t load the runs."; table.classList.add("hidden"); return; }
     runs = r.data || [];
     const ids = [...new Set(runs.map(x => x.user_id))];
