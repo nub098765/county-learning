@@ -45,7 +45,8 @@
     "gamergirljimmy": WRENCH,
     "goducks": WRENCH,
     "niceshirtbro": WRENCH,
-    "raine": WRENCH
+    "raine": WRENCH,
+    "ag": WRENCH
   };
 
   const wantedName = new URLSearchParams(location.search).get("u");   // profile.html?u=name shows that player

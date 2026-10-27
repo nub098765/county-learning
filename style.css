@@ -1270,7 +1270,11 @@ body.scale-states-by-size #svg-wisconsin { --w: 450px; }
 
 body.scale-states-by-size #svg-alaska { --w: 570px; }
 
-body.scale-states-by-size #svg-northern-mariana-islands { --w: 110px; }
+body.scale-states-by-size #svg-northern-mariana-islands:not(.zoomed) {
+ width: auto;
+ height: 230px;      /* it's a very tall, thin map: cap its height so it doesn't dwarf the other states */
+ flex: 0 0 auto;
+}
 
 
 .app-container.solo-map .map-wrapper {
@@ -1594,6 +1598,40 @@ body.high-contrast .skagway-callout {
 }
 
 
+.auto-callout-line {
+ stroke: #b5651d;
+ stroke-width: 1.5px;
+ fill: none;
+ vector-effect: non-scaling-stroke;
+}
+body.dark-mode .auto-callout-line {
+ stroke: #e0954a;
+}
+body.high-contrast .auto-callout-line {
+ stroke: #ff8800;
+}
+
+.auto-arrowhead-fill {
+ fill: #b5651d;
+}
+body.dark-mode .auto-arrowhead-fill {
+ fill: #e0954a;
+}
+body.high-contrast .auto-arrowhead-fill {
+ fill: #ff8800;
+}
+
+.auto-callout {
+ stroke: #b5651d;
+}
+body.dark-mode .auto-callout {
+ stroke: #e0954a;
+}
+body.high-contrast .auto-callout {
+ stroke: #ff8800;
+}
+
+
 .bristol-bay-callout-line {
  stroke: #b5651d;
  stroke-width: 1.5px;
@@ -1776,11 +1814,19 @@ body.dark-mode #target-prompt {
 
 #feedback {
  font-family: system-ui, -apple-system, sans-serif;
- font-size: 1rem;
+ font-size: 1rem;           /* the script shrinks this when a line is too long, so it always stays on one line */
  font-weight: 600;
  margin-top: 0.5rem;
- min-height: 1.3em;
+ height: 1.3rem;            /* a fixed one-line slot (in rem, so it stays the same size when the text inside shrinks) */
+ line-height: 1.3;
+ display: flex;
+ align-items: center;       /* shrunken text sits in the middle of the slot */
+ justify-content: center;
  text-align: center;
+ white-space: nowrap;
+ overflow: hidden;
+ text-overflow: ellipsis;
+ max-width: 100%;
 }
 
 
@@ -2184,6 +2230,16 @@ body.dark-mode .summary-missed-section {
  font-size: 1.5rem;
  font-weight: 700;
  margin: 0 0 0.5rem 0;
+}
+#summary-grade-title {
+ line-height: 1.3;
+ height: 1.95rem;             /* a fixed slot (rem, so it doesn't shrink with the text): a long title shrinks inside it instead of wrapping */
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ white-space: nowrap;
+ overflow: hidden;
+ text-overflow: ellipsis;
 }
 
 
@@ -4272,7 +4328,7 @@ body[data-play-mode="pin-hard"] .county.typing-highlight:not(.wrong) path {
 }
 @keyframes hlPulse {
  0%, 100% { --hl-mix: 0; }
- 50% { --hl-mix: var(--hl-strength); }
+ 50% { --hl-mix: 100; }                    /* the reveal pulse goes all the way to the highlight colour, like it always did */
 }
 /* hovering a missed county in Identify / The Ultimate Challenge */
 body[data-play-mode="type-hard"] .county:hover:not(.wrong),
@@ -4381,5 +4437,652 @@ body.dark-mode .pw-field input { background: #2b2b26; border-color: #3f3f38; }
 /* Virginia: the blue outline drawn again above the city layer */
 .hl-top { fill: none; stroke: var(--county-highlight-outline); stroke-width: 2px; vector-effect: non-scaling-stroke; pointer-events: none; }
 /* Pin and Flash only pulse the fill for their reveal, so the picked-county copy is hidden there; the hover glow copy still shows */
-body[data-play-mode="pin"] .hl-top:not(.hl-glow),
-body[data-play-mode="pin-hard"] .hl-top:not(.hl-glow) { display: none; }
+body[data-play-mode="pin"] .hl-top:not([data-tag="glow"]),
+body[data-play-mode="pin-hard"] .hl-top:not([data-tag="glow"]) { display: none; }
+
+/* ===== Game history: Records > History, and the "More info" page for a game ===== */
+.records-tabs { display: flex; gap: 0.5rem; justify-content: center; margin: 0.25rem 0 1rem; }
+.records-tabs button { background: transparent; color: inherit; border: 1px solid #ccc; padding: 0.4rem 1rem; font-size: 0.85rem; }
+.records-tabs button.active { background: #2d5a27; color: #fff; border-color: #2d5a27; }
+body.dark-mode .records-tabs button { border-color: #555; }
+body.dark-mode .records-tabs button.active { background: #fdeca6; color: #111; border-color: #fdeca6; }
+
+.gh-filters { flex-wrap: wrap; gap: 0.4rem 0.6rem; justify-content: center; align-items: center; }
+.gh-filters label { font-size: 0.75rem; opacity: 0.75; }
+.gh-list { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.75rem 0; text-align: left; }
+.gh-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.7rem 0.9rem; border: 1px solid #e0e0da; border-radius: 10px; background: #fafaf7; color: inherit; text-decoration: none; }
+.gh-row:hover { border-color: #2d5a27; background: #f3f1e6; }
+body.dark-mode .gh-row { background: #2b2b26; border-color: #3f3f38; }
+body.dark-mode .gh-row:hover { border-color: #fdeca6; background: #33332d; }
+.gh-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.25rem; }
+.gh-date { font-size: 0.72rem; opacity: 0.65; margin-top: 0.3rem; }
+.gh-right { display: flex; gap: 0.9rem; align-items: baseline; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gh-acc { font-size: 1.15rem; font-weight: 700; }
+.gh-time, .gh-count { font-size: 0.8rem; opacity: 0.75; }
+.gh-status { text-align: center; }
+.gh-more { display: block; margin: 0.5rem auto; }
+.gh-chips { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; }
+.gh-chip { font-family: system-ui, -apple-system, sans-serif; font-size: 0.68rem; font-weight: 700; padding: 0.12rem 0.55rem; border-radius: 999px; background: rgba(0,0,0,0.07); }
+body.dark-mode .gh-chip { background: rgba(255,255,255,0.12); }
+.gh-chip-mode { background: #3b6ea5; color: #fff; }
+.gh-out-perfect { background: #2d5a27; color: #fff; }
+.gh-out-complete { background: #d8b34b; color: #2a2100; }
+.gh-out-gave_up, .gh-out-failed { background: #b0453a; color: #fff; }
+
+/* the game page */
+#screen-game-detail { text-align: left; }
+.gd-top { display: flex; }
+.gd-back { margin-top: 0; }
+.gd-head { text-align: center; margin-bottom: 0.75rem; }
+.gd-head h2 { margin-bottom: 0.4rem; }
+.gd-when { font-size: 0.8rem; opacity: 0.7; margin: 0.4rem 0 0; }
+.gd-loading, .gd-note-p { text-align: center; opacity: 0.7; font-size: 0.9rem; }
+.gd-missing { text-align: center; padding: 2rem 0; }
+.gd-share { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; justify-content: center; align-items: center; margin: 0 0 1rem; padding: 0.6rem 0.8rem; border-radius: 10px; background: rgba(0,0,0,0.04); font-size: 0.85rem; }
+body.dark-mode .gd-share { background: rgba(255,255,255,0.06); }
+.gd-share-label { cursor: pointer; }
+.gd-share-msg { font-size: 0.78rem; opacity: 0.8; }
+.gd-small-btn { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+.gd-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 0.6rem; margin-bottom: 1rem; }
+.gd-tile { padding: 0.7rem 0.8rem; border-radius: 12px; border: 1px solid #e0e0da; background: #fafaf7; text-align: center; }
+body.dark-mode .gd-tile { background: #2b2b26; border-color: #3f3f38; }
+.gd-tile-v { font-size: 1.45rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gd-tile-l { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; }
+.gd-tile-s { font-size: 0.72rem; opacity: 0.6; margin-top: 0.15rem; }
+.gd-section { margin: 1.3rem 0; }
+.gd-section h3, .gd-trend-title { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.75; margin: 0 0 0.3rem; }
+.gd-hint { font-size: 0.78rem; opacity: 0.65; margin: 0 0 0.5rem; }
+.gd-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
+
+/* result colours: they follow the colours chosen in Settings */
+.gd-r-first { fill: var(--county-color-correct); background: var(--county-color-correct); }
+.gd-r-m1 { fill: var(--county-color-miss-1); background: var(--county-color-miss-1); }
+.gd-r-m2 { fill: var(--county-color-miss-2); background: var(--county-color-miss-2); }
+.gd-r-m3 { fill: var(--county-color-miss-3); background: var(--county-color-miss-3); }
+.gd-r-forfeit { fill: var(--county-color-wrong); background: var(--county-color-wrong); }
+.gd-r-gave { fill: var(--county-color-wrong); background: var(--county-color-wrong); opacity: 0.75; }
+.gd-r-none { fill: #9a968a; background: #9a968a; }
+.gd-r-out { fill: #e8e4d9; background: #e8e4d9; border: 1px solid #bbb; }
+body.dark-mode .gd-r-out { fill: #2f2f2a; background: #2f2f2a; border-color: #555; }
+
+.gd-stack { display: flex; height: 1.3rem; border-radius: 8px; overflow: hidden; border: 1px solid rgba(0,0,0,0.15); }
+.gd-seg { display: block; flex-basis: 0; min-width: 2px; }
+.gd-legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; margin-top: 0.5rem; font-size: 0.78rem; }
+.gd-legend-item { display: inline-flex; align-items: center; gap: 0.35rem; }
+.gd-swatch { display: inline-block; width: 0.85rem; height: 0.85rem; border-radius: 3px; }
+
+.gd-maps { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 0.9rem; margin-top: 0.7rem; }
+.gd-map-card { border: 1px solid #e0e0da; border-radius: 12px; padding: 0.6rem; background: #fbfaf6; }
+body.dark-mode .gd-map-card { background: #242420; border-color: #3f3f38; }
+.gd-map-head { display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline; font-size: 0.85rem; margin-bottom: 0.3rem; flex-wrap: wrap; }
+.gd-map-sub { font-size: 0.72rem; opacity: 0.7; }
+.gd-map { display: block; width: 100%; height: auto; max-height: 34rem; }
+.gd-county { stroke: #6b6b5f; stroke-width: 0.9px; vector-effect: non-scaling-stroke; cursor: default; transition: none; }
+.gd-map .gd-county path { vector-effect: non-scaling-stroke; }
+.gd-state-detail { margin-top: 0.8rem; max-width: 34rem; margin-left: auto; margin-right: auto; }
+.gd-us { max-width: 44rem; margin: 0.6rem auto; }
+.gd-us svg { width: 100%; height: auto; display: block; }
+.gd-us-st { fill: #e8e4d9; stroke: #fff; stroke-width: 0.9; }
+body.dark-mode .gd-us-st { fill: #333; stroke: #181816; }
+.gd-us-st.in { cursor: pointer; stroke-width: 1.3; }
+.gd-us-st.in:hover { stroke: #111; stroke-width: 2; }
+body.dark-mode .gd-us-st.in:hover { stroke: #fdeca6; }
+.gd-us-st.q4 { fill: var(--county-color-correct); }
+.gd-us-st.q3 { fill: var(--county-color-miss-1); }
+.gd-us-st.q2 { fill: var(--county-color-miss-2); }
+.gd-us-st.q1 { fill: var(--county-color-miss-3); }
+
+.gd-chart { width: 100%; height: auto; display: block; }
+.gd-axis { font-family: system-ui, -apple-system, sans-serif; font-size: 10px; fill: currentColor; opacity: 0.7; }
+.gd-note { opacity: 0.55; }
+.gd-grid { stroke: currentColor; stroke-opacity: 0.15; stroke-width: 1; }
+.gd-line { fill: none; stroke: #2d5a27; stroke-width: 2; stroke-linejoin: round; }
+body.dark-mode .gd-line { stroke: #7bc47f; }
+.gd-area { fill: #2d5a27; fill-opacity: 0.14; stroke: none; }
+body.dark-mode .gd-area { fill: #7bc47f; fill-opacity: 0.16; }
+.gd-miss-tick { stroke: var(--county-color-wrong); stroke-width: 1.5; }
+.gd-dot { fill: #2d5a27; }
+body.dark-mode .gd-dot { fill: #7bc47f; }
+.gd-dot-now { fill: #e8892b; stroke: #fff; stroke-width: 1.5; }
+
+.gd-list { margin: 0; padding-left: 1.3rem; font-size: 0.88rem; }
+.gd-list li, .gd-mix li { padding: 0.15rem 0; }
+.gd-list li { display: list-item; }
+.gd-li-name { font-weight: 600; margin-right: 0.5rem; }
+.gd-li-val { float: right; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.gd-mix { list-style: none; margin: 0; padding: 0; font-size: 0.88rem; }
+.gd-arrow { opacity: 0.55; margin: 0 0.4rem; }
+.gd-note-li { opacity: 0.65; font-size: 0.8rem; }
+.gd-table-wrap { overflow-x: auto; }
+.gd-table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+.gd-table th, .gd-table td { padding: 0.35rem 0.6rem; text-align: left; border-bottom: 1px solid #e0e0da; white-space: nowrap; font-variant-numeric: tabular-nums; }
+body.dark-mode .gd-table th, body.dark-mode .gd-table td { border-color: #3f3f38; }
+.gd-table th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; }
+@media (max-width: 560px) { .gh-row { flex-direction: column; align-items: flex-start; } .gh-right { align-self: flex-end; } }
+#screen-game-detail:focus { outline: none; }
+body .gh-chip.gh-chip-mode { background: #3b6ea5; color: #fff; }
+body .gh-chip.gh-out-perfect { background: #2d5a27; color: #fff; }
+body .gh-chip.gh-out-complete { background: #d8b34b; color: #2a2100; }
+body .gh-chip.gh-out-gave_up, body .gh-chip.gh-out-failed { background: #b0453a; color: #fff; }
+
+body .gd-us-st.in.q4 { fill: var(--county-color-correct); }
+body .gd-us-st.in.q3 { fill: var(--county-color-miss-1); }
+body .gd-us-st.in.q2 { fill: var(--county-color-miss-2); }
+body .gd-us-st.in.q1 { fill: var(--county-color-miss-3); }
+.gd-swatch.in.q4 { background: var(--county-color-correct); }
+.gd-swatch.in.q3 { background: var(--county-color-miss-1); }
+.gd-swatch.in.q2 { background: var(--county-color-miss-2); }
+.gd-swatch.in.q1 { background: var(--county-color-miss-3); }
+i.gd-swatch.gd-us-st { fill: none; border: 1px solid rgba(0,0,0,0.2); }
+i.gd-swatch.gd-us-st:not(.in) { background: #e8e4d9; }
+body.dark-mode i.gd-swatch.gd-us-st:not(.in) { background: #333; }
+/* the game page: big stats on the left, everything else on the right, no cards */
+.gd-page { display: grid; grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr); gap: 2.5rem; align-items: start; }
+.gd-side { position: sticky; top: 1rem; display: flex; flex-direction: column; gap: 2rem; padding-top: 0.5rem; text-transform: lowercase; }
+.gd-big-v { font-size: clamp(2.6rem, 7vw, 4.6rem); font-weight: 800; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.gd-big-l { font-size: 1rem; opacity: 0.6; margin-top: 0.35rem; }
+.gd-main { min-width: 0; }
+.gd-page .gd-head { text-align: left; }
+.gd-page .gd-share { justify-content: flex-start; background: none; padding: 0; }
+.gd-facts { font-size: 0.88rem; opacity: 0.75; margin: 0 0 0.5rem; line-height: 1.6; }
+.gd-page .gd-map-card { border: 0; background: none; padding: 0; }
+@media (max-width: 760px) {
+  .gd-page { grid-template-columns: 1fr; gap: 1rem; }
+  .gd-side { position: static; flex-direction: row; justify-content: space-between; gap: 1rem; }
+}
+
+/* no card around the game page */
+.app-container:has(#screen-game-detail.active) { background: none; border: 0; box-shadow: none; max-width: 1200px; width: 94vw; padding: 2rem 1rem; }
+body.dark-mode .app-container:has(#screen-game-detail.active) { background: none; border: 0; }
+body .gd-page .gd-share { background: none; padding: 0; }
+
+/* tabs on the game page */
+.gd-tabs { display: flex; flex-wrap: wrap; gap: 1.4rem; margin: 1.2rem 0 0.4rem; border-bottom: 1px solid rgba(128,128,120,0.3); text-transform: lowercase; }
+.gd-tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 0.4rem 0; margin-bottom: -1px; font: inherit; font-size: 1rem; color: inherit; opacity: 0.55; cursor: pointer; }
+.gd-tab:hover { opacity: 0.85; }
+.gd-tab.on { opacity: 1; font-weight: 700; border-bottom-color: currentColor; }
+.gd-panel[hidden] { display: none; }
+
+/* tabs on the game page */
+.gd-tabs { display: flex; flex-wrap: wrap; gap: 1.4rem; margin: 1.2rem 0 0.4rem; border-bottom: 1px solid rgba(128,128,120,0.3); text-transform: lowercase; }
+.gd-tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 0.4rem 0; margin-bottom: -1px; font: inherit; font-size: 1rem; color: inherit; opacity: 0.55; cursor: pointer; }
+.gd-tab:hover { opacity: 0.85; }
+.gd-tab.on { opacity: 1; font-weight: 700; border-bottom-color: currentColor; }
+.gd-panel[hidden] { display: none; }
+body .gd-tabs .gd-tab { background: none; box-shadow: none; transition: none; border-radius: 0; }
+
+/* ===== More info page: Lexend, and flat (no cards, pills or tiles) ===== */
+#screen-game-detail,
+#screen-game-detail button,
+#screen-game-detail select,
+#screen-game-detail h2,
+#screen-game-detail h3,
+#screen-game-detail .gd-axis {
+  font-family: 'Lexend', system-ui, sans-serif;
+}
+#screen-game-detail { letter-spacing: -0.005em; line-height: 1.5; }
+
+/* pills become plain text */
+#screen-game-detail .gh-chip,
+body #screen-game-detail .gh-chip.gh-chip-mode,
+body #screen-game-detail .gh-chip.gh-out-perfect,
+body #screen-game-detail .gh-chip.gh-out-complete,
+body #screen-game-detail .gh-chip.gh-out-gave_up,
+body #screen-game-detail .gh-chip.gh-out-failed {
+  background: none; color: inherit; padding: 0; border-radius: 0; font-weight: 500; font-size: 0.85rem; opacity: 0.75;
+}
+#screen-game-detail .gh-chips { gap: 0.9rem; }
+
+/* tiles and cards become plain blocks */
+#screen-game-detail .gd-tile,
+#screen-game-detail .gd-map-card,
+#screen-game-detail .gd-share,
+.gx-hero, .gx-card, .gx-stat {
+  background: none; border: 0; box-shadow: none; border-radius: 0; padding: 0;
+}
+body.dark-mode .gx-hero, body.dark-mode .gx-card, body.dark-mode .gx-stat { background: none; border: 0; }
+.gx-stat-l { font-weight: 500; }
+.gx-card { padding: 0 0 0.5rem; }
+.gx-grid { gap: 1.6rem 2.5rem; }
+
+/* More info page: plain text hierarchy */
+#screen-game-detail .gd-head { text-align: left; margin-bottom: 1.2rem; }
+#screen-game-detail .gd-head h2 { font-size: clamp(1.6rem, 4vw, 2.3rem); margin: 0 0 0.3rem; }
+#screen-game-detail .gd-when { font-size: 0.9rem; opacity: 0.65; margin: 0; }
+#screen-game-detail .gd-facts { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 2rem; margin: 0 0 1.4rem; font-size: 0.95rem; opacity: 1; }
+#screen-game-detail .gd-facts dt { opacity: 0.55; }
+#screen-game-detail .gd-facts dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+#screen-game-detail .gd-share { gap: 0.4rem 1.2rem; margin: 0 0 1rem; }
+#screen-game-detail .gd-share-label { font-size: 0.9rem; }
+#screen-game-detail .gd-share .gd-small-btn { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; font-weight: 400; font-size: 0.85rem; opacity: 0.7; }
+#screen-game-detail .gd-share-msg { flex-basis: 100%; font-size: 0.78rem; opacity: 0.55; }
+
+/* More info page: section titles in normal case, and the page holds still between tabs */
+#screen-game-detail .gd-section h3,
+#screen-game-detail .gd-trend-title { text-transform: none; letter-spacing: 0; font-size: 1.05rem; font-weight: 700; opacity: 0.9; margin: 0 0 0.35rem; }
+#screen-game-detail .gd-table th { text-transform: none; letter-spacing: 0; font-size: 0.85rem; }
+html { scrollbar-gutter: stable; }
+body:has(#screen-game-detail.active) { align-items: flex-start; }
+#screen-game-detail .gd-panel { min-height: 65vh; }
+#screen-game-detail .gd-check { display: block; margin-top: 0.6rem; font-size: 0.85rem; opacity: 0.8; cursor: pointer; }
+#screen-game-detail .gd-check input { accent-color: #2d5a27; margin-right: 0.3rem; cursor: pointer; }
+
+/* More info page: each state's map sits in its own tile */
+#screen-game-detail .gd-map-card { border: 1px solid #e0e0da; background: #fbfaf6; border-radius: 14px; padding: 0.8rem 0.9rem 0.9rem; }
+body.dark-mode #screen-game-detail .gd-map-card { background: #242420; border-color: #3f3f38; }
+#screen-game-detail .gd-map-head { margin-bottom: 0.5rem; }
+
+/* More info page: every state tile is the same size, and clicking one zooms it */
+#screen-game-detail .gd-maps { grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+#screen-game-detail .gd-map { width: 100%; height: 15rem; max-height: none; }
+#screen-game-detail .gd-map-card:not(.gd-map-zoomed) { cursor: zoom-in; }
+#screen-game-detail .gd-map-card:not(.gd-map-zoomed):hover { border-color: #2d5a27; }
+body.dark-mode #screen-game-detail .gd-map-card:not(.gd-map-zoomed):hover { border-color: #fdeca6; }
+#screen-game-detail .gd-zoom-back { position: fixed; inset: 0; z-index: 2000; background: rgba(20, 20, 15, 0.7); display: flex; align-items: center; justify-content: center; padding: 1rem; cursor: zoom-out; }
+#screen-game-detail .gd-zoom-box { max-width: 96vw; max-height: 96vh; overflow: auto; }
+#screen-game-detail .gd-map-zoomed { cursor: zoom-out; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); padding: 1.2rem 1.4rem 1.4rem; }
+#screen-game-detail .gd-map-zoomed .gd-map { width: min(88vw, 56rem); height: min(78vh, 44rem); }
+#screen-game-detail .gd-map-zoomed .gd-map-head { font-size: 1.1rem; }
+
+/* ===== More info page: looks match the profile stats (cards, titles, bars, orange charts) ===== */
+/* stat cards: translucent border, 10px corners, like .profile-stat */
+#screen-game-detail .gd-tile,
+#screen-game-detail .gx-stat,
+#screen-game-detail .gx-card,
+#screen-game-detail .gd-map-card,
+#screen-game-detail .gd-share {
+  background: rgba(128, 128, 128, 0.06);
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 10px;
+  box-shadow: none;
+  padding: 0.5rem 0.7rem;
+}
+body.dark-mode #screen-game-detail .gd-tile,
+body.dark-mode #screen-game-detail .gx-stat,
+body.dark-mode #screen-game-detail .gx-card,
+body.dark-mode #screen-game-detail .gd-map-card,
+body.dark-mode #screen-game-detail .gd-share { background: rgba(128, 128, 128, 0.06); border-color: rgba(128, 128, 128, 0.3); }
+#screen-game-detail .gd-map-card { padding: 0.6rem 0.7rem 0.7rem; }
+#screen-game-detail .gd-map-card:not(.gd-map-zoomed):hover,
+body.dark-mode #screen-game-detail .gd-map-card:not(.gd-map-zoomed):hover { border-color: #e8892b; }
+#screen-game-detail .gd-tile { text-align: left; }
+#screen-game-detail .gd-tile-v { font-size: 1.3rem; font-weight: 700; }
+#screen-game-detail .gd-tile-l,
+#screen-game-detail .gd-tile-s { font-size: 0.75rem; text-transform: none; letter-spacing: 0; opacity: 0.7; }
+#screen-game-detail .gd-share { padding: 0.5rem 0.7rem; }
+
+/* the big numbers on the side: like .profile-points, with a small muted label */
+.gd-big-v { font-weight: 700; letter-spacing: 0; }
+.gd-big-l { font-size: 0.8rem; opacity: 0.65; }
+
+/* section titles: big, normal case (same as the profile's) */
+#screen-game-detail .gd-section h3,
+#screen-game-detail .gd-trend-title {
+  font-size: 1.05rem; font-weight: 700; letter-spacing: 0; text-transform: none; opacity: 0.9; margin: 1.4rem 0 0.6rem;
+}
+#screen-game-detail .gd-section { margin: 0; }
+#screen-game-detail .gd-hint { font-size: 0.75rem; opacity: 0.6; }
+#screen-game-detail .gd-table th { text-transform: none; letter-spacing: 0; font-size: 0.85rem; }
+#screen-game-detail .gd-table th,
+#screen-game-detail .gd-table td,
+body.dark-mode #screen-game-detail .gd-table th,
+body.dark-mode #screen-game-detail .gd-table td { border-bottom: 1px solid rgba(128, 128, 128, 0.25); }
+
+/* bars: slim rounded tracks like .profile-bar / .pc-bar-track */
+.gd-stack { height: 10px; border-radius: 8px; border: 0; background: rgba(128, 128, 128, 0.2); }
+
+/* charts: orange line, area and dots, soft grey grid and ticks like .pc-* */
+.gd-line, body.dark-mode .gd-line { stroke: #e8892b; stroke-width: 2; }
+.gd-area, body.dark-mode .gd-area { fill: #e8892b; fill-opacity: 0.15; }
+.gd-dot, body.dark-mode .gd-dot { fill: #e8892b; }
+.gd-dot-now { fill: #e8892b; stroke: #fff; stroke-width: 1.5; }
+body.dark-mode .gd-dot-now { stroke: #181816; }
+.gd-grid { stroke: rgba(128, 128, 128, 0.28); stroke-opacity: 1; }
+.gd-axis { font-size: 11px; opacity: 0.6; }
+.gd-bar { rx: 1.5px; }
+
+/* tabs underline in the profile orange */
+.gd-tab.on { border-bottom-color: #e8892b; }
+#screen-game-detail .gd-check input { accent-color: #e8892b; }
+.gd-list { font-size: 0.85rem; }
+.gd-li-val { opacity: 0.7; }
+
+/* profile section titles: big, normal case too */
+.profile-section-title,
+.profile-fresh summary,
+.pc-title { font-size: 1.05rem; font-weight: 700; letter-spacing: 0; text-transform: none; opacity: 0.9; }
+
+/* More info page: no explanatory blurbs under the section titles */
+#screen-game-detail .gd-hint { display: none; }
+
+/* ===== Records > History rows: same look as the More info page ===== */
+.gh-list, .gh-list * , .gh-filters, .gh-filters *, .records-tabs button { font-family: 'Lexend', system-ui, sans-serif; }
+.gh-list { gap: 0.6rem; }
+.gh-row, body.dark-mode .gh-row {
+  background: rgba(128, 128, 128, 0.06);
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  transition: none;
+}
+.gh-row:hover, body.dark-mode .gh-row:hover { background: rgba(128, 128, 128, 0.1); border-color: #e8892b; }
+.gh-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.2rem; }
+/* pills become plain text, like on the game page */
+.gh-row .gh-chip,
+body .gh-row .gh-chip.gh-chip-mode,
+body .gh-row .gh-chip.gh-out-perfect,
+body .gh-row .gh-chip.gh-out-complete,
+body .gh-row .gh-chip.gh-out-gave_up,
+body .gh-row .gh-chip.gh-out-failed { background: none; color: inherit; padding: 0; border-radius: 0; font-family: inherit; font-weight: 500; font-size: 0.85rem; opacity: 0.75; }
+.gh-row .gh-chips { gap: 0.9rem; }
+.gh-date { font-size: 0.8rem; opacity: 0.55; margin-top: 0.25rem; }
+.gh-right { gap: 1.1rem; }
+.gh-acc { font-size: 1.3rem; font-weight: 700; }
+.gh-time, .gh-count { font-size: 0.85rem; opacity: 0.65; }
+
+/* ===== History rows, take 2: flat rows, one meta line, big percentage ===== */
+.gh-list { gap: 0; margin: 0.5rem 0; }
+.gh-row, body.dark-mode .gh-row {
+  background: none; border: 0; border-bottom: 1px solid rgba(128, 128, 128, 0.25); border-radius: 0;
+  padding: 1rem 0.2rem; align-items: center;
+}
+.gh-row:last-child { border-bottom: 0; }
+.gh-row:hover, body.dark-mode .gh-row:hover { background: rgba(128, 128, 128, 0.07); border-color: rgba(128, 128, 128, 0.25); }
+.gh-left { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15rem 0.9rem; min-width: 0; }
+.gh-title { flex-basis: 100%; font-size: 1.1rem; margin: 0; }
+.gh-row .gh-chips { display: contents; }
+.gh-row .gh-chip-mode { display: none; }
+.gh-row .gh-chip { font-size: 0.85rem; opacity: 0.8; }
+body .gh-row .gh-chip.gh-out-perfect { color: #e8892b; opacity: 1; font-weight: 600; }
+.gh-date { margin: 0; font-size: 0.85rem; opacity: 0.55; }
+.gh-right { display: grid; grid-template-columns: auto auto; column-gap: 0.9rem; justify-items: end; align-items: baseline; }
+.gh-acc { grid-column: 1 / -1; font-size: 1.6rem; line-height: 1.1; }
+.gh-time, .gh-count { font-size: 0.8rem; opacity: 0.6; }
+@media (max-width: 560px) { .gh-row { flex-direction: row; align-items: center; } .gh-right { align-self: auto; } }
+
+/* Records is one list of every run now: no Best times / History tabs, no separate best-times list */
+#screen-records .records-tabs, #screen-records #records-best { display: none !important; }
+#screen-records .records-tabs, #screen-records #records-best, #screen-records #records-history { display: none !important; }
+.record-run-link { display: flex; justify-content: space-between; gap: 1rem; width: 100%; color: inherit; text-decoration: none; padding: 0.05rem 0; }
+.record-run-link:hover { text-decoration: underline; }
+.record-runs li { display: block; }
+.record-run-link > span:first-child { opacity: 0.6; }
+.record-run-right { display: inline-flex; gap: 0.8rem; align-items: baseline; font-variant-numeric: tabular-nums; }
+.record-run-out { opacity: 0.6; font-size: 0.85rem; }
+.record-run-time { font-weight: 600; }
+.record-runs li.is-best .record-run-time { color: #4a7c59; font-weight: 700; }
+.record-runs li.not-perfect .record-run-link { opacity: 0.5; }
+.record-run-link > span:first-child { white-space: nowrap; }
+
+.app-container.wide-records { max-width: 96vw; width: 96vw; }
+
+#records-list, #records-all {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  align-items: start;          /* opening one tile doesn't stretch its neighbors */
+  text-align: left;
+}
+#records-list > .records-section-heading,
+#records-all > .records-section-heading,
+#records-all > .records-toolbar,
+#records-all > .records-empty { grid-column: 1 / -1; }   /* headings, the toolbar and messages span the whole row */
+
+.records-toolbar { justify-content: center; }
+@media (min-width: 900px) {
+  #records-all > .records-toolbar { grid-template-columns: repeat(3, auto auto); gap: 0.5rem 0.6rem; }
+  #records-all > .records-toolbar select:not(:last-child) { margin-right: 1.4rem; }
+}
+.record-runs { max-height: 13rem; overflow-y: auto; padding-right: 0.4rem; }
+
+.record-runs { scrollbar-width: thin; scrollbar-color: #c9c4b0 transparent; }
+.record-runs::-webkit-scrollbar { width: 8px; }
+.record-runs::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.06); border-radius: 8px; }
+.record-runs::-webkit-scrollbar-thumb { background: #c9c4b0; border-radius: 8px; }
+.record-runs::-webkit-scrollbar-thumb:hover { background: #b0aa92; }
+body.dark-mode .record-runs { scrollbar-color: #5c5a4a #242420; }
+body.dark-mode .record-runs::-webkit-scrollbar-track { background: #242420; }
+body.dark-mode .record-runs::-webkit-scrollbar-thumb { background: #5c5a4a; }
+body.dark-mode .record-runs::-webkit-scrollbar-thumb:hover { background: #fdeca6; }
+
+#screen-game-detail .gd-tile,
+#screen-game-detail .gx-stat,
+#screen-game-detail .gx-card,
+#screen-game-detail .gd-map-card,
+#screen-game-detail .gd-share { background: #f6f4ee; border-color: #ddd9cc; }
+body.dark-mode #screen-game-detail .gd-tile,
+body.dark-mode #screen-game-detail .gx-stat,
+body.dark-mode #screen-game-detail .gx-card,
+body.dark-mode #screen-game-detail .gd-map-card,
+body.dark-mode #screen-game-detail .gd-share { background: #2b2b26; border-color: #3f3f38; }
+
+#screen-game-detail .gd-map-card { position: relative; cursor: zoom-in; }
+.gd-magnify {
+  position: absolute; bottom: 0.5rem; right: 0.5rem; width: 1.9rem; height: 1.9rem; padding: 0;
+  display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 1rem; line-height: 1; cursor: zoom-in;
+  border: 1px solid rgba(0, 0, 0, 0.15); background: rgba(255, 255, 255, 0.88); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); z-index: 2;
+}
+body.dark-mode .gd-magnify { background: rgba(36, 36, 32, 0.88); border-color: rgba(255, 255, 255, 0.18); }
+/* More info page: the state tiles are the game's own tiles (.map-box / .state-map), so they look and zoom the same */
+/* same as the game's .map-wrapper, under another name: the game grabs the first .map-wrapper in the page and moves its tiles into it */
+.gd-map-wrapper { max-width: 720px; margin: 0.7rem 0 0; display: grid; grid-template-columns: repeat(var(--states-per-row, 2), 1fr); gap: 1rem; justify-items: stretch; align-items: stretch; }
+body.scale-states-by-size .gd-map-wrapper { max-width: 100%; display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+#screen-game-detail .map-box .gd-map { width: 100%; height: 100%; max-width: 100%; max-height: 100%; }
+#screen-game-detail .gd-tile-box { cursor: default; }
+.gd-tile-name { position: absolute; bottom: 0.55rem; left: 0.75rem; font-size: 0.8rem; font-weight: 600; opacity: 0.75; pointer-events: none; }
+body.scale-states-by-size .gd-tile-name { display: none; }
+.gd-tile-box .gd-county { cursor: pointer; }
+
+/* the big hover card on the More info county tiles */
+.gd-tip { position: fixed; z-index: 100000; pointer-events: none; width: max-content; min-width: 14rem; max-width: 22rem; padding: 1rem 1.1rem 1.05rem; border-radius: 14px; background: #fffdf6; color: #1c1c1a; border: 1px solid rgba(0,0,0,0.12); box-shadow: 0 12px 32px rgba(0,0,0,0.25); font-family: 'Lexend', system-ui, sans-serif; text-align: left; }
+body.dark-mode .gd-tip { background: #2b2b26; color: #fdeca6; border-color: #4a4a40; }
+.gd-tip[hidden] { display: none; }
+.gd-tip-name { font-size: 1.2rem; font-weight: 700; line-height: 1.2; }
+.gd-tip-state { font-size: 0.8rem; opacity: 0.6; margin-top: 0.15rem; }
+.gd-tip-verdict { display: flex; align-items: center; gap: 0.45rem; font-size: 0.9rem; font-weight: 600; margin: 0.55rem 0 0.8rem; }
+.gd-tip-dim { opacity: 0.6; margin-top: 0.4rem; font-size: 0.9rem; }
+.gd-tip-stats { display: flex; gap: 1.4rem; }
+.gd-tip-v { font-size: 1.35rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.gd-tip-l { font-size: 0.72rem; opacity: 0.6; margin-top: 0.15rem; }
+.gd-tip-said { margin-top: 0.85rem; padding-top: 0.7rem; border-top: 1px solid rgba(128,128,120,0.3); }
+.gd-tip-pick { font-size: 0.9rem; font-weight: 600; margin-top: 0.2rem; overflow-wrap: anywhere; }
+
+/* the zoomed view of a More info tile looks like the game's zoomed map */
+.gd-map.zoomed { position: static !important; margin: auto !important; transform: none !important; align-self: auto !important; background: #ffffff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); padding: 1rem; cursor: zoom-out; }
+body.dark-mode .gd-map.zoomed { background: #242420; }
+
+/* the whole-country view: white outlines everywhere (the not-to-scale boxes too), and the hovered state's outline sits on top */
+.gd-us-st, body.dark-mode .gd-us-st { stroke: #fff; }
+.gd-us-box { fill: none; stroke: #fff; stroke-width: 1.3; }
+.gd-us-st.in:hover { stroke: #111; stroke-width: 2.4; }
+body.dark-mode .gd-us-st.in:hover { stroke: #fdeca6; }
+.gd-tile-stash { position: absolute; left: -9999px; top: 0; width: 360px; visibility: hidden; pointer-events: none; }
+
+/* States row: one per line, "6 states ▸" opens a long list */
+#screen-game-detail .gd-states-list { list-style: none; margin: 0; padding: 0; }
+#screen-game-detail .gd-states-list li { padding: 0.05rem 0; }
+#screen-game-detail .gd-states-list.collapsed { display: none; }
+#screen-game-detail .gd-states-list:not(.collapsed) { margin-top: 0.3rem; }
+#screen-game-detail .gd-states-toggle { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+#screen-game-detail .gd-states-toggle:hover { background: none; opacity: 0.7; }
+
+/* By state table: sortable headings with triangles */
+#screen-game-detail .gd-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+#screen-game-detail .gd-sortable:hover { opacity: 1; }
+#screen-game-detail .gd-sort { display: inline-flex; flex-direction: column; gap: 2px; margin-left: 0.45rem; vertical-align: middle; }
+#screen-game-detail .gd-sort::before,
+#screen-game-detail .gd-sort::after { content: ""; border-left: 4px solid transparent; border-right: 4px solid transparent; opacity: 0.3; }
+#screen-game-detail .gd-sort::before { border-bottom: 5px solid currentColor; }
+#screen-game-detail .gd-sort::after { border-top: 5px solid currentColor; }
+#screen-game-detail .gd-sortable.asc .gd-sort::before { opacity: 1; }
+#screen-game-detail .gd-sortable.desc .gd-sort::after { opacity: 1; }
+
+
+/* Records: pick a mode, then a plain list */
+.rec-tabs { display: flex; flex-wrap: wrap; gap: 1.4rem; margin: 0.5rem 0 0.8rem; border-bottom: 1px solid rgba(128, 128, 120, 0.3); }
+.rec-tab { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 0.4rem 0; margin-bottom: -1px; font: inherit; font-size: 1rem; font-weight: 400; color: inherit; opacity: 0.55; cursor: pointer; }
+.rec-tab:hover { background: none; opacity: 0.85; }
+.rec-tab.on { opacity: 1; font-weight: 700; border-bottom-color: currentColor; }
+.rec-heading { text-align: left; font-size: 1.05rem; margin: 1.2rem 0 0.2rem; }
+.rec-list { text-align: left; }
+.rec-row { border-bottom: 1px solid rgba(128, 128, 120, 0.2); }
+.rec-row > summary { display: grid; grid-template-columns: 1fr auto auto 1rem; align-items: baseline; gap: 1rem; padding: 0.6rem 0.2rem; cursor: pointer; list-style: none; }
+.rec-row > summary::-webkit-details-marker { display: none; }
+.rec-row > summary::after { content: "\25B8"; opacity: 0.55; font-size: 0.8rem; }
+.rec-row[open] > summary::after { content: "\25BE"; }
+.rec-name { font-weight: 600; }
+.rec-count { font-weight: 400; font-size: 0.78rem; opacity: 0.55; margin-left: 0.6rem; }
+.rec-best { font-weight: 700; font-variant-numeric: tabular-nums; }
+.rec-runs { font-size: 0.85rem; opacity: 0.65; white-space: nowrap; }
+.rec-states-full { font-size: 0.85rem; line-height: 1.5; opacity: 0.75; margin: 0 0.2rem 0.5rem; }
+.rec-row .record-runs { margin: 0 0.2rem 0.8rem; }
+/* Records (merged list): rendered by records-list.js into #records-all, in the same layout as the Records tabs and rows above */
+#records-all { display: block; text-align: left; }
+#records-all > .records-toolbar { margin-bottom: 0.5rem; }
+#records-all .record-runs li { display: block; }
+#records-all .rec-best { min-width: 4.5rem; text-align: right; }
+#records-all .rec-tabs { justify-content: center; }
+#records-all .rec-heading { text-align: center; }
+#records-all .rec-list { max-width: 40rem; margin-left: auto; margin-right: auto; }
+
+/* More info > progress: the two graph titles are lighter than the section title above them */
+#screen-game-detail .gd-trend-host .gd-section h3 { font-size: 0.95rem; font-weight: 400; opacity: 0.75; margin: 0.8rem 0 0.4rem; }
+
+/* Zoomed map (review mode, magnifier): a map shorter than the screen sits in the middle instead of hugging the top.
+   margin:auto only centres when there's room; a zoomed-in map bigger than the screen still starts at its top-left and scrolls. */
+.state-map.zoomed { margin: auto !important; align-self: auto !important; }
+
+/* a pinned review label is placed by its centre, so it keeps its spot on the map at every zoom */
+.county-hover-tooltip.pinned { transform: translate(-50%, -50%); }
+
+/* More info: the game's name, with a Rename link */
+#screen-game-detail .gd-title-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.3rem 1rem; margin: 0 0 0.3rem; }
+#screen-game-detail .gd-title-row .gd-title { margin: 0; }
+#screen-game-detail .gd-rename { background: none; border: 0; padding: 0; color: inherit; font: inherit; font-size: 0.85rem; font-weight: 400; text-decoration: underline; opacity: 0.55; cursor: pointer; }
+#screen-game-detail .gd-rename:hover { background: none; opacity: 0.9; }
+#screen-game-detail .gd-title-input { font: inherit; font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 700; letter-spacing: -0.02em; color: inherit; background: transparent; border: 0; border-bottom: 2px solid #e8892b; border-radius: 0; padding: 0 0 0.1rem; width: min(100%, 36rem); outline: none; }
+
+#screen-game-detail .gd-rename { display: inline-flex; align-items: center; align-self: center; text-decoration: none; opacity: 0.4; }
+#screen-game-detail .gd-rename:hover, #screen-game-detail .gd-rename:focus-visible { opacity: 0.9; }
+
+/* Records runs: the game's name, with its date next to it */
+.record-run-name { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 0.7rem; min-width: 0; }
+.record-run-link > span.record-run-name:first-child { opacity: 1; white-space: normal; }
+.record-run-title { font-weight: 600; overflow-wrap: anywhere; }
+.record-run-date { font-size: 0.8rem; opacity: 0.55; white-space: nowrap; }
+
+/* Home: the icon buttons stay pinned in the corner (no extra row, so the page doesn't get any taller),
+   the card's top padding is smaller, and the title gets a little room below the buttons. Net: the page is slightly SHORTER than before. */
+.app-container:has(#screen-home.active) { padding-top: 1rem; }
+@media (min-width: 900px) {
+  .home-right h1 { margin-top: 0.9rem; }
+}
+
+/* ===== Learn > Designations ===== */
+/* Designations has its own colour: brown, which none of the other modes use (they are blue, violet, amber, teal, pink, red, green and white) */
+:root { --mode-desig: #a47148; }
+body.dark-mode { --mode-desig: #c8966a; }
+body .btn-mode.btn-mode[data-home-learn="desig"] { border-left-color: var(--mode-desig); }
+/* the designation shown under a place's name while you learn it */
+.study-desig { margin: 0.2rem 0 0.4rem; font-size: 1.35rem; font-weight: 700; color: var(--mode-desig); text-align: center; }
+.study-desig.hidden { display: none; }
+
+.gd-replay { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 0.8rem; flex-wrap: wrap; }
+.gd-replay-range { flex: 1 1 12rem; min-width: 8rem; accent-color: #2d5a27; cursor: pointer; }
+body.dark-mode .gd-replay-range { accent-color: #fdeca6; }
+.gd-replay-clock { min-width: 5.5rem; text-align: right; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.gd-replay-speed { font: inherit; font-size: 0.85rem; padding: 0.25rem 0.4rem; border-radius: 6px; border: 1px solid #ccc; background: #fbfaf6; color: inherit; }
+body.dark-mode .gd-replay-speed { background: #2b2b26; border-color: #3f3f38; }
+
+.gd-compare-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.8rem; margin: 0 0 1rem; }
+.gd-ahead .gd-tile-v { color: #2d7a2d; }
+.gd-behind .gd-tile-v { color: #b3261e; }
+body.dark-mode .gd-ahead .gd-tile-v { color: #7bd17b; }
+body.dark-mode .gd-behind .gd-tile-v { color: #ff8a80; }
+/* ===== More info > vs your best ===== */
+.gd-cmp-pick { margin: 0 0 1.2rem; font-size: 0.95rem; }
+.gd-cmp-pick label { display: flex; align-items: center; flex-wrap: wrap; gap: 0.3rem 1rem; }
+.gd-select { font: inherit; font-size: 0.9rem; padding: 0.4rem 0.6rem; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.45); background: transparent; color: inherit; cursor: pointer; max-width: 100%; }
+.gd-select option, .gd-select optgroup { background: #fff; color: #111; }
+body.dark-mode .gd-select option, body.dark-mode .gd-select optgroup { background: #242420; color: #fdeca6; }
+#screen-game-detail .gd-facts dd.gd-ahead { color: #2d7a2d; }
+#screen-game-detail .gd-facts dd.gd-behind { color: #b3261e; }
+body.dark-mode #screen-game-detail .gd-facts dd.gd-ahead { color: #7bd17b; }
+body.dark-mode #screen-game-detail .gd-facts dd.gd-behind { color: #ff8a80; }
+.gd-ahead-t { color: #2d7a2d; }
+.gd-behind-t { color: #b3261e; }
+body.dark-mode .gd-ahead-t { color: #7bd17b; }
+body.dark-mode .gd-behind-t { color: #ff8a80; }
+.gd-gap-ahead { fill: #2d7a2d; fill-opacity: 0.28; }
+.gd-gap-behind { fill: #b3261e; fill-opacity: 0.28; }
+body.dark-mode .gd-gap-ahead { fill: #7bd17b; fill-opacity: 0.25; }
+body.dark-mode .gd-gap-behind { fill: #ff8a80; fill-opacity: 0.25; }
+.gd-diff { display: inline-flex; align-items: center; gap: 0.5rem; }
+.gd-diff-num { min-width: 3.2rem; }
+.gd-diff-track { position: relative; display: inline-block; width: 2.6rem; height: 8px; border-radius: 4px; background: rgba(128, 128, 128, 0.18); }
+.gd-diff-track::before { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: rgba(128, 128, 128, 0.7); }
+.gd-diff-fill { position: absolute; top: 0; bottom: 0; }
+.gd-diff-fill.slower { left: 50%; background: #b3261e; border-radius: 0 4px 4px 0; }
+.gd-diff-fill.faster { right: 50%; background: #2d7a2d; border-radius: 4px 0 0 4px; }
+body.dark-mode .gd-diff-fill.slower { background: #ff8a80; }
+body.dark-mode .gd-diff-fill.faster { background: #7bd17b; }
+.gd-cmp-note { font-size: 0.8rem; opacity: 0.6; margin: 0.6rem 0 0; }
+.gd-cmp-body .gd-table th, .gd-cmp-body .gd-table td { padding-left: 0.4rem; padding-right: 0.4rem; }
+.gd-cmp-body .gd-sort { margin-left: 0.3rem; }
+
+/* ===== vs your best: the verdict and the paired bars ===== */
+.gd-cmp-head { margin: 0 0 1.4rem; }
+.gd-cmp-big { font-size: 2.4rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; }
+.gd-cmp-sub { font-size: 0.9rem; opacity: 0.65; margin-top: 0.2rem; }
+.gd-pairs { margin: 0 0 0.6rem; }
+.gd-pairs .gd-legend { margin: 0 0 0.9rem; }
+.gd-pair { display: grid; grid-template-columns: 9rem 1fr; gap: 0.2rem 1rem; align-items: center; margin: 0 0 0.9rem; }
+.gd-pair-label { font-size: 0.9rem; opacity: 0.65; }
+.gd-pair-bars { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gd-pair-line { display: flex; align-items: center; gap: 0.7rem; }
+.gd-pair-track { flex: 1; height: 10px; min-width: 0; }
+.gd-pair-bar { display: block; height: 100%; border-radius: 5px; }
+.gd-pair-val { width: 5.2rem; font-size: 0.85rem; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.gd-pair-now { background: #e8892b; }
+.gd-pair-then { background: rgba(128, 128, 128, 0.55); }
+.gd-pair-sub { font-size: 0.82rem; opacity: 0.65; margin-top: 0.2rem; }
+.gd-cmp-f { background: #2d7a2d; }
+.gd-cmp-e { background: rgba(128, 128, 128, 0.5); }
+.gd-cmp-s { background: #b3261e; }
+body.dark-mode .gd-cmp-f { background: #7bd17b; }
+body.dark-mode .gd-cmp-s { background: #ff8a80; }
+@media (max-width: 560px) { .gd-pair { grid-template-columns: 1fr; } }
+.gd-cmp-extra { font-size: 0.88rem; opacity: 0.7; margin: 0.2rem 0 0; }
+/* ===== Game buttons float over a zoomed map ===== */
+body.map-zoomed.zoom-game-buttons .game-header {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: calc(var(--zoom-hdr-top, 4.5rem) - 4px);
+  z-index: 1002;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0 0.75rem;
+  width: auto;
+  pointer-events: none;
+}
+body.map-zoomed.zoom-game-buttons .game-header button {
+  pointer-events: auto;
+}
+body.map-zoomed.zoom-game-buttons .prompt-box {
+  padding: 0.35rem 1.25rem;
+  min-width: min(92vw, 380px);
+  font-size: 0.9em;
+  border-radius: 12px;
+}
+body.map-zoomed.zoom-game-buttons .prompt-box * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.zoom-clear-top { right: 124px; }
+.zoom-clear-top { right: 118px; font-weight: 500; }

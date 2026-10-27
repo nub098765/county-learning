@@ -6,6 +6,34 @@
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impnd2huaWR0am51dWZkamNtcWR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxOTE4MDgsImV4cCI6MjEwNzc2NzgwOH0.SsIHfT9TFvAYthQbwcD_Ee6W9T9a8yqlD2HfiAbcgCk";
   const MODES = ["pin", "pin-hard", "mc", "type", "type-hard", "type-strict"];
 
+  /* ===== Game history: every finished game is kept. It's written to this browser first, then uploaded (and only removed once the
+     server has it), so nothing is lost if you're signed out, offline, or the upload fails. ===== */
+  const PENDING_GAMES_KEY = "pendingGames";
+  let readyResolve = () => {};
+  window.accountReady = new Promise(r => { readyResolve = r; });
+  const readPendingGames = () => { try { const l = JSON.parse(localStorage.getItem(PENDING_GAMES_KEY) || "[]"); return Array.isArray(l) ? l : []; } catch (e) { return []; } };
+  const writePendingGames = list => { try { localStorage.setItem(PENDING_GAMES_KEY, JSON.stringify(list)); return true; } catch (e) { console.warn("Couldn't keep this game on your device:", e.message); return false; } };
+  let currentUserId = null;                                    // set once we know who is signed in
+  window.reportGame = record => {
+    if (!record || !record.id) return;
+    const list = readPendingGames().filter(g => g.rec && g.rec.id !== record.id);
+    list.push({ uid: currentUserId, rec: record });
+    writePendingGames(list);
+    if (window.__flushGames) window.__flushGames();
+  };
+  window.getPendingGame = id => { const g = readPendingGames().find(x => x.rec && x.rec.id === id); return g ? g.rec : null; };
+  window.__setPendingTitle = (id, title) => {                    // a game that hasn't uploaded yet carries its name with it
+    const list = readPendingGames(); let hit = false;
+    list.forEach(g => { if (g.rec && g.rec.id === id) { g.rec.title = title || null; hit = true; } });
+    if (hit) writePendingGames(list);
+    return hit;
+  };
+  window.getPendingGames = () => readPendingGames().map(g => g.rec).filter(Boolean);
+  window.loadGameHistory = async () => ({ rows: [], signedIn: false });
+  window.loadGameForView = async id => { const rec = window.getPendingGame(id); return rec ? { record: rec, mine: true, pending: true } : null; };
+  window.setGameShared = async () => ({ ok: false, message: "Sign in to share a game." });
+  window.setGameTitle = async (id, title) => window.__setPendingTitle(id, title) ? { ok: true } : { ok: false, message: "Couldn't rename that game." };
+
   window.reportCompletion = () => {};
   window.reportTucComplete = () => {};
   window.accountIsSignedIn = () => false;
@@ -17,7 +45,7 @@
   const whoBtn = document.getElementById("home-who");
   if (whoBtn) whoBtn.addEventListener("click", () => { location.href = "profile.html"; });
   if (lbBtn) lbBtn.addEventListener("click", () => { location.href = "leaderboard.html"; });
-  if (!window.supabase) return;
+  if (!window.supabase) { readyResolve(); return; }
 
   const sb = window.countellectSupabase || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let session = null, profile = null, queue = [], timer = 0, lastKnownPoints = null;
@@ -292,11 +320,14 @@
         await syncRuns();
       }
       syncedUser = session.user.id;
+      currentUserId = session.user.id;
+      flushGames();
       await checkConcentratedEffort();
       if (openBtn) openBtn.title = "Signed in as " + profile.username;
     } else if (openBtn) {
       openBtn.title = "Account";
     }
+    if (!session) currentUserId = null;
     updateWho();
   }
 
@@ -304,6 +335,7 @@
   function refresh() {                 // page load and the SIGNED_IN event can both ask at once: run one at a time
     if (refreshing) { refreshAgain = true; return refreshing; }
     refreshing = refreshOnce().finally(() => {
+      readyResolve();
       refreshing = null;
       if (refreshAgain) { refreshAgain = false; refresh(); }
     });
@@ -421,14 +453,99 @@
     const a = await sb.from("completions").delete().eq("user_id", uid);
     const b = await sb.from("tuc_completions").delete().eq("user_id", uid);
     const c = await sb.from("state_runs").delete().eq("user_id", uid);
-    if (a.error || b.error || c.error) return { ok: false, signedIn: true, message: (a.error || b.error || c.error).message };
+    const g = await sb.from("game_history").delete().eq("user_id", uid);        // every saved game and record goes too
+    if (a.error || b.error || c.error || g.error) return { ok: false, signedIn: true, message: (a.error || b.error || c.error || g.error).message };
     // the server can refuse a delete without raising an error, so check that the rows are really gone
     const left = await sb.from("completions").select("county_id", { count: "exact", head: true }).eq("user_id", uid);
     const leftTuc = await sb.from("tuc_completions").select("user_id", { count: "exact", head: true }).eq("user_id", uid);
     const leftRuns = await sb.from("state_runs").select("state_key", { count: "exact", head: true }).eq("user_id", uid);
+    const leftGames = await sb.from("game_history").select("id", { count: "exact", head: true }).eq("user_id", uid);
+    if (leftGames.error) return { ok: false, signedIn: true, message: leftGames.error.message };
+    if (leftGames.count) return { ok: false, signedIn: true, message: "The server wouldn't delete your saved games (run game_history_reset.sql in Supabase first)." };
+    writePendingGames([]);
     if (left.error || leftTuc.error || leftRuns.error) return { ok: false, signedIn: true, message: (left.error || leftTuc.error || leftRuns.error).message };
     if (left.count || leftTuc.count || leftRuns.count) return { ok: false, signedIn: true, message: "The server wouldn't delete your saved progress (a delete permission is missing)." };
     return { ok: true, signedIn: true };
+  };
+
+  /* ----- game history: upload, list, open, share ----- */
+  let flushingGames = false;
+  async function flushGames() {
+    if (flushingGames || !session || !profile) return;
+    flushingGames = true;
+    try {
+      for (const entry of readPendingGames()) {
+        if (!entry.rec) continue;
+        // a game played while signed in belongs to that account; one played signed out goes to whoever owns this browser's progress
+        if (entry.uid ? entry.uid !== session.user.id : !ownsLocalProgress()) continue;
+        const { error } = await sb.from("game_history").upsert({ ...entry.rec, user_id: session.user.id }, { onConflict: "id", ignoreDuplicates: true });
+        if (error) {
+          console.warn("Couldn't upload a saved game (it's kept on this device and will retry):", error.message);
+          if (isOffline(error)) break;
+          continue;
+        }
+        writePendingGames(readPendingGames().filter(g => !(g.rec && g.rec.id === entry.rec.id)));   // re-read: a new game may have been added meanwhile
+      }
+    } finally { flushingGames = false; }
+  }
+  window.__flushGames = flushGames;
+
+  const HISTORY_COLS = "id, played_at, mode, outcome, is_retry, state_keys, total, right_count, wrong_count, forfeited, excluded, accuracy, time_ms, is_shared, title";
+  window.loadGameHistory = async (opts = {}) => {
+    await window.accountReady;
+    if (!session || !profile) return { rows: [], signedIn: false };
+    let q = sb.from("game_history").select(HISTORY_COLS, { count: "exact" }).eq("user_id", session.user.id);
+    if (opts.mode) q = q.eq("mode", opts.mode);
+    if (opts.outcome) q = q.eq("outcome", opts.outcome);
+    if (opts.state) q = q.contains("state_keys", [opts.state]);
+    q = q.order("played_at", { ascending: opts.oldestFirst === true }).range(opts.offset || 0, (opts.offset || 0) + (opts.limit || 50) - 1);
+    let { data, error, count } = await q;
+    if (error && /title/i.test(error.message)) {            // the title column isn't there yet (game_history_title.sql not run): list games without it
+      let q2 = sb.from("game_history").select(HISTORY_COLS.replace(", title", ""), { count: "exact" }).eq("user_id", session.user.id);
+      if (opts.mode) q2 = q2.eq("mode", opts.mode);
+      if (opts.outcome) q2 = q2.eq("outcome", opts.outcome);
+      if (opts.state) q2 = q2.contains("state_keys", [opts.state]);
+      q2 = q2.order("played_at", { ascending: opts.oldestFirst === true }).range(opts.offset || 0, (opts.offset || 0) + (opts.limit || 50) - 1);
+      ({ data, error, count } = await q2);
+    }
+    if (error) return { rows: [], signedIn: true, error: error.message };
+    return { rows: data || [], signedIn: true, total: count || 0 };
+  };
+
+  window.loadGameForView = async id => {
+    const local = window.getPendingGame(id);
+    await window.accountReady;
+    if (session) {
+      const own = await sb.from("game_history").select("*").eq("id", id).eq("user_id", session.user.id).maybeSingle();
+      if (own.data) return { record: own.data, mine: true, owner: profile ? profile.username : "" };
+      if (own.error) console.warn("Couldn't load that game:", own.error.message);
+    }
+    if (local) return { record: local, mine: true, pending: true, owner: profile ? profile.username : "" };
+    const shared = await sb.rpc("get_shared_game", { p_id: id });
+    if (shared.error) { console.warn("Couldn't load that shared game:", shared.error.message); return null; }
+    const row = (shared.data || [])[0];
+    if (!row) return null;
+    const { owner_name, ...record } = row;
+    record.is_shared = true;
+    return { record, mine: false, owner: owner_name || "" };
+  };
+
+  window.setGameShared = async (id, shared) => {
+    if (!session) return { ok: false, message: "Sign in to share a game." };
+    await flushGames();                                   // make sure the server has it before switching it on
+    const { data, error } = await sb.rpc("set_game_shared", { p_id: id, p_shared: !!shared });
+    if (error) return { ok: false, message: error.message };
+    return data ? { ok: true } : { ok: false, message: "That game isn't saved to your account yet." };
+  };
+
+  window.setGameTitle = async (id, title) => {
+    title = (title || "").trim().slice(0, 80) || null;
+    const wasPending = window.__setPendingTitle(id, title);       // keep it on this device too, so it goes up with the game if the upload is still waiting
+    if (!session) return wasPending ? { ok: true } : { ok: false, message: "Sign in to rename a game." };
+    await flushGames();
+    const { data, error } = await sb.rpc("set_game_title", { p_id: id, p_title: title });
+    if (error) return { ok: false, message: error.message };
+    return data || wasPending ? { ok: true } : { ok: false, message: "That game isn't saved to your account yet." };
   };
 
   sb.auth.onAuthStateChange(evt => { if (evt === "SIGNED_IN" || evt === "SIGNED_OUT") { if (evt === "SIGNED_OUT") queue = []; refresh(); } });

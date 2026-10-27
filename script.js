@@ -863,6 +863,7 @@ let updateHandle = null;
 let finalTime = 0;
 let pausedByTab = false;
 let missedCounties = new Set();
+const flashForfeited = new Set();          // Flash: forfeited counties flash red, then come back red when the game ends
 let struggledCounties = new Set();   // every county you got wrong at least once this run, even if you found it later (feeds "What you missed")
 let stateMistakes = new Set();
 let stateCompletionTimes = new Map();
@@ -935,10 +936,14 @@ function vaShapeCenter(svg, el) {
 }
 
 // returns [[id, offsetX, offsetY], ...] in the same units VIRGINIA_CALLOUTS used
-function layoutVirginiaCallouts(svg) {
-  if (virginiaLayout) return virginiaLayout;
+function layoutVirginiaCallouts(svg) { return layoutCallouts(svg, VIRGINIA_CALLOUTS, 9, "virginia", false); }
+
+const calloutLayouts = {};
+// Finds each circle the nearest empty spot. strict: also try first to keep every arrow off the land (except the county itself).
+function layoutCallouts(svg, list, radius, cacheKey, strict) {
+  if (calloutLayouts[cacheKey]) return calloutLayouts[cacheKey];
   const us = parseFloat(svg.dataset && svg.dataset.unitScale) || 1;
-  const R = 9 * us;                                           // circle radius (matches the 9 in the setupCountyCallout call)
+  const R = radius * us;                                           // circle radius (matches the 9 in the setupCountyCallout call)
   const vbs = svg.viewBox && svg.viewBox.baseVal;
   const vb = vbs && vbs.width ? vbs : svg.getBBox();
   const W = 700, cell = vb.width / W, H = Math.ceil(vb.height / cell);
@@ -997,13 +1002,15 @@ function layoutVirginiaCallouts(svg) {
 
   // 3. the cities, shallowest (nearest the coast / border) first so they get their ideal spot
   const items = [];
-  VIRGINIA_CALLOUTS.forEach(([id, ox, oy]) => {
+  list.forEach(([id, ox, oy]) => {
     const el = document.getElementById(id);
     const c = el && vaShapeCenter(svg, el);
     if (!c) return;
+    let own = 0;
+    try { const bb = el.getBBox(); own = Math.max(bb.width, bb.height) / cell / 2; } catch (e) { /* no size: assume a point */ }
     const col = Math.min(W - 1, Math.max(0, Math.floor((c[0] - vb.x) / cell)));
     const row = Math.min(H - 1, Math.max(0, Math.floor((c[1] - vb.y) / cell)));
-    items.push({ id, ox, oy, cx: c[0], cy: c[1], col, row, depth: dist[row * W + col] });
+    items.push({ id, ox, oy, cx: c[0], cy: c[1], col, row, own, depth: dist[row * W + col] });
   });
   items.sort((a, b) => a.depth - b.depth);
 
@@ -1043,18 +1050,30 @@ function layoutVirginiaCallouts(svg) {
     return c;
   };
 
+  const landOver = (x, y, tx, ty, skip) => {                 // land cells the arrow crosses before it is within `skip` cells of its county
+    const n = Math.max(1, Math.ceil(Math.hypot(tx - x, ty - y)));
+    let c = 0;
+    for (let k = 0; k <= n; k++) {
+      const qx = Math.round(x + (tx - x) * k / n), qy = Math.round(y + (ty - y) * k / n);
+      if (Math.hypot(qx - tx, qy - ty) <= skip) continue;
+      if (qx >= 0 && qy >= 0 && qx < W && qy < H && dist[qy * W + qx] === 0) c++;
+    }
+    return c;
+  };
+
   items.forEach(it => { it.tx = (it.cx - vb.x) / cell; it.ty = (it.cy - vb.y) / cell; });   // each city, in canvas cells
 
   // strictest rules first; relax only if a city has nowhere to go: [max land nearby, avoid arrows/circles, avoid other cities]
-  const passes = [[0.4, true, true], [0.6, true, true], [1.01, true, true], [1.01, true, false], [1.01, false, false]];
+  const passes = [...(strict ? [[0.4, true, true, true], [0.6, true, true, true], [1.01, true, true, true]] : []), [0.4, true, true], [0.6, true, true], [1.01, true, true], [1.01, true, false], [1.01, false, false]];
   const placed = [], out = [];
   items.forEach(it => {
     const tx = it.tx, ty = it.ty;
-    const ok = (x, y, maxLand, lines, avoidCities) => {
+    const ok = (x, y, maxLand, lines, avoidCities, noLand) => {
       if (x < m || y < m || x >= W - m || y >= H - m) return false;
       if (dist[y * W + x] < clear) return false;
       if ((x - tx) * (x - tx) + (y - ty) * (y - ty) < minArrow * minArrow) return false;
       if (landFrac(x, y, half) > maxLand) return false;
+      if (noLand && landOver(x, y, tx, ty, Math.min(it.own, 6 * Rc) + 1.5) > 0) return false;   // the arrow may only touch land inside its own county
       for (const p of placed) {
         if ((p.x - x) * (p.x - x) + (p.y - y) * (p.y - y) < sep * sep) return false;
         if (!lines) continue;
@@ -1073,9 +1092,9 @@ function layoutVirginiaCallouts(svg) {
 
     let best = null;
     const x0 = Math.round(tx), y0 = Math.round(ty), limit = Math.max(W, H);
-    for (const [maxLand, lines, avoidCities] of passes) {
+    for (const [maxLand, lines, avoidCities, noLand] of passes) {
       const cands = [];
-      const test = (x, y) => { if (ok(x, y, maxLand, lines, avoidCities)) cands.push([x, y]); };
+      const test = (x, y) => { if (ok(x, y, maxLand, lines, avoidCities, noLand)) cands.push([x, y]); };
       for (let k = 0; k <= limit && cands.length < WANT; k++) {   // collect the nearest valid spots, ring by ring
         if (k === 0) { test(x0, y0); continue; }
         for (let d = -k; d <= k; d++) { test(x0 + d, y0 - k); test(x0 + d, y0 + k); }
@@ -1097,7 +1116,7 @@ function layoutVirginiaCallouts(svg) {
     }
   });
 
-  if (out.length) virginiaLayout = out;
+  if (out.length) calloutLayouts[cacheKey] = out;
   return out;
 
 }
@@ -1126,6 +1145,12 @@ function raiseVirginiaCities(svg) {
   all.forEach(el => (cityIds.has(el.id) ? cityLayer : countyLayer).appendChild(el));
 }
 // extra callouts: [countyId, offsetX, offsetY]  (offsets are in the same units as VIRGINIA_CALLOUTS)
+// Callouts whose circles find their own empty spot (arrows kept off the land), all the same size and look
+const AUTO_RADIUS = 14;
+const AUTO_CALLOUTS = {
+  alaska: [["skagway", 40, -55], ["haines", 40, -20], ["bristol-bay", -85, 15], ["aleutians-west", 0, -55]],
+  new_york: [["new-york", 40, -40]],
+};
 const EXTRA_CALLOUTS = {
   american_samoa: [
     ["swains-island", 90, 90, null, 30],
@@ -1133,10 +1158,6 @@ const EXTRA_CALLOUTS = {
   ],
   texas: [
     ["aransas", 65, 35, [0.6, 1.4]]
-  ],
-  alaska: [
-    ["haines", 40, -20, [0.8, 0.3], 14],
-    ["aleutians-west", 0, -55, null, 18],
   ],
 };
 
@@ -1357,6 +1378,14 @@ function findCountyById(id) {
 }
 
 window.findCountyForAccount = findCountyById;
+window.countellect = {                                   // what history.js (the game-history pages) needs from this file
+  stateData, ensureStateMaps: keys => ensureStateMaps(keys), setupStateCallouts: (k, svg) => setupStateCallouts(k, svg), showScreen: id => showScreen(id),
+  findCounty: findCountyById, MODE_LABELS,
+  unitWord: (plural, keys) => { const eq = (keys || []).some(k => usesCountyEquivalents(k)); return eq ? (plural ? "county equivalents" : "county equivalent") : (plural ? "counties" : "county"); },
+  zoomMap: svg => toggleMapZoom(svg),
+  mapSvg: key => { const m = stateData[key]; return m ? document.getElementById(m.svgId) : null; }
+
+};
 window.countyCountForAccount = key => (stateData[key] ? stateData[key].counties.length : null);
 
 function getCountyElements(id) {
@@ -1415,7 +1444,9 @@ const DEFAULT_SETTINGS = {
   showHoverNames: true,
   autoScrollToState: true,
   autoZoom: true,
-  reviewArrowsOn: true
+  zoomGameButtons: true,
+  reviewArrowsOn: true,
+  restartHotkey: ""
 };
 let gameSettings = { ...DEFAULT_SETTINGS, ...readStoredJson("gameSettings", {}) };
 gameSettings.flashRepeatClickGuardMs = Number.isFinite(Number(gameSettings.flashRepeatClickGuardMs))
@@ -1475,6 +1506,7 @@ const SETTING_CONTROLS = [
   { id: "toggle-hover-names", key: "showHoverNames", ...asCheckbox },
   { id: "toggle-auto-scroll", key: "autoScrollToState", ...asCheckbox },
   { id: "toggle-auto-zoom", key: "autoZoom", ...asCheckbox },
+  { id: "toggle-zoom-game-buttons", key: "zoomGameButtons", ...asCheckbox, after: () => applySettings() },
 ];
 function updateFlashRepeatClickGuardValue() {
   const output = document.getElementById("flash-repeat-click-guard-value");
@@ -1493,7 +1525,7 @@ let statsHiddenOverride = {};
 
 const STUDY_KEY = "studyLearnedByMode";
 const STUDY_MODE_LIST = ["pin", "mc", "type"];
-const STUDY_MODE_LABELS = { pin: "Pin", mc: "Multiple-Choice", type: "Type" };
+const STUDY_MODE_LABELS = { pin: "Pin", mc: "Multiple-Choice", type: "Type", desig: "Designations" };
 let statsLearnMode = "all";
 let statsView = "play";
 function loadStudyLearned() { try { return JSON.parse(localStorage.getItem(STUDY_KEY)) || {}; } catch (e) { return {}; } }
@@ -1782,7 +1814,12 @@ function visibleBanner() {
 function layoutZoom() {
   if (!zoomedMap) return;
   const banner = visibleBanner();
-  const top = Math.ceil((banner ? banner.getBoundingClientRect().bottom : 0) + 8);
+  let top = Math.ceil((banner ? banner.getBoundingClientRect().bottom : 0) + 8);
+  document.documentElement.style.setProperty("--zoom-hdr-top", top + "px");
+  const hdr = document.querySelector(".game-header");
+  if (document.body.classList.contains("zoom-game-buttons") && hdr && hdr.getClientRects().length) {
+    top = Math.ceil(top + 4 + hdr.getBoundingClientRect().height + 6);   // the button row gets its own band above the map
+  }
   zoomScroller.style.top = top + "px";
   const cs = getComputedStyle(zoomedMap);
   const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
@@ -1795,7 +1832,7 @@ function layoutZoom() {
   const maxW = window.innerWidth - 16 - reserve;
   const fitW = (availH - pad) * ratio + padX;
   const clearStepUp = zoomNormalWidth * ZOOM_GOOD_ENOUGH + padX;
-  const wantW0 = fitW >= clearStepUp ? fitW : Math.max(fitW, zoomNormalWidth * ZOOM_MIN_FACTOR + padX);
+  const wantW0 = Math.max(fitW, zoomNormalWidth + padX);   // fit the screen height so a zoomed state never needs scrolling; never smaller than it was before zooming
   const wantW = ratio < 0.6 ? fitW : wantW0;      // tall, narrow maps (CNMI): fit the screen height so there's no scrolling
   const w = Math.round(Math.max(Math.min(wantW, maxW), 120));
   const set = (k, v) => zoomedMap.style.setProperty(k, v, "important");
@@ -1835,6 +1872,7 @@ function exitMapZoom() {
   zoomLevel = 1;
   zoomControls.remove();
   zoomArrowsBtn.remove();
+  zoomClearBtn.remove();
   zoomBackdrop.classList.remove("active");
   document.body.classList.remove("map-zoomed");
 }
@@ -1869,6 +1907,7 @@ function enterMapZoom(svg) {
   layoutZoom();
   document.body.appendChild(zoomControls);
   document.body.appendChild(zoomArrowsBtn);
+  document.body.appendChild(zoomClearBtn);
   updateZoomControls();
   const banner = visibleBanner();
   if (banner && window.ResizeObserver) {
@@ -1909,13 +1948,21 @@ zoomArrowsBtn.addEventListener("click", (e) => {
   if (typeof reviewReposition === "function") reviewReposition();
 });
 
+const zoomClearBtn = document.createElement("button");
+zoomClearBtn.type = "button";
+zoomClearBtn.className = "zoom-arrows-top zoom-clear-top";
+zoomClearBtn.textContent = "Clear";
+zoomClearBtn.title = "Remove every label and arrow you've pinned";
+zoomClearBtn.addEventListener("click", (e) => { e.stopPropagation(); clearReviewPins(); });
+
 function updateZoomControls() {
   const shown = zoomLevel < 10 ? zoomLevel.toFixed(1).replace(/\.0$/, "") : String(Math.round(zoomLevel));
   zoomLevelLabel.textContent = shown + "\u00D7";
   zoomControls.querySelector('[data-z="out"]').disabled = zoomLevel <= 1.001;
   zoomControls.querySelector('[data-z="in"]').disabled = zoomLevel >= ZOOM_MAX - 0.001;
   zoomControls.querySelector('[data-z="reset"]').disabled = zoomLevel <= 1.001;
-  zoomArrowsBtn.hidden = !reviewMode;      // only while reviewing: it's about the dragged name labels
+  zoomArrowsBtn.hidden = !reviewMode;
+  zoomClearBtn.hidden = !reviewMode;      // only while reviewing: it's about the dragged name labels
   zoomArrowsBtn.setAttribute("aria-pressed", String(gameSettings.reviewArrowsOn === true));
   zoomScroller.classList.toggle("zoom-deep", zoomLevel > 1.001);
 }
@@ -2086,6 +2133,67 @@ svgMaps.forEach(svg => {
   svg.addEventListener("contextmenu", onCardContext);     // still needed once the map has moved out of its card into the zoom view
   if (magnifyBox) magnifyBox.addEventListener("contextmenu", onCardContext);   // the whole card: title, padding, buttons
 });
+
+
+/* The More info page's copies of the state maps behave like the game's own tiles: the same hover glow and name,
+   click to pin a name (drag it, click again to remove), the magnifier, right-click or long-press to zoom. */
+window.countellect.bindTile = (svg, opts = {}) => {
+  const tile = svg.closest(".map-box");
+  svg.dataset.gdTile = svg.dataset.gdTile || String(Math.random().toString(36).slice(2, 8));
+  const idOf = p => p.dataset.gdOrig || p.dataset.countyId;
+  const counties = [...svg.querySelectorAll(".gd-county")];
+  counties.forEach(path => {
+    path.addEventListener("mouseenter", e => {
+      clearHoverGlow();
+      const id = idOf(path);
+      counties.filter(p => idOf(p) === id).forEach(part => {
+        const c = part.cloneNode(true);
+        ["id", "tabindex", "role", "aria-label", "data-county-id", "data-name", "data-gd-orig"].forEach(a => c.removeAttribute(a));
+        c.querySelectorAll("[id]").forEach(n => n.removeAttribute("id"));
+        c.querySelectorAll("title").forEach(n => n.remove());
+        c.setAttribute("class", "play-glow play-glow-strong");
+        c.style.pointerEvents = "none";
+        part.parentNode.appendChild(c);
+        glowClones.push(c);
+      });
+      const county = findCountyById(id);
+      if (opts.tooltip !== false) showHoverTooltip(county ? getPlainName(county) : "", e.clientX, e.clientY);
+    });
+    path.addEventListener("mousemove", e => { if (opts.tooltip !== false) moveHoverTooltip(e.clientX, e.clientY); });
+    path.addEventListener("mouseleave", hideHoverTooltip);
+    path.addEventListener("click", e => {
+      if (isZoomGestureStart(e) || Date.now() < suppressClickUntil) return;
+      e.stopPropagation();
+      reviewTap(path);
+    });
+  });
+  if (tile) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "map-magnify-btn";
+    btn.setAttribute("aria-label", "Zoom in on this map");
+    btn.textContent = "\u{1F50D}";
+    btn.addEventListener("click", e => { e.stopPropagation(); toggleMapZoom(svg); });
+    tile.appendChild(btn);
+  }
+  let pressTimer = null, moved = false;
+  svg.addEventListener("touchstart", () => {
+    moved = false; touchGestureWasLongPress = false; clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => { if (moved) return; touchLongPressFiredAt = Date.now(); touchGestureWasLongPress = true; toggleMapZoom(svg); }, LONG_PRESS_MS);
+  }, { passive: true });
+  svg.addEventListener("touchmove", () => { moved = true; clearTimeout(pressTimer); }, { passive: true });
+  svg.addEventListener("touchend", () => { clearTimeout(pressTimer); if (touchGestureWasLongPress) suppressClickUntil = Date.now() + 600; });
+  svg.addEventListener("touchcancel", () => clearTimeout(pressTimer));
+  const onCtx = e => {
+    e.preventDefault(); e.stopPropagation();
+    if (Date.now() - touchLongPressFiredAt < LONG_PRESS_GUARD_MS) return;
+    toggleMapZoom(svg);
+  };
+  svg.addEventListener("contextmenu", onCtx);
+  if (tile) tile.addEventListener("contextmenu", onCtx);
+};
+window.countellect.clearPins = () => clearReviewPins();
+window.countellect.statesPerRow = () => gameSettings.statesPerRow;
 
 zoomBackdrop.addEventListener("click", exitMapZoom);
 
@@ -2271,6 +2379,7 @@ const admireBar = document.getElementById("admire-bar");
 const admirePercentage = document.getElementById("admire-percentage");
 const admireText = document.getElementById("admire-text");
 const btnAdmireRetry = document.getElementById("btn-admire-retry");
+let summaryRetryList = [];      // what Retry Missed would replay, for the modal and for the bar under the map after See Results
 const btnAdmireReplay = document.getElementById("btn-admire-replay");
 const btnAdmireSettings = document.getElementById("btn-admire-settings");
 const btnAdmireHome = document.getElementById("btn-admire-home");
@@ -2364,6 +2473,7 @@ function applySettings() {
     const el = document.getElementById(c.id);
     if (el) c.write(el, gameSettings[c.key]);
   });
+  document.body.classList.toggle("zoom-game-buttons", !!gameSettings.zoomGameButtons);
   updateFlashRepeatClickGuardValue();
   syncStAbbrevSettingUI();
   applyTucSettingsLock();
@@ -2431,7 +2541,7 @@ function showScreen(screenId) {
     activeScreen.focus();
   }
   exitMapZoom();
-  if (screenId !== "screen-game") clearReviewPins();
+  if (screenId !== "screen-game" && !(screenId === "screen-settings" && reviewMode)) clearReviewPins();   // opening Settings from Review keeps your labels and arrows
   if (countyListPanel && screenId !== "screen-game") {
     countyListPanel.classList.add("hidden");
   }
@@ -2444,6 +2554,7 @@ function showScreen(screenId) {
       "solo-map",
       screenId === "screen-game" && activeStateKeys.length === 1
     );
+    appContainer.classList.toggle("wide-records", screenId === "screen-records");
     appContainer.classList.toggle("wide-settings", screenId === "screen-settings");
     appContainer.classList.toggle("wide-picker", screenId === "screen-home" || screenId === "screen-setup" || screenId === "screen-study");
     appContainer.classList.remove("wide-study");
@@ -2567,25 +2678,26 @@ setTimeout(() => {
   const KEY = "studyLearned";
   const batchSize = () => Math.min(8, Math.max(4, parseInt(gameSettings.learnCount, 10) || 5));
   const selected = new Set();
-  let counties = [], start = 0, batch = [], quizSet = [], typeSet = [], pinSet = [], i = 0, phase = "learn", score = 0, typeScore = 0, pinScore = 0, answered = false;
+  let counties = [], start = 0, batch = [], quizSet = [], typeSet = [], pinSet = [], deSet = [], i = 0, phase = "learn", score = 0, typeScore = 0, pinScore = 0, deScore = 0, answered = false;
   const unit = plural => counties.some(c => usesCountyEquivalents(c.stateKey))
   ? (plural ? "county equivalents" : "county equivalent") : (plural ? "counties" : "county");
   let studyMode = "all";
   let homeExcluded = new Set();
-  const roundLog = { quiz: [], type: [], pin: [] };
-  const PHASE_TITLE = { quiz: "Multiple-Choice", type: "Type", pin: "Pin" };
+  const roundLog = { quiz: [], type: [], pin: [], desig: [] };
+  const PHASE_TITLE = { quiz: "Multiple-Choice", type: "Type", pin: "Pin", desig: "Designations" };
   const sumEl = document.createElement("div");
   sumEl.id = "study-summary";
   sumEl.className = "study-summary hidden";
   $("study-map").after(sumEl);
-  const MODE_SEQ = { all: ["pin", "quiz", "type"], mc: ["quiz"], type: ["type"], pin: ["pin"] };
-  const MODE_NAME = { all: "All", mc: "Multiple-Choice", type: "Type", pin: "Pin" };
+  const MODE_SEQ = { all: ["pin", "quiz", "type"], mc: ["quiz"], type: ["type"], pin: ["pin"], desig: ["desig"] };
+  const MODE_NAME = { all: "All", mc: "Multiple-Choice", type: "Type", pin: "Pin", desig: "Designations" };
   const seq = () => MODE_SEQ[studyMode];
   const nextPhaseAfter = p => seq()[seq().indexOf(p) + 1] || null;
   const firstPhase = () => seq()[0];
   const afterLabel = p => {
     const n = p === "learn" ? firstPhase() : (replayOnly ? null : nextPhaseAfter(p));
     if (!n) return "See results";
+    if (p === "learn" && n === "desig") return "Start the quiz";
     return (p === "learn" ? "Start " : "Continue to ") + PHASE_TITLE[n];
   };
 
@@ -2595,7 +2707,7 @@ setTimeout(() => {
     Object.keys(all).forEach(id => { if (need.every(m => all[id] && all[id][m])) out[id] = true; });
     return out;
   };
-  const PHASE_ROW = { quiz: "mc", type: "type", pin: "pin" };
+  const PHASE_ROW = { quiz: "mc", type: "type", pin: "pin", desig: "desig" };
   const studyStates = () => Object.entries(stateData)
     .filter(([, s]) => document.getElementById(s.svgId))
     .sort((a, b) => a[1].name.localeCompare(b[1].name));
@@ -2743,6 +2855,7 @@ setTimeout(() => {
     const src = document.getElementById(stateData[county.stateKey]?.svgId);
     holder.innerHTML = "";
     if (!src) return;
+    setupStateCallouts(county.stateKey, src);
     const svg = src.cloneNode(true);
     const srcCounty = src.querySelector(".county");
     const outlineW = srcCounty ? getComputedStyle(srcCounty).strokeWidth : "";
@@ -2826,16 +2939,34 @@ setTimeout(() => {
     }));
   }
 
+  /* ----- Designations: which places are counties, boroughs, parishes, independent cities... ----- */
+  const DESIG_FALLBACK = ["County", "Borough", "Census Area", "Parish", "Independent City", "Municipality", "Planning Region"];
+  const desigOf = c => tucDesignation(c);
+  const desigPhrase = d => ["District of Columbia", "Guam"].includes(d) ? d : (/^[AEIOU]/i.test(d) ? "an " : "a ") + d;
+  const desigEl = document.createElement("p");
+  desigEl.id = "study-desig"; desigEl.className = "study-desig hidden";
+  $("study-name").after(desigEl);
+  function desigOptions(c) {
+    const correct = desigOf(c);
+    const present = [...new Set(counties.map(desigOf))];
+    const others = shuffle(present.filter(d => d !== correct));
+    for (const d of shuffle(DESIG_FALLBACK)) if (others.length < 3 && d !== correct && !others.includes(d)) others.push(d);
+    const picks = [correct, ...others.slice(0, 3)];
+    return DESIGNATIONS.filter(d => picks.includes(d));            // always in the same order, so each button stays put
+  }
+
   function render() {
     sumEl.classList.add("hidden");
-    const learn = phase === "learn", typing = phase === "type", pinning = phase === "pin";
-    const list = learn ? batch : typing ? typeSet : pinning ? pinSet : quizSet;
+    const learn = phase === "learn", typing = phase === "type", pinning = phase === "pin", desiging = phase === "desig";
+    const list = learn ? batch : typing ? typeSet : pinning ? pinSet : desiging ? deSet : quizSet;
     const c = list[i];
-    $("study-progress").textContent = `${learn ? "Study" : typing ? "Type" : pinning ? "Pin" : "Quiz"}: ${i + 1} of ${list.length} (${unit(true)} ${start + 1}-${start + batch.length} of ${counties.length})`;
+    $("study-progress").textContent = `${learn ? "Study" : typing ? "Type" : pinning ? "Pin" : desiging ? "Designations" : "Quiz"}: ${i + 1} of ${list.length} (${unit(true)} ${start + 1}-${start + batch.length} of ${counties.length})`;
     drawMap(c, pinning, learn);
     const studyStateEl = $("study-state");
     if (studyStateEl) studyStateEl.textContent = stateData[c.stateKey]?.name || "";
-    $("study-name").textContent = learn ? getPlainName(c) : typing ? `Type the name of the highlighted ${unitWord(false)}.` : pinning ? `Click ${getPlainName(c)} on the map.` : `Which ${unitWord(false)} is highlighted?`;
+    $("study-name").textContent = learn ? getPlainName(c) : typing ? `Type the name of the highlighted ${unitWord(false)}.` : pinning ? `Click ${getPlainName(c)} on the map.` : desiging ? `What kind of place is ${getPlainName(c)}?` : `Which ${unitWord(false)} is highlighted?`;
+    desigEl.textContent = learn && studyMode === "desig" ? desigOf(c) : "";
+    desigEl.classList.toggle("hidden", !(learn && studyMode === "desig"));
     if (learn || pinning) appendSpeaker($("study-name"), c);
     $("study-feedback").textContent = "";
     const ch = $("study-choices");
@@ -2849,6 +2980,16 @@ setTimeout(() => {
       $("study-submit").classList.remove("hidden", "study-pending");
       buildChars();
       inp.focus({ preventScroll: true });
+    } else if (desiging) {
+      desigOptions(c).forEach((d, k) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn-secondary";
+        b.textContent = d;
+        b.dataset.correct = d === desigOf(c) ? "1" : "";
+        b.addEventListener("click", () => answerDesig(b, d, c));
+        ch.appendChild(b);
+      });
     } else if (!learn && !pinning) {
       const picks = pickMcDistractors(c, counties, 3, null, new Set(batch));
       shuffle([c, ...picks]).forEach(o => {
@@ -2883,6 +3024,21 @@ setTimeout(() => {
     appendSpeaker($("study-feedback"), c);
     $("study-next").textContent = lastIn(quizSet) ? afterLabel("quiz") : "Next";
     replayBackBtn.classList.toggle("hidden", !replayFrom || (replayOnly && lastIn(quizSet)));
+    $("study-next").classList.remove("hidden", "study-pending");
+  }
+
+  function answerDesig(btn, chosen, c) {
+    if (answered) return;
+    answered = true;
+    const correct = desigOf(c), ok = chosen === correct;
+    if (ok) deScore++;
+    roundLog.desig.push({ c, ok, chosen });
+    btn.classList.add(ok ? "study-correct" : "study-wrong");
+    $("study-choices").querySelectorAll("button").forEach(b => { if (b.dataset.correct) b.classList.add("study-correct"); });
+    setStudyLearned(c.id, PHASE_ROW.desig, ok);
+    $("study-feedback").textContent = ok ? "Correct!" : `${getPlainName(c)} is ${desigPhrase(correct)}.`;
+    $("study-next").textContent = lastIn(deSet) ? afterLabel("desig") : "Next";
+    replayBackBtn.classList.toggle("hidden", !replayFrom || (replayOnly && lastIn(deSet)));
     $("study-next").classList.remove("hidden", "study-pending");
   }
 
@@ -2929,6 +3085,7 @@ setTimeout(() => {
   function roundMap(c, wrong) {
     const src = document.getElementById(stateData[c.stateKey]?.svgId);
     if (!src) return null;
+    setupStateCallouts(c.stateKey, src);
     const svg = src.cloneNode(true);
     const sc = src.querySelector(".county");
     const outlineW = sc ? getComputedStyle(sc).strokeWidth : "";
@@ -2955,6 +3112,7 @@ setTimeout(() => {
   }
 
   const youLine = (p, e) => {
+    if (p === "desig") return `You chose: ${e.chosen}`;
     if (p === "type") return `You typed: \u201C${e.typed}\u201D`;
     const who = e.chosen ? getPlainName(e.chosen) : "another county";
     return `${p === "pin" ? "You clicked" : "You chose"}: ${who}`;
@@ -2966,15 +3124,15 @@ setTimeout(() => {
   };
 
   let replayFrom = null, replayOnly = false;
-  const snapshotRound = () => ({ quiz: roundLog.quiz.slice(), type: roundLog.type.slice(), pin: roundLog.pin.slice(), score, typeScore, pinScore, start, batch: batch.slice() });
+  const snapshotRound = () => ({ quiz: roundLog.quiz.slice(), type: roundLog.type.slice(), pin: roundLog.pin.slice(), desig: roundLog.desig.slice(), score, typeScore, pinScore, deScore, start, batch: batch.slice() });
   const replay = fn => () => { replayFrom = snapshotRound(); replayOnly = true; fn(); };
   const replayBackBtn = el("button", "study-replay-back hidden", "Back to results");
   replayBackBtn.type = "button";
   replayBackBtn.addEventListener("click", () => {
     if (!replayFrom) return;
     const r = replayFrom;
-    roundLog.quiz = r.quiz; roundLog.type = r.type; roundLog.pin = r.pin;
-    score = r.score; typeScore = r.typeScore; pinScore = r.pinScore;
+    roundLog.quiz = r.quiz; roundLog.type = r.type; roundLog.pin = r.pin; roundLog.desig = r.desig;
+    score = r.score; typeScore = r.typeScore; pinScore = r.pinScore; deScore = r.deScore;
     start = r.start; batch = r.batch;
     showSummary();
   });
@@ -3061,11 +3219,11 @@ setTimeout(() => {
       const cards = list.map(e => {
         const card = el("div", "rs-card " + (e.ok ? "ok" : "bad"));
         const holder = el("div", "rs-map");
-        const m = roundMap(e.c, p === "type" ? null : e.chosen);
+        const m = roundMap(e.c, p === "type" || p === "desig" ? null : e.chosen);
         if (m) { holder.appendChild(m.svg); rings.push(m); }
         const cap = el("div", "rs-cap");
-        if (e.ok) cap.append(el("div", "rs-right", `\u2713 ${getPlainName(e.c)}`));
-        else cap.append(el("div", "rs-you", `\u2717 ${youLine(p, e)}`), el("div", "rs-answer", `Answer: ${getPlainName(e.c)}`));
+        if (e.ok) cap.append(el("div", "rs-right", `\u2713 ${getPlainName(e.c)}` + (p === "desig" ? ` \u00B7 ${desigOf(e.c)}` : "")));
+        else cap.append(el("div", "rs-you", `\u2717 ${youLine(p, e)}`), el("div", "rs-answer", p === "desig" ? `${getPlainName(e.c)}: ${desigOf(e.c)}` : `Answer: ${getPlainName(e.c)}`));
         card.append(holder, cap);
         return card;
       });
@@ -3077,11 +3235,12 @@ setTimeout(() => {
     if (seq().includes("pin")) addBtn("Pin again", replay(startPin));
     if (seq().includes("quiz")) addBtn("Quiz again", replay(startQuiz));
     if (seq().includes("type")) addBtn("Type again", replay(startType));
+    if (seq().includes("desig")) addBtn("Quiz again", replay(startDesig));
   }
   function results() { showSummary(); }
 
   const lastOfPhase = () => {
-    const set = ({ quiz: quizSet, type: typeSet, pin: pinSet })[phase];
+    const set = ({ quiz: quizSet, type: typeSet, pin: pinSet, desig: deSet })[phase];
     return set && set.length ? set[set.length - 1] : batch[batch.length - 1];
   };
   function practiceOrder(prev) {
@@ -3094,6 +3253,7 @@ setTimeout(() => {
   }
   function startQuiz() { const prev = lastOfPhase(); phase = "quiz"; quizSet = practiceOrder(prev); i = 0; score = 0; roundLog.quiz = []; render(); }
   function startPin() { const prev = lastOfPhase(); phase = "pin"; pinSet = practiceOrder(prev); i = 0; pinScore = 0; roundLog.pin = []; render(); }
+  function startDesig() { const prev = lastOfPhase(); phase = "desig"; deSet = practiceOrder(prev); i = 0; deScore = 0; roundLog.desig = []; render(); }
   function startType() { const prev = lastOfPhase(); phase = "type"; typeSet = practiceOrder(prev); i = 0; typeScore = 0; roundLog.type = []; render(); }
 
   function beginBatch(keepBackToResults) {
@@ -3103,7 +3263,7 @@ setTimeout(() => {
     i = 0; phase = "learn";
     render();
   }
-  function startPhase(p) { ({ quiz: startQuiz, type: startType, pin: startPin })[p](); }
+  function startPhase(p) { ({ quiz: startQuiz, type: startType, pin: startPin, desig: startDesig })[p](); }
 
   window.startStudyFromHome = (mode, keys, skipLearned, excluded) => {
     studyMode = mode;
@@ -3145,6 +3305,12 @@ setTimeout(() => {
     try { await ensureStateMaps(pool.map(c => c.stateKey)); }
     catch (err) { $("study-pick-msg").textContent = "Couldn't load the map data. Make sure the maps folder is next to index.html, then try again."; return; }
     counties = shuffle(pool);
+    if (studyMode === "desig") {          // Designations: mostly the interesting ones (boroughs, parishes...) first, but plain counties show up all along the way
+      const special = counties.filter(c => tucDesignation(c) !== "County"), plain = counties.filter(c => tucDesignation(c) === "County");
+      const mix = [];
+      while (special.length || plain.length) mix.push((special.length && (!plain.length || Math.random() < 0.6)) ? special.pop() : plain.pop());
+      counties = mix;
+    }
     start = 0;
     $("study-pick").classList.add("hidden");
     $("study-run").classList.remove("hidden");
@@ -3163,7 +3329,7 @@ setTimeout(() => {
     if (phase === "learn") {
       if (i < batch.length - 1) { i++; render(); } else startPhase(firstPhase());
     } else if (answered) {
-      const list = phase === "quiz" ? quizSet : phase === "pin" ? pinSet : typeSet;
+      const list = phase === "quiz" ? quizSet : phase === "pin" ? pinSet : phase === "desig" ? deSet : typeSet;
       if (i < list.length - 1) { i++; render(); }
       else if (!replayOnly && nextPhaseAfter(phase)) startPhase(nextPhaseAfter(phase));
       else showSummary();
@@ -3269,10 +3435,39 @@ document.getElementById("btn-county-color-lighter-correct")?.addEventListener("c
     console.error("Cannot derive the lighter correct color: the current correct color is not a hex value.", correctColor);
     return;
   }
-  gameSettings.countyJustFoundColor = lightenHexColor(correctColor, 0.4);
+  gameSettings.countyJustFoundColor = lighterLikeDefault(correctColor);
   saveSettings();
   applySettings();
 });
+
+/* "Lighter" makes Just found relate to Correct the way the default Just found relates to the default Correct (for the theme
+   that's showing): same hue, the same change in saturation, and the same share of the way up to white in lightness.
+   It's worked out from the default colours below, so if you change the defaults, change them here too. */
+const LIGHTER_DEFAULTS = {                // [default Correct, default Just found] for each theme
+  light: ["#1e4b0e", "#61a848"],
+  dark: ["#38592c", "#61a848"]
+};
+function hexToHsl(hex) {
+  const [r, g, b] = hex.slice(1).match(/.{2}/g).map(c => parseInt(c, 16) / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min, l = (max + min) / 2;
+  let h = 0;
+  if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return { h: (h * 60 + 360) % 360, s: d ? d / (1 - Math.abs(2 * l - 1)) : 0, l };
+}
+function hslToHex(h, s, l) {
+  const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return "#" + [f(0), f(8), f(4)].map(v => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, "0")).join("");
+}
+function lighterRule(theme) {
+  const [fromHex, toHex] = LIGHTER_DEFAULTS[theme], from = hexToHsl(fromHex), to = hexToHsl(toHex);
+  return { satScale: from.s ? to.s / from.s : 1, liftToWhite: from.l < 1 ? (to.l - from.l) / (1 - from.l) : 0 };
+}
+function lighterLikeDefault(color) {
+  const rule = lighterRule(document.body.classList.contains("dark-mode") ? "dark" : "light");   // follows whichever theme is showing
+  const c = hexToHsl(color);
+  return hslToHex(c.h, Math.min(1, c.s * rule.satScale), c.l + (1 - c.l) * rule.liftToWhite);
+}
 
 function lightenHexColor(color, amount) {
   const channels = color.slice(1).match(/.{2}/g)
@@ -3317,9 +3512,11 @@ function syncStAbbrevSettingUI() {
 if (btnResetProgress) {
 btnResetProgress.addEventListener("click", async () => {
   const signedIn = !!(window.accountIsSignedIn && window.accountIsSignedIn());
-  const ask = signedIn
-    ? "Are you sure you want to reset all saved progress and mistakes?\n\nYou're signed in, so this also deletes your points, badges and leaderboard standing. It can't be undone."
-    : "Are you sure you want to reset all saved progress and mistakes?";
+  const ask = "RESET EVERYTHING?\n\nThis permanently deletes ALL of your saved data:\n"
+    + "  \u2022 your progress, mistake history and Study progress\n"
+    + "  \u2022 all of your records and every saved game, with its history, graphs and maps\n"
+    + (signedIn ? "  \u2022 your points, badges and leaderboard standing (on your account, not just this device)\n" : "")
+    + "\nThis can't be undone. There is no backup and no way to get any of it back.\n\nReset everything?";
   if (!confirm(ask)) return;
 
   // clear the account first; if that fails, change nothing so the game and the profile stay in step
@@ -3338,13 +3535,15 @@ btnResetProgress.addEventListener("click", async () => {
   localStorage.removeItem("countyMistakes");
   localStorage.removeItem("perfectTimes");
   localStorage.removeItem("stateRunBests");
+  localStorage.removeItem("pendingGames");          // saved games still waiting to upload
+  window.__gameCache = {};
   localStorage.removeItem("progressOwner");
   perfectTimes = {};
   renderStateListUI();
   renderCountyCheckboxes();
   renderStatsPanel();
   if (suggestionBox) suggestionBox.classList.add("hidden");
-  alert("Progress and mistake history reset successfully!");
+  alert("Everything was reset.");
 });
 }
 
@@ -3689,7 +3888,7 @@ function renderStatsPanel() {
   if (hideAllBtn) hideAllBtn.textContent = activeStateKeys.every(isStatsHidden) ? "Show all" : "Hide all";
 
   const learnView = statsView === "learn";
-  const modes = learnView ? STUDY_MODE_LIST : MODE_LIST;
+  const modes = learnView ? [...STUDY_MODE_LIST, "desig"] : MODE_LIST;
   const labelOf = m => learnView ? STUDY_MODE_LABELS[m] : MODE_LABELS[m];
   const statusOf = (id, m) => learnView ? (isStudyLearned(id, m) ? "clean" : null) : getCountyLearnedStatus(id, m);
   statsPanel.querySelectorAll("[data-stats-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.statsView === statsView)));
@@ -3866,7 +4065,7 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
   const uy = dy / dist;
   let tipX = aimX - ux * stopShort;
   let tipY = aimY - uy * stopShort;
-  if (styleKey === "va" && !tip) {
+  if ((styleKey === "va" || styleKey === "auto") && !tip) {
     const edge = distanceToShapeEdge(countyPath, cx, cy, -ux, -uy, Math.min(dist, 20 * us));
     if (edge !== null) { tipX = cx - ux * edge; tipY = cy - uy * edge; }
   }
@@ -3896,8 +4095,8 @@ function setupCountyCallout(targetSvg, countyId, key, offsetX, offsetY, radiusPa
     const arrowHead = document.createElementNS(svgNS, "path");
     arrowHead.setAttribute("d", "M0,0 L8,4 L0,8 Z");
     if (us !== 1) {
-      const isVa = styleKey === "va";
-      const m = (isVa ? (targetSvg.id === "svg-american-samoa" ? 20 : 5) : 12) * us;
+      const isVa = styleKey === "va" || styleKey === "auto";
+      const m = (isVa ? (targetSvg.id === "svg-american-samoa" ? 20 : styleKey === "auto" ? 7 : 5) : 12) * us;
       marker.setAttribute("markerUnits", "userSpaceOnUse");
       marker.setAttribute("markerWidth", m);
       marker.setAttribute("markerHeight", m);
@@ -3982,6 +4181,54 @@ function updateMapGridColumns() {
 }
 
 
+// callouts (the circles for tiny counties/cities) live on the real map, so every place that copies a map has to make them first
+function setupStateCallouts(key, targetSvg) {
+  if (!targetSvg) return;
+  const rendered = targetSvg.getClientRects().length > 0;
+  let undo = null;
+  if (!rendered) {   // getBBox needs a rendered map: borrow the game screen for a moment, invisibly
+    const scr = document.getElementById("screen-game"), box = targetSvg.closest(".map-box");
+    const saved = { scr: scr && scr.getAttribute("style"), svg: targetSvg.getAttribute("style"), boxHidden: box && box.classList.contains("hidden"), svgHidden: targetSvg.classList.contains("hidden") };
+    if (scr) scr.setAttribute("style", "display:block;visibility:hidden;position:absolute;left:0;top:0;width:1000px;");
+    if (box) box.classList.remove("hidden");
+    targetSvg.classList.remove("hidden"); targetSvg.style.display = "block";
+    undo = () => {
+      if (scr) { if (saved.scr == null) scr.removeAttribute("style"); else scr.setAttribute("style", saved.scr); }
+      if (box && saved.boxHidden) box.classList.add("hidden");
+      if (saved.svgHidden) targetSvg.classList.add("hidden");
+      if (saved.svg == null) targetSvg.removeAttribute("style"); else targetSvg.setAttribute("style", saved.svg);
+    };
+  }
+  try {
+    if (key === "hawaii" && !kalawaoCalloutCreated) {
+      kalawaoCalloutCreated = setupCountyCallout(targetSvg, "kalawao", "kalawao", -59, -110, 5, 2);
+    }
+    if (key === "california" && !sfCalloutCreated) {
+      sfCalloutCreated = setupCountyCallout(targetSvg, "san-francisco", "sf", -150, -17, 10, 15);
+    }
+    (AUTO_CALLOUTS[key] || []).length && layoutCallouts(targetSvg, AUTO_CALLOUTS[key], AUTO_RADIUS, key, true).forEach(([id, ox, oy]) => {
+      if (!extraCalloutsDone["auto-" + id]) extraCalloutsDone["auto-" + id] = setupCountyCallout(targetSvg, id, `auto-${id}`, ox, oy, 0, 2, AUTO_RADIUS, "auto");
+    });
+    (EXTRA_CALLOUTS[key] || []).forEach(([id, ox, oy, tip, radius]) => {
+      if (!extraCalloutsDone[id]) {
+        extraCalloutsDone[id] = setupCountyCallout(targetSvg, id, `x-${id}`, ox, oy, 0, 3, radius || 16, "va", tip);
+      }
+    });
+    (RAISE_ON_TOP[key] || []).forEach(id => {
+      const el = targetSvg.querySelector(`[id="${id}"]`);
+      if (el && el.parentNode) el.parentNode.appendChild(el);
+    });
+          if (key === "virginia") {
+      raiseVirginiaCities(targetSvg);
+        layoutVirginiaCallouts(targetSvg).forEach(([id, ox, oy]) => {
+        if (!virginiaCalloutsDone[id]) {
+          virginiaCalloutsDone[id] = setupCountyCallout(targetSvg, id, `va-${id}`, ox, oy, 0, 3, 9, "va");
+        }
+      });
+    }
+  } finally { if (undo) undo(); }
+}
+
 function switchVisibleSvgMap() {
   prefetchStateMaps(activeStateKeys);
   exitMapZoom();
@@ -4011,35 +4258,7 @@ function switchVisibleSvgMap() {
       visibleMaps.push(targetSvg);
 
 
-      if (key === "hawaii" && !kalawaoCalloutCreated) {
-        kalawaoCalloutCreated = setupCountyCallout(targetSvg, "kalawao", "kalawao", -59, -110, 5, 2);
-      }
-      if (key === "california" && !sfCalloutCreated) {
-        sfCalloutCreated = setupCountyCallout(targetSvg, "san-francisco", "sf", -150, -17, 10, 15);
-      }
-      if (key === "alaska" && !skagwayCalloutCreated) {
-        skagwayCalloutCreated = setupCountyCallout(targetSvg, "skagway", "skagway", 40, -55, 4, 5, 14);
-      }
-      if (key === "alaska" && !bristolBayCalloutCreated) {
-        bristolBayCalloutCreated = setupCountyCallout(targetSvg, "bristol-bay", "bristol-bay", -85, 15, 4, 8, 14);
-      }
-      (EXTRA_CALLOUTS[key] || []).forEach(([id, ox, oy, tip, radius]) => {
-        if (!extraCalloutsDone[id]) {
-          extraCalloutsDone[id] = setupCountyCallout(targetSvg, id, `x-${id}`, ox, oy, 0, 3, radius || 16, "va", tip);
-        }
-      });
-      (RAISE_ON_TOP[key] || []).forEach(id => {
-        const el = targetSvg.querySelector(`[id="${id}"]`);
-        if (el && el.parentNode) el.parentNode.appendChild(el);
-      });
-            if (key === "virginia") {
-        raiseVirginiaCities(targetSvg);
-          layoutVirginiaCallouts(targetSvg).forEach(([id, ox, oy]) => {
-          if (!virginiaCalloutsDone[id]) {
-            virginiaCalloutsDone[id] = setupCountyCallout(targetSvg, id, `va-${id}`, ox, oy, 0, 3, 9, "va");
-          }
-        });
-      }
+      setupStateCallouts(key, targetSvg);
     }
   });
 
@@ -4522,6 +4741,49 @@ if (btnQuitGame) {
 const btnRestart = document.getElementById("btn-restart");
 if (btnRestart) btnRestart.addEventListener("click", () => { if (!reviewMode) initGame(selectedCounties); });
 
+/* ===== Restart hotkey: pick your own key in Settings; it does exactly what the Restart button does ===== */
+(function initRestartHotkey() {
+  const setBtn = document.getElementById("btn-restart-hotkey");
+  const clearBtn = document.getElementById("btn-restart-hotkey-clear");
+  const comboOf = e => {
+    if (["Shift", "Control", "Alt", "Meta", "AltGraph", "CapsLock"].includes(e.key)) return null;   // a modifier on its own isn't a hotkey
+    const k = e.key === " " ? "Space" : (e.key.length === 1 ? e.key.toUpperCase() : e.key);
+    return [e.ctrlKey ? "Ctrl" : "", e.altKey ? "Alt" : "", e.shiftKey ? "Shift" : "", e.metaKey ? "Cmd" : "", k].filter(Boolean).join("+");
+  };
+  let capturing = false;
+  const paint = () => {
+    if (!setBtn) return;
+    setBtn.textContent = capturing ? "Press a key…" : (gameSettings.restartHotkey || "Not set");
+    if (clearBtn) clearBtn.classList.toggle("hidden", !gameSettings.restartHotkey || capturing);
+  };
+  paint();
+  if (setBtn) setBtn.addEventListener("click", () => { capturing = true; paint(); setBtn.blur(); });
+  if (clearBtn) clearBtn.addEventListener("click", () => { gameSettings.restartHotkey = ""; saveSettings(); paint(); });
+
+  document.addEventListener("keydown", e => {
+    if (capturing) {                                           // runs first, so the key you press to set it doesn't also do its normal job
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (e.key === "Escape") { capturing = false; paint(); return; }
+      const c = comboOf(e);
+      if (!c) return;
+      gameSettings.restartHotkey = (e.key === "Backspace" || e.key === "Delete") ? "" : c;
+      saveSettings(); capturing = false; paint();
+      return;
+    }
+    const hk = gameSettings.restartHotkey;
+    if (!hk || e.repeat || comboOf(e) !== hk) return;
+    const gs = document.getElementById("screen-game");
+    if (!gs || !gs.classList.contains("active") || reviewMode || !btnRestart) return;
+    const tag = (document.activeElement && document.activeElement.tagName) || "";
+    if ((tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") && !/Ctrl|Alt|Cmd/.test(hk)) return;   // a plain letter shouldn't restart while you're typing a county
+    e.preventDefault();
+    if (modalSummary) modalSummary.classList.add("hidden");
+    if (admireBar) admireBar.classList.add("hidden");
+    btnRestart.click();
+  }, true);
+})();
+
+
 if (btnToggleCountyList) {
   btnToggleCountyList.addEventListener("click", () => {
     if (!countyListPanel) return;
@@ -4546,7 +4808,9 @@ function giveUp() {
     el.classList.remove("typing-highlight");
   });
 
+  gameEndKind = "gave_up";
   targetPool.forEach(c => {
+    glEvt("giveup", c.id);
     missedCounties.add(c);
     markStateMistake(c.stateKey);
     scoreWrong++;
@@ -4589,6 +4853,7 @@ function forfeitCurrentTarget() {
   if (!isGameActive || !currentTarget || selectedMode === "type") return;
 
   const forfeited = currentTarget;
+  glEvt("forfeit", forfeited.id);
 
   scoreWrong++;
   currentRunHadMistake = true;
@@ -4603,11 +4868,11 @@ function forfeitCurrentTarget() {
     el.classList.remove("typing-highlight");
     el.classList.add("given-up-missed");
     el.style.pointerEvents = "auto";
-    if (selectedMode !== "pin") {
-      setTimeout(() => {
-        el.classList.remove("given-up-missed");
-        if (TYPE_MODES.has(selectedMode) && selectedMode !== "type-hard") el.style.pointerEvents = "none";
-      }, 1800);
+    if (selectedMode === "pin-hard") {                  // Flash: nothing stays on the map, so the forfeit flashes too
+      flashForfeited.add(forfeited.id);
+      setTimeout(() => { if (isGameActive) el.classList.remove("given-up-missed"); }, 1800);
+    } else if (selectedMode !== "pin") {                // every other mode: the forfeited county stays red, like in Pin
+      if (TYPE_MODES.has(selectedMode) && selectedMode !== "type-hard") el.style.pointerEvents = "none";
     }
   });
 
@@ -4671,8 +4936,9 @@ function reviewReposition() {
     if (!m) { p.tip.style.visibility = "hidden"; if (p.line) p.line.style.display = "none"; return; }
     const ax = m.a * p.ax + m.c * p.ay + m.e, ay = m.b * p.ax + m.d * p.ay + m.f;     // the spot on the county, in screen pixels
     p.tip.style.visibility = "";
-    p.tip.style.left = (ax + p.dx) + "px";
-    p.tip.style.top = (ay + p.dy) + "px";
+    const sc = Math.hypot(m.a, m.b) || 1;                                              // screen pixels per map unit right now
+    p.tip.style.left = (ax + p.ux * sc) + "px";                                        // the label's offset is in map units, so it keeps its place on the map when you zoom
+    p.tip.style.top = (ay + p.uy * sc) + "px";
 
     // arrow: only when the label has been dragged off its county
     const r = p.tip.getBoundingClientRect();
@@ -4692,12 +4958,14 @@ function reviewReposition() {
 }
 
 function reviewTap(pathEl) {      // click or tap: pin the name; drag it wherever you like; click the county again to remove it
-  const id = pathEl.dataset.countyId || pathEl.id;
-  const county = findCountyById(id);
+  const svg = pathEl.closest("svg");
+  const tile = svg && svg.dataset.gdTile;                          // a copy of the map on the More info page
+  const countyId = tile ? (pathEl.dataset.gdOrig || pathEl.dataset.countyId) : (pathEl.dataset.countyId || pathEl.id);
+  const county = findCountyById(countyId);
   if (!county) return;
+  const id = tile ? tile + ":" + countyId : countyId;              // pins on a copy never clash with the game's own
   if (reviewPinned.has(id)) { removeReviewPin(id); return; }
 
-  const svg = pathEl.closest("svg");
   if (!svg || !svg.getScreenCTM()) return;
   const tip = document.createElement("div");
   tip.className = "county-hover-tooltip pinned";
@@ -4712,7 +4980,8 @@ function reviewTap(pathEl) {      // click or tap: pin the name; drag it whereve
   const a = pt.matrixTransform(svg.getScreenCTM().inverse());       // the spot on the county, in the map's own units, so it follows zooming
   document.body.appendChild(tip);
 
-  const glow = getCountyElements(id).filter(p => p.parentNode).map(part => {
+  const parts = tile ? [...svg.querySelectorAll(".gd-county")].filter(e => (e.dataset.gdOrig || e.dataset.countyId) === countyId) : getCountyElements(id);
+  const glow = parts.filter(p => p.parentNode).map(part => {
     const c = part.cloneNode(true);
     ["id", "tabindex", "role", "aria-label", "data-county-id", "data-name"].forEach(a => c.removeAttribute(a));
     c.setAttribute("class", "play-glow");
@@ -4720,7 +4989,8 @@ function reviewTap(pathEl) {      // click or tap: pin the name; drag it whereve
     part.parentNode.appendChild(c);
     return c;
   });
-  const pin = { tip, glow, svg, ax: a.x, ay: a.y, dx: 0, dy, line: null };
+  const sc0 = Math.hypot(svg.getScreenCTM().a, svg.getScreenCTM().b) || 1;
+  const pin = { tip, glow, svg, ax: a.x, ay: a.y, ux: (tip.offsetWidth / 2 + 14) / sc0, uy: (dy + tip.offsetHeight / 2 + 14) / sc0, line: null };   // measured from the label's centre, starting exactly where the hover label was
   reviewPinned.set(id, pin);
 
   // drag the label anywhere
@@ -4729,8 +4999,11 @@ function reviewTap(pathEl) {      // click or tap: pin the name; drag it whereve
     e.preventDefault(); e.stopPropagation();
     tip.setPointerCapture(e.pointerId);
     tip.classList.add("dragging");
-    const sx = e.clientX, sy = e.clientY, dx0 = pin.dx, dy0 = pin.dy;
-    const move = ev => { pin.dx = dx0 + ev.clientX - sx; pin.dy = dy0 + ev.clientY - sy; reviewReposition(); };
+    const sx = e.clientX, sy = e.clientY, ux0 = pin.ux, uy0 = pin.uy;
+    const move = ev => {
+      const cm = svg.getScreenCTM(), sc = cm ? (Math.hypot(cm.a, cm.b) || 1) : 1;
+      pin.ux = ux0 + (ev.clientX - sx) / sc; pin.uy = uy0 + (ev.clientY - sy) / sc; reviewReposition();
+    };
     const up = () => {
       tip.classList.remove("dragging");
       tip.removeEventListener("pointermove", move); tip.removeEventListener("pointerup", up); tip.removeEventListener("pointercancel", up);
@@ -4774,12 +5047,70 @@ function enterReviewMode() {
   [btnGiveUp, btnForfeitTarget, btnToggleCountyList].forEach(b => b && b.classList.add("hidden"));
 }
 
+
 function startReview() {
   selectedMode = "pin";
   selectedCounties = [...getActiveCountiesPool()];
   showScreen("screen-game");
   switchVisibleSvgMap();
   enterReviewMode();
+}
+
+/* ===== Game history: a log of what happened in this game, saved to the account when it ends ===== */
+let gameLog = null;
+let gameEndKind = null;                    // "gave_up" / "failed" when the game didn't end by finishing
+function glStart() { gameLog = { id: currentGameRunId, started: Date.now(), t0: performance.now(), events: [], saved: false }; gameEndKind = null; }
+function glEvt(type, id, extra) { if (gameLog) gameLog.events.push([type, id || null, Math.round(performance.now() - gameLog.t0), extra == null ? 0 : extra]); }
+window.__gameCache = window.__gameCache || {};
+
+function buildGameRecord(accuracy) {
+  const L = gameLog;
+  const per = new Map();
+  const stray = [];                         // wrong guesses that couldn't be pinned on one county (List mode typos)
+  const missTimes = [];
+  const rowFor = id => { let r = per.get(id); if (!r) per.set(id, r = { s: 0, t: 0, m: 0, p: [] }); return r; };
+  for (const [type, id, ms, extra] of L.events) {
+    if (type === "miss") {
+      missTimes.push([ms, id]);
+      if (!id) { if (extra && stray.length < 200) stray.push([ms, String(extra).slice(0, 40)]); continue; }
+      const r = rowFor(id); r.m++;
+      if (extra && r.p.length < 6) r.p.push(String(extra).slice(0, 40));
+    } else if (type === "ok") { const r = rowFor(id); r.s = 1; r.t = ms; }
+    else if (type === "forfeit") { const r = rowFor(id); r.s = 2; r.t = ms; }
+    else if (type === "giveup") { const r = rowFor(id); r.s = 3; r.t = ms; }
+  }
+  const counties = originalTargetList.map(c => { const r = per.get(c.id) || { s: 0, t: 0, m: 0, p: [] }; return r.p.length ? [c.id, r.s, r.t, r.m, r.p] : [c.id, r.s, r.t, r.m]; });
+  const clean = !currentRunHadMistake && forfeitedCount === 0;
+  const outcome = gameEndKind || (clean ? "perfect" : "complete");
+  const allActive = typeof getActiveCountiesPool === "function" ? getActiveCountiesPool().length : originalTargetList.length;
+  const stateTimes = {};
+  stateCompletionTimes.forEach((v, k) => { stateTimes[k] = Math.round(v); });
+  return {
+    id: L.id,
+    played_at: new Date(L.started).toISOString(),
+    mode: selectedMode,
+    outcome,
+    is_retry: !!currentRunIsRetryMissed,
+    state_keys: [...activeStateKeys],
+    total: totalTargetsCount,
+    right_count: scoreRight,
+    wrong_count: scoreWrong,
+    forfeited: forfeitedCount,
+    excluded: Math.max(0, allActive - selectedCounties.length),
+    accuracy,
+    time_ms: Math.round(finalTime || (performance.now() - L.t0)),
+    data: { v: 1, c: counties, x: missTimes.slice(0, 3000), stray, st: stateTimes }
+  };
+}
+
+function saveGameHistory(accuracy) {
+  if (!gameLog || gameLog.saved || !originalTargetList.length) return null;
+  gameLog.saved = true;
+  let record = null;
+  try { record = buildGameRecord(accuracy); } catch (e) { console.warn("Couldn't build this game's history record:", e); return null; }
+  window.__gameCache[record.id] = record;
+  if (window.reportGame) window.reportGame(record);
+  return record;
 }
 
 function initGame(countiesToPlay, isRetryMissedRun = false) {
@@ -4797,6 +5128,7 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   currentGameRunId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   totalTargetsCount = targetPool.length;
   originalTargetList = [...targetPool];
+  glStart();
   scoreRight = 0;
   scoreWrong = 0;
   currentRunHadMistake = false;
@@ -4804,6 +5136,7 @@ function initGame(countiesToPlay, isRetryMissedRun = false) {
   startStopwatch(isRetryMissedRun);
   isGameActive = true;
   missedCounties.clear();
+  flashForfeited.clear();
   struggledCounties.clear();
   stateMistakes.clear();
   stateCompletionTimes = new Map();
@@ -4941,6 +5274,8 @@ function sortRuns(runs) {
   return copy.reverse();
 }
 
+let recordsModeTab = null;
+
 function renderRecords() {
   if (!recordsList) return;
 
@@ -4949,91 +5284,90 @@ function renderRecords() {
   );
   recordsList.replaceChildren();
 
-  const groups = new Map();
+  // one row per set of states, sorted into the mode it was played in
+  const byMode = new Map();
   for (const [key, runs] of Object.entries(perfectTimes)) {
     if (!runs || !runs.length) continue;
     const info = parseRecordKey(key);
-    const stateKey = key.split("|")[0];
-    if (!groups.has(stateKey)) {
-      groups.set(stateKey, { stateKey, stateNames: info.stateNames, sections: [], last: 0, total: 0 });
-    }
-    const g = groups.get(stateKey);
-    g.sections.push({ key, runs, ...info, best: Math.min(...runs.map(r => r.time)) });
-    g.last = Math.max(g.last, runs[runs.length - 1].date);
-    g.total += runs.length;
+    if (!byMode.has(info.mode)) byMode.set(info.mode, []);
+    byMode.get(info.mode).push({
+      key, runs, ...info,
+      stateKey: key.split("|")[0],
+      best: Math.min(...runs.map(r => r.time)),
+      last: runs[runs.length - 1].date
+    });
   }
 
-  const groupList = [...groups.values()];
+  const modes = Object.keys(RECORD_MODE_LABELS).filter(m => byMode.has(m));
+  for (const m of byMode.keys()) if (!modes.includes(m)) modes.push(m);
+  if (recordsEmpty) recordsEmpty.classList.toggle("hidden", modes.length > 0);
+  if (!modes.length) return;
+  if (!modes.includes(recordsModeTab)) recordsModeTab = modes[0];
+
+  const tabs = document.createElement("div");
+  tabs.className = "rec-tabs";
+  for (const m of modes) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "rec-tab" + (m === recordsModeTab ? " on" : "");
+    b.textContent = byMode.get(m)[0].modeLabel;
+    b.addEventListener("click", () => { recordsModeTab = m; renderRecords(); });
+    tabs.append(b);
+  }
+  recordsList.append(tabs);
+
   const sortBy = recordsSort ? recordsSort.value : "recent";
-  groupList.sort((a, b) => {
+  const rows = byMode.get(recordsModeTab).sort((a, b) => {
     if (sortBy === "state") return a.stateNames.localeCompare(b.stateNames);
-    if (sortBy === "runs") return b.total - a.total || a.stateNames.localeCompare(b.stateNames);
+    if (sortBy === "runs") return b.runs.length - a.runs.length || a.stateNames.localeCompare(b.stateNames);
     return b.last - a.last;
   });
+  const singles = rows.filter(r => !r.stateKey.includes(","));
+  const combos = rows.filter(r => r.stateKey.includes(","));
 
-  if (recordsEmpty) recordsEmpty.classList.toggle("hidden", groupList.length > 0);
-
-  const modeOrder = Object.keys(RECORD_MODE_LABELS);
-
-  const singles = groupList.filter(g => !g.stateKey.includes(","));
-  const combos = groupList.filter(g => g.stateKey.includes(","));
-  let lastKind = null;
-  for (const g of [...singles, ...combos]) {
-    const kind = g.stateKey.includes(",") ? "combo" : "single";
-    if (kind !== lastKind) {
-      const h = document.createElement("h2");
-      h.className = "records-section-heading";
-      h.textContent = kind === "single" ? "Single State Runs" : "Combinations";
+  const addRows = (list, heading) => {
+    if (!list.length) return;
+    if (heading) {
+      const h = document.createElement("h3");
+      h.className = "rec-heading";
+      h.textContent = heading;
       recordsList.append(h);
-      lastKind = kind;
     }
-    
-    g.sections.sort((a, b) => modeOrder.indexOf(a.mode) - modeOrder.indexOf(b.mode) || b.count - a.count);
-
-    const card = document.createElement("section");
-    card.className = "record-state-card";
-
-        const sameCount = new Set(g.sections.map(s => s.count)).size === 1;
-
-    const title = document.createElement("h3");
-    title.className = "record-state-title";
-    title.textContent = g.stateNames;
-    if (sameCount) {
-      const n = g.sections[0].count;
-      const countEl = document.createElement("span");
-      countEl.className = "record-count";
-      countEl.textContent = `${n} ${recordWord(g.stateKey, n)}`;
-      title.append(countEl);
-    }
-    card.append(title);
-
-    for (const s of g.sections) {
+    const box = document.createElement("div");
+    box.className = "rec-list";
+    for (const s of list) {
+      const stateTotal = s.stateKey.split(",").length;
       const sec = document.createElement("details");
-      sec.className = "record-section";
+      sec.className = "rec-row";
       sec.dataset.key = s.key;
       sec.open = openKeys.has(s.key);
 
-      const summary = document.createElement("summary");
+      const sum = document.createElement("summary");
+      const name = document.createElement("span");
+      name.className = "rec-name";
+      name.textContent = stateTotal > 3 ? `${stateTotal} states` : s.stateNames;
+      const cnt = document.createElement("span");
+      cnt.className = "rec-count";
+      cnt.textContent = `${s.count} ${recordWord(s.stateKey, s.count)}`;
+      name.append(cnt);
+      const best = document.createElement("span");
+      best.className = "rec-best";
+      best.textContent = formatTime(s.best);
+      const runs = document.createElement("span");
+      runs.className = "rec-runs";
+      runs.textContent = `${s.runs.length} run${s.runs.length === 1 ? "" : "s"}`;
+      sum.append(name, best, runs);
+      sec.append(sum);
 
-      const meta = document.createElement("div");
-      meta.className = "record-meta";
-      const mode = document.createElement("span");
-      mode.className = "record-mode " + (RECORD_MODE_CLASS[s.mode] || "");
-      mode.textContent = s.modeLabel;
-      const size = document.createElement("span");
-      size.className = "record-count";
-      size.textContent = `${s.count} ${recordWord(g.stateKey, s.count)}`;
-      meta.append(mode);
-      if (!sameCount) meta.append(size);
+      if (stateTotal > 3) {
+        const full = document.createElement("p");
+        full.className = "rec-states-full";
+        full.textContent = s.stateNames;
+        sec.append(full);
+      }
 
-      const bestEl = document.createElement("span");
-      bestEl.className = "record-best";
-      bestEl.textContent = formatTime(s.best);
-
-      summary.append(meta, bestEl);
-
-      const list = document.createElement("ul");
-      list.className = "record-runs";
+      const runList = document.createElement("ul");
+      runList.className = "record-runs";
       for (const run of sortRuns(s.runs)) {
         const li = document.createElement("li");
         if (run.time === s.best) li.classList.add("is-best");
@@ -5042,15 +5376,17 @@ function renderRecords() {
         const time = document.createElement("span");
         time.textContent = formatTime(run.time);
         li.append(when, time);
-        list.append(li);
+        runList.append(li);
       }
-
-      sec.append(summary, list);
-      card.append(sec);
+      sec.append(runList);
+      box.append(sec);
     }
+    recordsList.append(box);
+  };
 
-    recordsList.append(card);
-  }
+  const both = singles.length && combos.length;
+  addRows(singles, both ? "Single State Runs" : "");
+  addRows(combos, both ? "Combinations" : "");
 }
 
 if (recordsSort) recordsSort.addEventListener("change", renderRecords);
@@ -5286,6 +5622,28 @@ function refreshTargetPrompt(forceReveal) {
   `;
 }
 
+// Long one-line texts (the special "Washington" feedback, the end modal's title) shrink to fit their slot
+// instead of wrapping, so they can never make the box taller or push the buttons down.
+(function fitOneLineTexts() {
+  const fits = ["feedback", "summary-grade-title"].map(id => document.getElementById(id)).filter(Boolean);
+  let busy = false;
+  const fit = el => {
+    if (busy) return;
+    busy = true;
+    el.style.fontSize = "";
+    if (el.textContent && el.clientWidth) {
+      let size = parseFloat(getComputedStyle(el).fontSize);
+      const min = size * 0.6;
+      while (el.scrollWidth > el.clientWidth + 1 && size > min) { size -= 0.5; el.style.fontSize = size + "px"; }
+    }
+    busy = false;
+  };
+  fits.forEach(el => new MutationObserver(() => fit(el)).observe(el, { childList: true, characterData: true, subtree: true }));
+  window.addEventListener("resize", () => fits.forEach(fit));
+  const modal = document.getElementById("modal-summary");   // the modal is hidden (no width) while its text is filled in, so fit again when it opens
+  if (modal) new MutationObserver(() => { if (!modal.classList.contains("hidden")) fits.forEach(fit); }).observe(modal, { attributes: true, attributeFilter: ["class"] });
+})();
+
 function mcShuffle(a) { a = a.slice(); for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; }
 /* ---------- Confusion tracking (shared by every Play and Learn mode) ---------- */
 const CONFUSE_KEY = "countyConfusions";
@@ -5399,7 +5757,7 @@ function renderMcOptions() {
     b.addEventListener("click", () => {
       if (!isGameActive || !currentTarget || b.disabled) return;
       if (c.id === currentTarget.id) { mcRemember(c.id); acceptTypedMatches([currentTarget]); }
-      else { recordConfusion(currentTarget.id, c.id); mcRemember(c.id); registerWrongTypedGuess(); b.disabled = true; b.classList.add("wrong"); }
+      else { recordConfusion(currentTarget.id, c.id); mcRemember(c.id); registerWrongTypedGuess(c.id); b.disabled = true; b.classList.add("wrong"); }
     });
     return b;
   }));
@@ -5596,6 +5954,7 @@ function handleCountyClick(pathEl) {
   if (clickedId === currentTarget.id) {
     const recovered = currentAttemptMistakes > 0 || currentRunIsRetryMissed;
     const recoveryMissCount = Math.max(currentAttemptMistakes, currentRunIsRetryMissed ? 1 : 0);
+    glEvt("ok", currentTarget.id);
     scoreRight++;
     playSound("correct");
     clearHoverGlow();
@@ -5649,6 +6008,7 @@ function handleCountyClick(pathEl) {
     markStateMistake(currentTarget.stateKey);
     playSound("wrong");
     recordConfusion(currentTarget.id, clickedId);
+    glEvt("miss", currentTarget.id, clickedId);
 
 
     if (feedbackEl) {
@@ -5688,6 +6048,7 @@ function handleCountyClick(pathEl) {
 function acceptTypedMatches(matchedCounties) {
   const recovered = currentAttemptMistakes > 0 || currentRunIsRetryMissed;
   const recoveryMissCount = Math.max(currentAttemptMistakes, currentRunIsRetryMissed ? 1 : 0);
+  matchedCounties.forEach(c => glEvt("ok", c.id));
   scoreRight++;
   playSound("correct");
 
@@ -5724,7 +6085,8 @@ function acceptTypedMatches(matchedCounties) {
   pickNextTarget();
 }
 
-function registerWrongTypedGuess() {
+function registerWrongTypedGuess(pickedHint) {
+  glEvt("miss", currentTarget ? currentTarget.id : null, pickedHint || (typeInput && typeInput.value) || "");
   currentRunHadMistake = true;
   if (currentTarget) markStateMistake(currentTarget.stateKey);
   else activeStateKeys.forEach(k => { if (targetPool.some(c => c.stateKey === k)) markStateMistake(k); });   // List: a typo can't be pinned on one state, so it counts against every state still unfinished
@@ -5918,6 +6280,7 @@ function tucSubmit() {
     return;
   }
   if (!tucAccepts(c, typeInput.value, tucDesig ? tucDesig.value : "")) { tucFail(c, typeInput.value); return; }
+  glEvt("ok", c.id);
   scoreRight++;
   playSound("correct");
   getCountyElements(c.id).forEach(el => {
@@ -5938,6 +6301,8 @@ function tucFail(c, typedRaw) {
   const named = totalTargetsCount - targetPool.length;
   isGameActive = false;
   stopStopwatch();
+  gameEndKind = "failed";
+  glEvt("miss", c.id, typedRaw);
   scoreWrong++;
   missedCounties.add(c);
   countyMistakes[c.id] = (countyMistakes[c.id] || 0) + 1;
@@ -6081,7 +6446,7 @@ if (specialCharsBar) {
 
 // Learn-style blue hover for the Play maps: a copy of the hovered county (and its callout copies) drawn on top
 let glowClones = [];
-function clearHoverGlow() { glowClones.forEach(c => c.remove()); glowClones = []; }
+function clearHoverGlow() { glowClones.forEach(c => c.remove()); glowClones = []; document.querySelectorAll('.hl-top[data-tag="glow"]').forEach(n => n.remove()); }
 function showHoverGlow(el) {
   clearHoverGlow();
   const id = el.dataset.countyId || el.id;
@@ -6096,6 +6461,7 @@ function showHoverGlow(el) {
     c.style.pointerEvents = "none";
     part.parentNode.appendChild(c);
     glowClones.push(c);
+    topOutlineFor(part, true, "glow");          // Virginia: the glow outline is drawn again above the city layer
   });
 }
 function hoverGlowAllowed(el) {
@@ -6127,26 +6493,51 @@ function hideHoverTooltip() {
   clearHoverGlow();
 }
 
-/* ===== Blue outlines stay on top in Virginia =====
-   Virginia's independent cities are drawn in a layer after the counties, so their gray outlines paint over a county's
-   blue outline. For counties in that layer, the outline is drawn again as a stroke-only copy directly in the svg,
-   which sits above both layers. Every other map is untouched. */
+const vaCityPoints = new WeakMap();      // svg -> Map(city element -> a point known to be inside that city)
+function pointInside(city) {
+  if (typeof city.isPointInFill !== "function") return null;
+  const b = city.getBBox();
+  const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+  const tries = [[cx, cy]];
+  const len = city.getTotalLength();
+  for (let i = 1; i <= 12; i++) {                           // points just inside the edge, in case the middle isn't inside (odd shapes)
+    const p = city.getPointAtLength(len * i / 12);
+    tries.push([p.x + (cx - p.x) * 0.15, p.y + (cy - p.y) * 0.15]);
+  }
+  return tries.find(([x, y]) => city.isPointInFill(new DOMPoint(x, y))) || null;
+}
+// the independent cities that sit inside this county's shape (a county drawn as a solid shape covers them)
+function enclosedCities(svg, county) {
+  const cityLayer = svg.querySelector(".va-cities-layer");
+  if (!cityLayer || typeof county.isPointInFill !== "function") return [];
+  let cache = vaCityPoints.get(svg);
+  if (!cache) { cache = new Map(); vaCityPoints.set(svg, cache); }
+  return Array.from(cityLayer.children).filter(city => {
+    if (!cache.has(city)) cache.set(city, pointInside(city));
+    const pt = cache.get(city);
+    return pt && county.isPointInFill(new DOMPoint(pt[0], pt[1]));
+  });
+}
 function topOutlineFor(el, on, tag) {
   const layer = el.parentNode;
   if (!layer || !layer.classList || !layer.classList.contains("va-counties-layer")) return;
   const svg = el.ownerSVGElement;
   const key = el.id || (el.dataset && el.dataset.countyId);
   if (!svg || !key) return;
-  const old = Array.from(svg.children).find(n => n.classList.contains("hl-top") && n.dataset.for === key && n.dataset.tag === tag);
-  if (!on) { if (old) old.remove(); return; }
-  if (old) return;
-  const o = el.cloneNode(false);
-  ["id", "tabindex", "role", "aria-label", "data-county-id", "data-name"].forEach(a => o.removeAttribute(a));
-  o.setAttribute("class", "hl-top");
-  o.setAttribute("data-for", key);
-  o.setAttribute("data-tag", tag);
-  o.style.pointerEvents = "none";
-  svg.appendChild(o);
+  const mine = Array.from(svg.children).filter(n => n.classList.contains("hl-top") && n.dataset.for === key && n.dataset.tag === tag);
+  if (!on) { mine.forEach(n => n.remove()); return; }
+  if (mine.length) return;
+  const copy = src => {
+    const o = src.cloneNode(false);
+    ["id", "tabindex", "role", "aria-label", "data-county-id", "data-name"].forEach(a => o.removeAttribute(a));
+    o.setAttribute("class", "hl-top");
+    o.setAttribute("data-for", key);
+    o.setAttribute("data-tag", tag);
+    o.style.pointerEvents = "none";
+    svg.appendChild(o);
+  };
+  copy(el);
+  enclosedCities(svg, el).forEach(copy);                    // cities inside this county get the blue outline too
 }
 new MutationObserver(changes => {
   for (const ch of changes) {
@@ -6261,21 +6652,25 @@ const SPECIAL_LINES = {
   "cook": { ok: ["{c}. Now you're cooking."], bad: ["That's {c}. Back to the kitchen."] },
   "lincoln": { ok: ["{c}. Honest answer, honest Abe."], bad: ["That's {c}. Four score and several misses ago."] },
   "monroe": { ok: ["{c}. Marilyn would be proud."], bad: ["That's {c}. Not the Monroe you wanted."] },
-  "moore": { ok: ["Waiter, waiter! {c}, please!"], bad: ["Maybe you should practice some {c}."] },
-  "yolo": { ok: ["{c}. You only click once, and you clicked right."], bad: ["{c}. You only click once, and you clicked wrong."]},
+  "moore": { ok: ["Waiter, waiter! {c}, please!"], bad: [] },
+  "yolo": { ok: ["{c}. You only click once."], bad: [] },
   "garfield": { ok: ["{c}. Lasagna time."], bad: [] },
   "knox": { ok: ["Knox knox. Who's there? {c}. {c} who? You, correctly."], bad: [] },
   "kane": { ok: [], bad: ["That's {c}. Not the Citizen kind."] },
   "uinta": { ok: ["Are {c} geography? You're doing amazing!"], bad: [] },
   "uintah": { ok: ["Are {c} geography? You're doing amazing!"], bad: [] },
+  "king": { ok: ["{c}. Long may you reign."], bad: ["That's {c}. Off with your head!"] },
+  "king and queen": { ok: ["{c}. A royally correct answer."], bad: ["That's {c}. The royals are displeased."] },
   "wise": { ok: ["Wise choice. That's {c}."], bad: [] },
   "story": { ok: ["And that's the story of {c}."], bad: [] },
   "early": { ok: ["Yep. The {c} bird gets the worm."], bad: [] },
   "liberty": { ok: ["Give me {c} or give me death."], bad: [] },
-  "houston": { ok: ["{c}, we have the right answer."], bad: ["{c}, we have a problem: this answer is wrong."] },
+  "houston": { ok: ["{c}, we have the right answer."], bad: ["{c}, we have a problem."] },
   "hamilton": { ok: ["{c} didn't throw away his shot, and neither did you."], bad: [] },
-  "swisher": { ok: ["{c}. Mellohi would be proud of you."], bad: ["That's {c}. Mellohi would be disappointed in you."] }
+  "swisher": { ok: ["{c}. mellohihellohi would love you."], bad: ["That's {c}. mellohihellohi would hate you."] }
 };
+SPECIAL_LINES["cooke"] = SPECIAL_LINES["cook"];   // Cooke County (TX) gets the same lines as Cook
+
 const lastFeedbackLine = { ok: "", bad: "" };
 function pickFeedback(ok, county) {
   const key = ok ? "ok" : "bad";
@@ -6321,6 +6716,7 @@ function renderMissedSection(list) {
 }
 
 function showSummaryModal() {
+  flashForfeited.forEach(id => getCountyElements(id).forEach(el => el.classList.add("given-up-missed")));
   if (autoZoomedByGame && zoomedMap) exitMapZoom();
   autoZoomedByGame = false;
   if (!modalSummary) return;
@@ -6393,19 +6789,20 @@ if (recentTimesElement) {
 
 
     const struggled = selectedMode === "tuc" ? [] : Array.from(struggledCounties);
+    summaryRetryList = currentRunHadMistake && struggled.length ? struggled : [];
     if (currentRunHadMistake && struggled.length) renderMissedSection(struggled);   // found them all, but these took more than one try
 
     appendModalButton("See Results", "btn-secondary", enableAdmireBar);
+    appendModalButton("Play Again", "btn-primary", () => {
+      modalSummary.classList.add("hidden");
+      initGame(selectedCounties);
+    });
     if (currentRunHadMistake && struggled.length) {
-      appendModalButton("Retry Missed", "btn-primary", () => {
+      appendModalButton("Retry Missed", "btn-secondary", () => {
         modalSummary.classList.add("hidden");
         initGame(struggled, true);
       });
     }
-    appendModalButton("Play Again", currentRunHadMistake && struggled.length ? "btn-secondary" : "btn-primary", () => {
-      modalSummary.classList.add("hidden");
-      initGame(selectedCounties);
-    });
     appendModalButton("Settings", "btn-secondary", () => {
       modalSummary.classList.add("hidden");
       openSettings("screen-game", "modal");
@@ -6418,17 +6815,18 @@ if (recentTimesElement) {
     if (summaryMessage) {
     summaryMessage.textContent = `You missed ${missedArray.length} ${unitWord(false)} target${missedArray.length > 1 ? 's' : ''}. What would you like to do?`;;
     }
+    summaryRetryList = [...missedArray];
     renderMissedSection(missedArray);
 
 
     appendModalButton("See Results", "btn-secondary", enableAdmireBar);
-    appendModalButton("Retry Missed", "btn-primary", () => {
-      modalSummary.classList.add("hidden");
-      initGame(missedArray, true);
-    });
-    appendModalButton("Play Again", "btn-secondary", () => {
+    appendModalButton("Play Again", "btn-primary", () => {
       modalSummary.classList.add("hidden");
       initGame(selectedCounties);
+    });
+    appendModalButton("Retry Missed", "btn-secondary", () => {
+      modalSummary.classList.add("hidden");
+      initGame(missedArray, true);
     });
     appendModalButton("Settings", "btn-secondary", () => {
       modalSummary.classList.add("hidden");
@@ -6440,6 +6838,11 @@ if (recentTimesElement) {
     });
   }
 
+  const gameRec = saveGameHistory(accuracy);          // every game is kept: this uploads it (or holds it until you're signed in)
+  if (gameRec) appendModalButton("More info", "btn-secondary", () => {
+    modalSummary.classList.add("hidden");
+    location.hash = "#game-" + gameRec.id;             // history.js shows the full page for this game
+  });
 
   modalSummary.classList.remove("hidden");
 }
@@ -6462,7 +6865,7 @@ function enableAdmireBar() {
 
 
   if (btnAdmireRetry) {
-    if (missedCounties.size > 0 && selectedMode !== "tuc") {
+    if (summaryRetryList.length > 0 && selectedMode !== "tuc") {
       btnAdmireRetry.classList.remove("hidden");
     } else {
       btnAdmireRetry.classList.add("hidden");
@@ -6477,7 +6880,7 @@ function enableAdmireBar() {
 if (btnAdmireRetry) {
   btnAdmireRetry.addEventListener("click", () => {
     admireBar.classList.add("hidden");
-    initGame(Array.from(missedCounties), true);
+    initGame([...summaryRetryList], true);
   });
 }
 
@@ -6621,12 +7024,33 @@ document.addEventListener("keydown", e => {
   playBtns.forEach(b => b.addEventListener("click", () => choose("play", b.dataset.homeMode)));
   learnBtns.forEach(b => b.addEventListener("click", () => choose("learn", b.dataset.homeLearn)));
 
+  // "Every place you picked is a plain County": ask before starting a Designations lesson with only one answer
+  function confirmAllCounties() {
+    return new Promise(resolve => {
+      const m = document.createElement("div");
+      m.className = "modal";
+      m.setAttribute("role", "dialog"); m.setAttribute("aria-modal", "true");
+      m.innerHTML = '<div class="modal-content"><h2>Only counties here</h2>' +
+        '<p>Every place in the states you picked is a plain county, so there\u2019s only one answer to learn. Designations gets more interesting with a state like Alaska, Louisiana, Virginia or Connecticut.</p>' +
+        '<div class="modal-actions"><button type="button" class="btn-secondary" data-go="1">Start anyway</button><button type="button" class="btn-primary" data-go="">Choose more states</button></div></div>';
+      const done = v => { document.removeEventListener("keydown", onKey); m.remove(); resolve(v); };
+      const onKey = e => { if (e.key === "Escape") done(false); };
+      m.addEventListener("click", e => { if (e.target === m) done(false); const b = e.target.closest("[data-go]"); if (b) done(!!b.dataset.go); });
+      document.addEventListener("keydown", onKey);
+      document.body.appendChild(m);
+      m.querySelector('[data-go=""]').focus();
+    });
+  }
   start.addEventListener("click", async e => {
     if (!chosen) { e.stopImmediatePropagation(); msg.textContent = "Pick a mode first."; return; }
     if (chosen.kind === "play") return;
     e.stopImmediatePropagation();
     const yes = document.querySelector('input[name="specific-counties"]:checked');
     const excluded = new Set(yes && yes.value === "yes" ? [...document.querySelectorAll(".county-checkbox:checked")].map(cb => cb.value) : []);
+    if (chosen.mode === "desig") {                       // nothing to tell apart if every place is a plain County
+      const places = activeStateKeys.flatMap(k => (stateData[k] ? stateData[k].counties : [])).filter(c => !excluded.has(c.id));
+      if (places.length && places.every(c => tucDesignation(c) === "County") && !(await confirmAllCounties())) return;
+    }
     try { await ensureStateMaps(activeStateKeys); }
     catch (err) { msg.textContent = "Couldn't load the map data."; return; }
     if (chosen.mode === "review") { startReview(); return; }

@@ -15,7 +15,7 @@
 <title>Countellect</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Serif:opsz,wght@8..144,300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=Roboto+Serif:opsz,wght@8..144,300;400;600;700&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="geonerds.png">
 
 
@@ -95,7 +95,7 @@
        <p class="subtitle">How would you like to learn the US, county by county?</p>
        <div class="home-columns">
          <div class="home-col"><h2>Play</h2><div class="mode-options"><button type="button" class="btn-mode mode-pin" data-home-mode="pin" aria-pressed="false"><strong>Pin</strong><span>Click the county you are given; once found, it stays filled.</span></button><button type="button" class="btn-mode mode-pin" data-home-mode="pin-hard" aria-pressed="false"><strong>Flash</strong><span>Click the county you are given; once found, it flashes briefly.</span></button><button type="button" class="btn-mode mode-mc" data-home-mode="mc" aria-pressed="false"><strong>Multiple-Choice</strong><span>Pick the highlighted county's name from four options.</span></button><button type="button" class="btn-mode mode-list" data-home-mode="type" aria-pressed="false"><strong>List</strong><span>Type any county, in any order, and see how many you can list.</span></button><button type="button" class="btn-mode mode-type" data-home-mode="type-strict" aria-pressed="false"><strong>Type</strong><span>Type the name of a specific highlighted county and press Enter.</span></button><button type="button" class="btn-mode mode-type" data-home-mode="type-hard" aria-pressed="false"><strong>Identify</strong><span>Click a county, then type its name and press Enter.</span></button></div></div>
-         <div class="home-col"><h2>Learn</h2><div class="mode-options"><button type="button" class="btn-mode mode-pin" data-home-learn="pin" aria-pressed="false"><strong>Pin</strong><span>Learn five at a time, then click each county on the map.</span></button><button type="button" class="btn-mode mode-mc" data-home-learn="mc" aria-pressed="false"><strong>Multiple-Choice</strong><span>Learn five at a time, then pick the right name from four options.</span></button><button type="button" class="btn-mode mode-type" data-home-learn="type" aria-pressed="false"><strong>Type</strong><span>Learn five at a time, then type each county's name.</span></button><button type="button" class="btn-mode mode-all" data-home-learn="all" aria-pressed="false"><strong>All</strong><span>Learn five at a time, then multiple-choice, typing, and pinning.</span></button><button type="button" class="btn-mode mode-list" data-home-learn="review" aria-pressed="false"><strong>Review</strong><span>Hover over counties to see their names. No quiz, no score.</span></button></div></div>
+         <div class="home-col"><h2>Learn</h2><div class="mode-options"><button type="button" class="btn-mode mode-pin" data-home-learn="pin" aria-pressed="false"><strong>Pin</strong><span>Learn five at a time, then click each county on the map.</span></button><button type="button" class="btn-mode mode-mc" data-home-learn="mc" aria-pressed="false"><strong>Multiple-Choice</strong><span>Learn five at a time, then pick the right name from four options.</span></button><button type="button" class="btn-mode mode-type" data-home-learn="type" aria-pressed="false"><strong>Type</strong><span>Learn five at a time, then type each county's name.</span></button><button type="button" class="btn-mode mode-all" data-home-learn="all" aria-pressed="false"><strong>All</strong><span>Learn five at a time, then multiple-choice, typing, and pinning.</span></button><button type="button" class="btn-mode mode-desig" data-home-learn="desig" aria-pressed="false"><strong>Designations</strong><span>Learn five at a time, then pick what kind of place it is: county, city, parish, etc.</span></button><button type="button" class="btn-mode mode-list" data-home-learn="review" aria-pressed="false"><strong>Review</strong><span>Hover over counties to see their names. No quiz, no score.</span></button></div></div>
        </div>
        <button id="btn-start-game" class="btn-launch" disabled title="Select at least one state to play.">Play</button>
        <button type="button" class="btn-ultimate" data-home-mode="tuc" aria-pressed="false">The Ultimate Challenge</button>
@@ -141,13 +141,15 @@
 <section id="screen-records" class="screen">
   <button type="button" class="btn-back" data-target="screen-home">Back to home</button>
   <h2>Records</h2>
+  <div class="records-tabs" role="tablist"><button type="button" role="tab" data-rtab="best" class="active" aria-selected="true">Best times</button><button type="button" role="tab" data-rtab="history" aria-selected="false">History</button></div>
+  <div id="records-best">
   <p class="records-intro">Your fastest perfect runs. Only games with no wrong guesses are saved, and Retry Missed runs don't count. Click a mode to see every run.</p>
   <p id="records-empty" class="records-empty">No records yet. Finish a game with no mistakes to set one.</p>
   <div class="records-toolbar">
   <label for="records-sort">Sort states</label>
 <select id="records-sort">
   <option value="recent">Recently played</option>
-  <option value="state">State (A–Z)</option>
+  <option value="state">Name (A–Z)</option>
   <option value="runs">Most played</option>
 </select>
   <label for="records-times-sort">Sort times</label>
@@ -158,6 +160,13 @@
   </select>
 </div>
   <div id="records-list"></div>
+  </div>
+  <div id="records-history" class="hidden"></div>
+  <div id="records-all"></div>
+</section>
+
+<section id="screen-game-detail" class="screen" tabindex="-1">
+  <div id="gd-root"></div>
 </section>
 
  <section id="screen-settings" class="screen">
@@ -367,6 +376,13 @@
 </div>
 <input type="checkbox" id="toggle-auto-zoom">
 </div>
+<div class="setting-item" id="setting-zoom-game-buttons">
+<div class="setting-text">
+<label for="toggle-zoom-game-buttons">Keep Game Buttons On Screen When Zoomed</label>
+<p class="setting-desc">While you're zoomed into a state, Quit, Restart and the other game buttons float over the map so you can still reach them.</p>
+</div>
+<input type="checkbox" id="toggle-zoom-game-buttons">
+</div>
 <div class="setting-item" id="setting-hover-names">
 <div class="setting-text">
 <label for="toggle-hover-names">Show Names on Hover</label>
@@ -415,6 +431,16 @@
 <div class="setting-range-control">
 <input type="range" id="slider-flash-repeat-click-guard" min="0" max="1000" value="250" step="50">
 <output id="flash-repeat-click-guard-value" for="slider-flash-repeat-click-guard">250 ms</output>
+</div>
+</div>
+<div class="setting-item" id="setting-restart-hotkey">
+<div class="setting-text">
+<label for="btn-restart-hotkey">Restart Hotkey</label>
+<p class="setting-desc">Press this key during a game to restart it, same as the Restart button. Click the box, then press the key you want (Esc cancels, Backspace clears).</p>
+</div>
+<div class="setting-range-control">
+<button type="button" id="btn-restart-hotkey" class="btn-secondary">Not set</button>
+<button type="button" id="btn-restart-hotkey-clear" class="btn-secondary hidden">Clear</button>
 </div>
 </div>
          </div>
@@ -484,9 +510,9 @@
 <div class="setting-item" id="setting-reset-progress">
 <div class="setting-text">
 <label>Progress</label>
-<p class="setting-desc">Clear completed states, mistake history, best-known suggestions, and Study progress.</p>
+<p class="setting-desc"><b>Deletes everything:</b> completed states, mistake history, best-known suggestions, Study progress, all your records and every saved game (and your points, badges and leaderboard standing if you're signed in). <b>This can't be undone.</b></p>
 </div>
-<button id="btn-reset-progress" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Reset Progress</button>
+<button id="btn-reset-progress" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Reset Everything</button>
 </div>
          </div>
        </section>
@@ -991,8 +1017,8 @@
        <span id="admire-text" class="admire-subtext">Game finished.</span>
      </div>
      <div class="admire-actions">
-       <button id="btn-admire-retry" class="btn-primary hidden">Retry Missed</button>
-       <button id="btn-admire-replay" class="btn-secondary">Play Again</button>
+       <button id="btn-admire-replay" class="btn-primary">Play Again</button>
+       <button id="btn-admire-retry" class="btn-secondary hidden">Retry Missed</button>
        <button id="btn-admire-settings" class="btn-secondary">Settings</button>
        <button id="btn-admire-home" class="btn-secondary">Home</button>
      </div>
@@ -1173,8 +1199,10 @@
 <script src="maps/manifest.js"></script>
 <script src="maps/manifest-extra.js"></script>
 <script src="script.js"></script>
+<script src="history.js"></script>
 <script src="report.js"></script>
 
 
+<script src="records-list.js"></script>
 </body>
 </html>
