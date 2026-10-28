@@ -1146,7 +1146,7 @@ function raiseVirginiaCities(svg) {
 }
 // extra callouts: [countyId, offsetX, offsetY]  (offsets are in the same units as VIRGINIA_CALLOUTS)
 // Callouts whose circles find their own empty spot (arrows kept off the land), all the same size and look
-const AUTO_RADIUS = 14;
+const AUTO_RADIUS = { alaska: 14, new_york: 24 };   // circle size per state (map units); raise new_york to make Manhattan's circle bigger
 const AUTO_CALLOUTS = {
   alaska: [["skagway", 40, -55], ["haines", 40, -20], ["bristol-bay", -85, 15], ["aleutians-west", 0, -55]],
   new_york: [["new-york", 40, -40]],
@@ -4206,8 +4206,8 @@ function setupStateCallouts(key, targetSvg) {
     if (key === "california" && !sfCalloutCreated) {
       sfCalloutCreated = setupCountyCallout(targetSvg, "san-francisco", "sf", -150, -17, 10, 15);
     }
-    (AUTO_CALLOUTS[key] || []).length && layoutCallouts(targetSvg, AUTO_CALLOUTS[key], AUTO_RADIUS, key, true).forEach(([id, ox, oy]) => {
-      if (!extraCalloutsDone["auto-" + id]) extraCalloutsDone["auto-" + id] = setupCountyCallout(targetSvg, id, `auto-${id}`, ox, oy, 0, 2, AUTO_RADIUS, "auto");
+    (AUTO_CALLOUTS[key] || []).length && layoutCallouts(targetSvg, AUTO_CALLOUTS[key], AUTO_RADIUS[key] || 14, key, true).forEach(([id, ox, oy]) => {
+      if (!extraCalloutsDone["auto-" + id]) extraCalloutsDone["auto-" + id] = setupCountyCallout(targetSvg, id, `auto-${id}`, ox, oy, 0, 2, AUTO_RADIUS[key] || 14, "auto");
     });
     (EXTRA_CALLOUTS[key] || []).forEach(([id, ox, oy, tip, radius]) => {
       if (!extraCalloutsDone[id]) {
