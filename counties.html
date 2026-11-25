@@ -26,6 +26,8 @@
   body.dark-mode .cl-table thead th { background: #1a1a17; }
   .cl-table tbody tr:hover td { background: rgba(128, 128, 120, 0.1); }
   .cl-table td.dim { opacity: 0.55; }
+  .cl-table td.cl-total:not(.dim) { opacity: 0.7; }
+  .cl-table th.cl-total, .cl-table td.cl-total { border-left: 1px dashed rgba(128,128,128,.35); }
   .cl-sort { display: inline-flex; flex-direction: column; gap: 2px; margin-left: 0.45rem; vertical-align: middle; }
   .cl-sort::before, .cl-sort::after { content: ""; border-left: 4px solid transparent; border-right: 4px solid transparent; opacity: 0.3; }
   .cl-sort::before { border-bottom: 5px solid currentColor; }
@@ -87,7 +89,8 @@
         <th data-sort="state">State<span class="cl-sort"></span></th>
         <th data-sort="isc" class="mid">County?<span class="cl-info" tabindex="0" role="note" aria-label="Whether this is an actual county, or goes under another designation (like parish)" data-tip="Whether this is an actual county, or goes under another designation (like parish). Hover a mark to see what this one is called.">i</span><span class="cl-sort"></span></th>
         <th data-sort="pop" class="num">Population<span class="cl-sort"></span></th>
-        <th data-sort="area" class="num">Land area (sq mi)<span class="cl-sort"></span></th>
+        <th data-sort="area" class="num">Land area (sq mi)<span class="cl-info" tabindex="0" role="note" aria-label="Dry land only: no lakes, rivers or coastal water." data-tip="Dry land only: no lakes, rivers or coastal water.">i</span><span class="cl-sort"></span></th>
+        <th data-sort="total" class="num cl-total">Total area (sq mi)<span class="cl-info" tabindex="0" role="note" aria-label="Land plus water: the lakes, rivers and coastal water inside the boundary. Always the same as or bigger than land area." data-tip="Land plus water: the lakes, rivers and coastal water inside the boundary. Always the same as or bigger than land area.">i</span><span class="cl-sort"></span></th>
         <th data-sort="where">Where in the state<span class="cl-sort"></span></th>
       </tr></thead>
       <tbody id="cl-body"></tbody>
@@ -378,7 +381,7 @@
   try { var p = new URLSearchParams(location.search); if (p.get("sort")) { sortKey = p.get("sort"); dir = p.get("dir") === "desc" ? -1 : 1; } } catch (e) {}
   var fmtArea = function (n) { return n > 0 && n < 10 ? n.toLocaleString("en-US", { maximumSignificantDigits: 2 }) : n.toLocaleString("en-US", { maximumFractionDigits: 1 }); };
   var fmt = function (n) { return n == null ? "\u2014" : n.toLocaleString("en-US"); };
-  var NUMERIC_FIRST = { pop: 1, area: 1, isc: 1 };     // first click on these = biggest / yes first
+  var NUMERIC_FIRST = { pop: 1, area: 1, total: 1, isc: 1 };     // first click on these = biggest / yes first
   function cmp(a, b) {
     var x = a[sortKey], y = b[sortKey];
     var xe = x == null || x === "", ye = y == null || y === "";
@@ -393,7 +396,7 @@
     var frag = document.createDocumentFragment();
     shown.forEach(function (r) {
       var tr = document.createElement("tr");
-      [[r.name, ""], [r.state, ""], ["", "mid"], [fmt(r.pop), "num" + (r.pop == null ? " dim" : "")], [r.area == null ? "\u2014" : fmtArea(r.area), "num" + (r.area == null ? " dim" : "")], ["", "cl-loc"]].forEach(function (c) {
+      [[r.name, ""], [r.state, ""], ["", "mid"], [fmt(r.pop), "num" + (r.pop == null ? " dim" : "")], [r.area == null ? "\u2014" : fmtArea(r.area), "num" + (r.area == null ? " dim" : "")], [r.total == null ? "\u2014" : fmtArea(r.total), "num cl-total" + (r.total == null ? " dim" : "")], ["", "cl-loc"]].forEach(function (c) {
         var td = document.createElement("td"); td.textContent = c[0]; if (c[1]) td.className = c[1]; tr.appendChild(td);
         if (c[1] === "mid") {
           var m = document.createElement("span"); m.className = r.isc ? "cl-yes" : "cl-no"; m.textContent = r.isc ? "\u2713" : "\u2717";
