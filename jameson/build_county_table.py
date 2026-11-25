@@ -26,6 +26,11 @@ FIPS = {"01":"Alabama","02":"Alaska","04":"Arizona","05":"Arkansas","06":"Califo
 M2_PER_SQMI = 2589988.11
 NO_POP_EXPECTED = {"60", "66", "69", "72", "78"}   # (72 is dropped from this once the PR file is found)   # not in the Census county estimates file
 
+def sq(m2):
+    """square metres -> sq mi, 1 decimal normally, more for tiny places (Rose Atoll would round to 0.0)"""
+    v = m2 / M2_PER_SQMI
+    return round(v, 1) if v >= 10 else round(v, 4)
+
 def norm(s):
     s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode().lower()
     s = s.replace("st.", "saint").replace("ste.", "sainte")
@@ -36,6 +41,7 @@ def slug(name):
     if name == "U.S. Virgin Islands": return "united_states_virgin_islands"
     return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
 
+print("build_county_table.py version 2026-11-24c")
 tl = sorted(glob.glob("tl_*_us_county.zip")) or sorted(glob.glob("tl_*_us_county"))
 if not tl: sys.exit("Can't find tl_YYYY_us_county.zip in this folder.")
 print("using", tl[-1])
@@ -66,6 +72,7 @@ if os.path.exists("extra-population.csv"):
     for g, p in zip(x["GEOID"], x["pop"]): pop[g.zfill(5)] = int(p)
     print("extra-population.csv:", len(x), "rows")
 
+pr_n = 0
 pr_pop = {}   # Puerto Rico municipio file has names, not FIPS codes: "Adjuntas Municipio, Puerto Rico"
 prf = (sorted(glob.glob("prm-est*-pop.xlsx")) + sorted(glob.glob("prm-est*-pop.csv")) or [None])[-1]
 if prf:
@@ -75,8 +82,10 @@ if prf:
             nm = str(row.iloc[0]).lstrip(".")
             if nm.endswith(", Puerto Rico") and nm != "Puerto Rico":
                 v = [x for x in row.iloc[1:] if pd.notna(x)]
-                pr_pop[norm(nm[:-len(", Puerto Rico")])] = int(v[-1])      # last column = newest year
-        print(prf + ":", len(pr_pop), "municipios")
+                base = nm[:-len(", Puerto Rico")]
+                pr_pop[norm(base)] = pr_pop[norm(re.sub(r"\s*Municipio$", "", base))] = int(v[-1])      # last column = newest year
+                pr_n += 1
+        print(prf + ":", pr_n, "municipios")
     except Exception as e:
         print("couldn't read %s (%s)" % (prf, e))
 if pr_pop: NO_POP_EXPECTED.discard("72")
@@ -109,13 +118,20 @@ for r in c.itertuples():
     s = slug(FIPS[r.STATEFP])
     t = lsad_type(r)
     p = pop.get(r.GEOID)
-    if p is None and r.STATEFP == "72": p = pr_pop.get(norm(r.NAMELSAD))
+    if p is None and r.STATEFP == "72": p = pr_pop.get(norm(r.NAMELSAD)) or pr_pop.get(norm(r.NAME))
     if p is None and r.STATEFP not in NO_POP_EXPECTED: no_pop.append(FIPS[r.STATEFP] + ": " + r.NAMELSAD)
     out.append({"k": (s + "|" + norm(r.NAME)) if dupes[(r.STATEFP, norm(r.NAME))] == 1 else None,
                 "k2": s + "|" + norm(r.NAMELSAD),
-                "pop": p, "area": round((r.ALAND + r.AWATER) / M2_PER_SQMI, 1), "land": round(r.ALAND / M2_PER_SQMI, 1),
+                "pop": p, "area": sq(r.ALAND + r.AWATER), "land": sq(r.ALAND),
                 "where": where(r), "type": t, "county": t.lower() == "county"})
 
+pr_rows = [(r, o) for r, o in zip(c.itertuples(), out) if r.STATEFP == "72"]
+if pr_rows:
+    hit = sum(1 for r, o in pr_rows if o["pop"] is not None)
+    print("\nPuerto Rico: %d of %d municipios have a population%s" % (hit, len(pr_rows), "" if pr_pop else "  (no prm-est*-pop.xlsx/csv found in this folder)"))
+    if pr_pop and hit < len(pr_rows):
+        print("   no match for:", [r.NAMELSAD for r, o in pr_rows if o["pop"] is None][:6])
+        print("   names in the file look like:", list(pr_pop)[:6])
 ct = [r for r in c.itertuples() if r.STATEFP == "09"]
 if ct and not any("Planning Region" in r.NAMELSAD for r in ct):
     print("\nWARNING: this TIGER file still has Connecticut's 8 old counties. The game uses the 9 planning regions,")
@@ -125,6 +141,9 @@ if no_pop:
     for n in no_pop[:40]: print("   ", n)
     if len(no_pop) > 40: print("    ...and %d more" % (len(no_pop) - 40))
 with open("county-data.js", "w") as f:
-    f.write("/* made by build_county_table.py */\nwindow.__countyData = " + json.dumps(out, separators=(",", ":")) + ";\n")
+    import datetime
+    info = {"script": "2026-11-24c", "built": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "rows": len(out),
+            "withPopulation": sum(1 for o in out if o["pop"] is not None), "puertoRicoWithPopulation": sum(1 for r, o in pr_rows if o["pop"] is not None)}
+    f.write("/* made by build_county_table.py */\nwindow.__countyDataInfo = " + json.dumps(info) + ";\nwindow.__countyData = " + json.dumps(out, separators=(",", ":")) + ";\n")
 print("\nwrote county-data.js:", len(out), "counties, %d with population" % sum(1 for o in out if o["pop"] is not None))
 print("Now open counties.html, press F12, and look at the Console: it lists any rows that still didn't match.")
