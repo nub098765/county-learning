@@ -13,8 +13,9 @@ Population comes from the Census file co-est2025-alldata.csv (Vintage 2025; the 
 folder the script tries to download it; if that fails, get it by hand from the "County Population Totals" page on census.gov
 (search: "County Population Totals and Components of Change 2020-2025") and put the CSV next to this script. (No population file at all = the Population column just shows dashes.)
 
-That file only covers the 50 states + DC. For Puerto Rico, put the Census municipio file (prm-est2025-pop.xlsx) in this folder
-(needs: pip install openpyxl). The other territories stay blank unless you add an optional
+That file only covers the 50 states + DC. Guam, American Samoa, the Northern Mariana Islands and the U.S. Virgin Islands use
+the 2020 Census counts, which are built into this script (no yearly estimates exist for them). For Puerto Rico, put the Census municipio file (prm-est2025-pop.xlsx) in this folder
+(needs: pip install openpyxl). Anything else can be added with an optional
 file called extra-population.csv with two columns, GEOID and pop, e.g.
   GEOID,pop
   72001,17000
@@ -24,7 +25,18 @@ import geopandas as gpd, pandas as pd
 
 FIPS = {"01":"Alabama","02":"Alaska","04":"Arizona","05":"Arkansas","06":"California","08":"Colorado","09":"Connecticut","10":"Delaware","11":"District of Columbia","12":"Florida","13":"Georgia","15":"Hawaii","16":"Idaho","17":"Illinois","18":"Indiana","19":"Iowa","20":"Kansas","21":"Kentucky","22":"Louisiana","23":"Maine","24":"Maryland","25":"Massachusetts","26":"Michigan","27":"Minnesota","28":"Mississippi","29":"Missouri","30":"Montana","31":"Nebraska","32":"Nevada","33":"New Hampshire","34":"New Jersey","35":"New Mexico","36":"New York","37":"North Carolina","38":"North Dakota","39":"Ohio","40":"Oklahoma","41":"Oregon","42":"Pennsylvania","44":"Rhode Island","45":"South Carolina","46":"South Dakota","47":"Tennessee","48":"Texas","49":"Utah","50":"Vermont","51":"Virginia","53":"Washington","54":"West Virginia","55":"Wisconsin","56":"Wyoming","60":"American Samoa","66":"Guam","69":"Northern Mariana Islands","72":"Puerto Rico","78":"U.S. Virgin Islands"}
 M2_PER_SQMI = 2589988.11
-NO_POP_EXPECTED = {"60", "66", "69", "72", "78"}   # (72 is dropped from this once the PR file is found)   # not in the Census county estimates file
+# The Census Bureau publishes no yearly estimates for these territories, so these are the April 1, 2020 Census counts
+# (2020 Island Areas Censuses, population and housing unit counts, released Oct 28, 2021). Keyed by normalised NAME / NAMELSAD.
+TERRITORY_2020 = {
+    "60": {"eastern": 17059, "easterndistrict": 17059, "manua": 832, "manuadistrict": 832, "roseisland": 0, "swainsisland": 0,
+           "western": 31819, "westerndistrict": 31819},                                           # American Samoa (total 49,710)
+    "66": {"guam": 153836},                                                                        # Guam
+    "69": {"northernislands": 7, "northernislandsmunicipality": 7, "rota": 1893, "rotamunicipality": 1893,
+           "saipan": 43385, "saipanmunicipality": 43385, "tinian": 2044, "tinianmunicipality": 2044},   # Northern Mariana Islands (total 47,329)
+    "78": {"saintcroix": 41004, "saintcroixisland": 41004, "saintjohn": 3881, "saintjohnisland": 3881,
+           "saintthomas": 42261, "saintthomasisland": 42261},                                      # U.S. Virgin Islands (total 87,146)
+}
+NO_POP_EXPECTED = {"72"}   # Puerto Rico needs its own file (dropped from this once prm-est*-pop.xlsx is found)
 
 def sq(m2):
     """square metres -> sq mi, 1 decimal normally, more for tiny places (Rose Atoll would round to 0.0)"""
@@ -41,7 +53,7 @@ def slug(name):
     if name == "U.S. Virgin Islands": return "united_states_virgin_islands"
     return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
 
-print("build_county_table.py version 2026-11-24c")
+print("build_county_table.py version 2026-11-25d")
 tl = sorted(glob.glob("tl_*_us_county.zip")) or sorted(glob.glob("tl_*_us_county"))
 if not tl: sys.exit("Can't find tl_YYYY_us_county.zip in this folder.")
 print("using", tl[-1])
@@ -119,11 +131,16 @@ for r in c.itertuples():
     t = lsad_type(r)
     p = pop.get(r.GEOID)
     if p is None and r.STATEFP == "72": p = pr_pop.get(norm(r.NAMELSAD)) or pr_pop.get(norm(r.NAME))
+    from_2020 = False
+    if p is None and r.STATEFP in TERRITORY_2020:
+        tt = TERRITORY_2020[r.STATEFP]
+        p = tt.get(norm(r.NAME), tt.get(norm(r.NAMELSAD)))
+        from_2020 = p is not None
     if p is None and r.STATEFP not in NO_POP_EXPECTED: no_pop.append(FIPS[r.STATEFP] + ": " + r.NAMELSAD)
     out.append({"k": (s + "|" + norm(r.NAME)) if dupes[(r.STATEFP, norm(r.NAME))] == 1 else None,
                 "k2": s + "|" + norm(r.NAMELSAD),
                 "pop": p, "area": sq(r.ALAND + r.AWATER), "land": sq(r.ALAND),
-                "where": where(r), "type": t, "county": t.lower() == "county"})
+                "where": where(r), "type": t, "county": t.lower() == "county", **({"popNote": "2020 Census"} if from_2020 else {})})
 
 pr_rows = [(r, o) for r, o in zip(c.itertuples(), out) if r.STATEFP == "72"]
 if pr_rows:
@@ -132,6 +149,12 @@ if pr_rows:
     if pr_pop and hit < len(pr_rows):
         print("   no match for:", [r.NAMELSAD for r, o in pr_rows if o["pop"] is None][:6])
         print("   names in the file look like:", list(pr_pop)[:6])
+ter = [(r, o) for r, o in zip(c.itertuples(), out) if r.STATEFP in TERRITORY_2020]
+if ter:
+    got = sum(1 for r, o in ter if o["pop"] is not None)
+    print("\nGuam / American Samoa / Northern Marianas / Virgin Islands: %d of %d have a 2020 Census count" % (got, len(ter)))
+    for r, o in ter:
+        if o["pop"] is None: print("   no match for:", FIPS[r.STATEFP] + ": " + r.NAMELSAD, " (NAME=%r)" % r.NAME)
 ct = [r for r in c.itertuples() if r.STATEFP == "09"]
 if ct and not any("Planning Region" in r.NAMELSAD for r in ct):
     print("\nWARNING: this TIGER file still has Connecticut's 8 old counties. The game uses the 9 planning regions,")
@@ -142,7 +165,7 @@ if no_pop:
     if len(no_pop) > 40: print("    ...and %d more" % (len(no_pop) - 40))
 with open("county-data.js", "w") as f:
     import datetime
-    info = {"script": "2026-11-24c", "built": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "rows": len(out),
+    info = {"script": "2026-11-25d", "built": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "rows": len(out),
             "withPopulation": sum(1 for o in out if o["pop"] is not None), "puertoRicoWithPopulation": sum(1 for r, o in pr_rows if o["pop"] is not None)}
     f.write("/* made by build_county_table.py */\nwindow.__countyDataInfo = " + json.dumps(info) + ";\nwindow.__countyData = " + json.dumps(out, separators=(",", ":")) + ";\n")
 print("\nwrote county-data.js:", len(out), "counties, %d with population" % sum(1 for o in out if o["pop"] is not None))

@@ -186,7 +186,7 @@
       var ov = OVERRIDES[key + "|" + norm(n)];
       if (!d && window.__countyData && key !== "united_states_minor_outlying_islands") missing.push(state + ": " + n);
       if (d && typeof d.county === "boolean" && d.county !== (desig === "County")) disagree.push(state + ": " + n + " (game: " + desig + ", census: " + (d.type || "none") + ")");
-      rows.push({ id: c[0], name: n, state: state, key: key, desig: desig, isc: desig === "County" ? 1 : 0, pop: d ? d.pop : null, area: ov ? ov.land : d ? d.land : null, total: d ? d.area : null, note: ov ? ov.note : "", where: d ? d.where : "" });
+      rows.push({ id: c[0], name: n, state: state, key: key, desig: desig, isc: desig === "County" ? 1 : 0, pop: d ? d.pop : null, popNote: d && d.popNote ? d.popNote : "", area: ov ? ov.land : d ? d.land : null, total: d ? d.area : null, note: ov ? ov.note : "", where: d ? d.where : "" });
     });
   }
   var base = window.__baseCountyNames || {};
@@ -404,6 +404,7 @@
         }
         if (c[1] === "cl-loc") { var bt = document.createElement("button"); bt.type = "button"; bt.className = "cl-thumb"; bt.setAttribute("aria-label", "Show " + r.name + ", " + r.state + " on the map"); bt._row = r; td.appendChild(bt); }
       });
+      if (r.popNote) tr.cells[3].title = r.popNote + " count. The Census Bureau doesn\u2019t publish yearly population estimates for this territory, so it isn\u2019t from the same 2025 estimates as the states.";
       if (r.note) tr.cells[4].title = r.note;
       else if (r.area === 0 && r.total > 0) tr.cells[4].title = "The Census Bureau lists no land area here, only water (" + fmtArea(r.total) + " sq mi in total).";
       frag.appendChild(tr);
