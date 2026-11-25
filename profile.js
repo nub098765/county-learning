@@ -201,7 +201,9 @@
       s.append(sw, label); return s;
     };
     const legendRow = mk("div", "pmap-key-row");
-    legendRow.append(staticItem("var(--pm-done)", "All 6 modes done"), staticItem("var(--pm-track)", "Not yet"));    const buttons = MODES.map(m => {
+    const goldKey = staticItem("var(--pm-done)", "Earned the state\u2019s Gold badge"), todoKey = staticItem("var(--pm-track)", "Not yet");
+    goldKey.title = "A state turns green once you've earned its Gold badge: a completed, perfect run of the whole state in each of the 6 game modes.";
+    legendRow.append(goldKey, todoKey);    const buttons = MODES.map(m => {
       const b = mk("button", "pmap-key-item"); b.type = "button";
       const sw = mk("span", "pmap-swatch"); sw.style.background = MODE_COLOR[m];
       b.append(sw, MODE_LABEL[m]);
@@ -1550,7 +1552,7 @@
   function renderActions() {
     const box = $("p-actions");
     const btn = (label, fn, secondary) => { const b = mk("button", secondary ? "btn-secondary" : "", label); b.type = "button"; b.addEventListener("click", fn); return b; };
-    const link = (label, href) => { const a = mk("a", "profile-link", label); a.href = href; return a; };
+    const link = (label, href) => btn(label, () => { location.href = href; }, true);      // top-corner links are buttons now
     const items = [];
     items.push(link("How points work", "points.html"));
     const viewing = wantedName || (me && me.username);

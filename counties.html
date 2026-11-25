@@ -61,8 +61,9 @@
   /* zoomed map: uses the game's own .zoom-backdrop / .zoom-scroller / .state-map.zoomed / .zoom-controls from style.css */
   .cl-zhead { position: fixed; top: 0; left: 0; right: 0; z-index: 1100; display: flex; align-items: center; gap: 0.3rem 1rem; flex-wrap: wrap; padding: 0.55rem clamp(10px, 2vw, 24px); background: #fdeca6; color: #1c1c1a; box-shadow: 0 2px 10px rgba(0,0,0,.25); text-align: left; }
   body.dark-mode .cl-zhead { background: #242420; color: #fdeca6; }
-  .cl-zhead h2 { margin: 0; font-size: 1.15rem; }
-  .cl-zhead .cl-sub { flex: 1 1 200px; margin: 0; font-size: 0.85rem; opacity: 0.75; }
+  .cl-zhead { justify-content: center; }
+  .cl-zhead h2 { margin: 0; font-size: 1.3rem; text-align: center; flex: 1 1 auto; padding: 0 6.5rem; }
+  .cl-zhead [data-z="close"] { position: absolute; right: clamp(10px, 2vw, 24px); top: 50%; transform: translateY(-50%); margin: 0; padding: 0.3rem 0.8rem; font-size: 0.8rem; line-height: 1.2; }
   .cl-zmsg { position: fixed; inset: 0; z-index: 1001; display: grid; place-items: center; color: #fff; pointer-events: none; }
 </style>
 </head>
@@ -163,7 +164,19 @@
 
   /* ---------- manual overrides ----------
      For rows where the Census land area is wrong or missing. Key = state key + "|" + normalised county name. land is in sq mi. */
+  var USMOI_NOTE = "Land area only (the Census Bureau has no data for these islands). No permanent residents.";
   var OVERRIDES = {
+    /* U.S. Minor Outlying Islands: not in the Census county file. Land areas are from the Wikipedia/CIA World Factbook table (km2 x 0.386102);
+       no island has permanent residents, so population is 0 (staff, military and scientists are rotated in and out, and aren't counted). */
+    "united_states_minor_outlying_islands|bakerisland":   { land: 0.81,   pop: 0, note: USMOI_NOTE },
+    "united_states_minor_outlying_islands|howlandisland": { land: 1.00,   pop: 0, note: USMOI_NOTE },
+    "united_states_minor_outlying_islands|jarvisisland":  { land: 1.93,   pop: 0, note: USMOI_NOTE },
+    "united_states_minor_outlying_islands|johnstonatoll": { land: 1.00,   pop: 0, note: USMOI_NOTE },
+    "united_states_minor_outlying_islands|kingmanreef":   { land: 0.0039, pop: 0, note: USMOI_NOTE + " Kingman Reef is almost entirely submerged: about 0.01 sq km of land." },
+    "united_states_minor_outlying_islands|midwayislands": { land: 2.39,   pop: 0, note: USMOI_NOTE },
+    "united_states_minor_outlying_islands|navassaisland": { land: 2.08,   pop: 0, note: USMOI_NOTE },
+    "united_states_minor_outlying_islands|palmyraatoll":  { land: 1.51,   pop: 0, note: USMOI_NOTE },
+    "united_states_minor_outlying_islands|wakeisland":    { land: 2.51,   pop: 0, note: USMOI_NOTE },
     "american_samoa|roseisland": { land: 0.033, note: "The Census Bureau lists no land area here. This is about 21 acres of land, per the U.S. Fish & Wildlife Service (which manages the refuge)." }
   };
 
@@ -186,7 +199,7 @@
       var ov = OVERRIDES[key + "|" + norm(n)];
       if (!d && window.__countyData && key !== "united_states_minor_outlying_islands") missing.push(state + ": " + n);
       if (d && typeof d.county === "boolean" && d.county !== (desig === "County")) disagree.push(state + ": " + n + " (game: " + desig + ", census: " + (d.type || "none") + ")");
-      rows.push({ id: c[0], name: n, state: state, key: key, desig: desig, isc: desig === "County" ? 1 : 0, pop: d ? d.pop : null, popNote: d && d.popNote ? d.popNote : "", area: ov ? ov.land : d ? d.land : null, total: d ? d.area : null, note: ov ? ov.note : "", where: d ? d.where : "" });
+      rows.push({ id: c[0], name: n, state: state, key: key, desig: desig, isc: desig === "County" ? 1 : 0, pop: ov && ov.pop != null ? ov.pop : d ? d.pop : null, popNote: ov && ov.pop != null ? "No permanent residents" : d && d.popNote ? d.popNote : "", area: ov ? ov.land : d ? d.land : null, total: d ? d.area : null, note: ov ? ov.note : "", where: d ? d.where : "" });
     });
   }
   var base = window.__baseCountyNames || {};
@@ -248,7 +261,7 @@
   var backdrop = document.createElement("div"); backdrop.className = "zoom-backdrop";
   var scroller = document.createElement("div"); scroller.className = "zoom-scroller";
   var head = document.createElement("div"); head.className = "cl-zhead";
-  head.innerHTML = '<h2></h2><p class="cl-sub"></p><button type="button" class="btn-secondary" data-z="close">Close</button>';
+  head.innerHTML = '<h2></h2><button type="button" class="btn-secondary" data-z="close">Close</button>';
   var controls = document.createElement("div"); controls.className = "zoom-controls";
   controls.innerHTML = '<button type="button" data-z="out" aria-label="Zoom out" title="Zoom out (-)">\u2212</button>' +
     '<span class="zoom-level" aria-live="polite">1\u00D7</span>' +
@@ -289,20 +302,20 @@
   }
   function zoomToCounty() {
     if (!zMap || !zMain) return;
-    zoomLevel = 1; zLayout();
+    scroller.scrollLeft = 0; scroller.scrollTop = 0;
+    zoomLevel = 1; zLayout(); zUpdate();
     var mr = zMain.getBoundingClientRect(), sr = scroller.getBoundingClientRect();
     var f = Math.min(sr.width * 0.55 / Math.max(mr.width, 1), sr.height * 0.55 / Math.max(mr.height, 1));
-    zoomLevel = Math.min(ZOOM_MAX, Math.max(1, f)); zLayout();
-    mr = zMain.getBoundingClientRect();
-    scroller.scrollLeft += (mr.left + mr.width / 2) - (sr.left + sr.width / 2); scroller.scrollTop += (mr.top + mr.height / 2) - (sr.top + sr.height / 2);
-    zUpdate();
+    zoomLevel = Math.min(ZOOM_MAX, Math.max(1, f)); zLayout(); zUpdate();      // zUpdate first: it switches the scroller's "deep" layout, which moves things
+    var center = function () {
+      var m = zMain.getBoundingClientRect(), s2 = scroller.getBoundingClientRect();
+      scroller.scrollLeft += (m.left + m.width / 2) - (s2.left + s2.width / 2); scroller.scrollTop += (m.top + m.height / 2) - (s2.top + s2.height / 2);
+    };
+    center(); requestAnimationFrame(center);         // a second pass settles anything the first one couldn't reach yet
   }
   function openZoom(r, btn) {
     var tok = ++zToken; zFrom = btn || null;
     head.querySelector("h2").textContent = r.name + ", " + r.state;
-    var bits = [r.isc ? "County" : r.desig]; if (r.pop != null) bits.push(fmt(r.pop) + " people"); if (r.area != null) bits.push(r.note ? "about " + fmtArea(r.area) + " sq mi" : r.area === 0 && r.total > 0 ? "no land area listed (" + fmtArea(r.total) + " sq mi of water)" : fmtArea(r.area) + " sq mi");
-    if (r.where) bits.push(r.where === "Whole state" ? "Whole state" : r.where + " part of the state");
-    head.querySelector(".cl-sub").textContent = bits.join(" \u00B7 ");
     var msg = document.createElement("div"); msg.className = "cl-zmsg"; msg.textContent = "Loading map\u2026";
     document.body.append(backdrop, head, msg); backdrop.classList.add("active"); document.body.style.overflow = "hidden";
     var id = states[r.key].svgId;
@@ -404,7 +417,8 @@
         }
         if (c[1] === "cl-loc") { var bt = document.createElement("button"); bt.type = "button"; bt.className = "cl-thumb"; bt.setAttribute("aria-label", "Show " + r.name + ", " + r.state + " on the map"); bt._row = r; td.appendChild(bt); }
       });
-      if (r.popNote) tr.cells[3].title = r.popNote + " count. The Census Bureau doesn\u2019t publish yearly population estimates for this territory, so it isn\u2019t from the same 2025 estimates as the states.";
+      if (r.popNote === "No permanent residents") tr.cells[3].title = "No permanent residents. Staff, military and scientists are rotated in and out, and aren\u2019t counted.";
+      else if (r.popNote) tr.cells[3].title = r.popNote + " count. The Census Bureau doesn\u2019t publish yearly population estimates for this territory, so it isn\u2019t from the same 2025 estimates as the states.";
       if (r.note) tr.cells[4].title = r.note;
       else if (r.area === 0 && r.total > 0) tr.cells[4].title = "The Census Bureau lists no land area here, only water (" + fmtArea(r.total) + " sq mi in total).";
       frag.appendChild(tr);

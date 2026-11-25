@@ -1632,6 +1632,9 @@ function fetchMapText(name) {
     return text.slice(start, end);
   });
 }
+const GLOBE_SVG_ID = "svg-united-states-minor-outlying-islands";
+function inGlobe(el) { return !!el && !!el.ownerSVGElement && el.ownerSVGElement.id === GLOBE_SVG_ID; }
+function isGlobeBubble(el) { return inGlobe(el) && /^x-.*-callout$/.test(el.id || ""); }   // the island boxes on the UM globe
 function keepGlobeBubblesBehindIslands(svg) {
   const isBubble = el => /^x-.*-callout$/.test(el.id || "");
   const obs = new MutationObserver(fix);
@@ -4470,13 +4473,6 @@ if (btnRestart) {
     if (restartUndo) { restartUndo.newRunId = currentGameRunId; showUndoToast(); }
     refreshUndoButton();
   });
-  undoBtn = document.createElement("button");
-  undoBtn.type = "button"; undoBtn.id = "btn-undo-restart";
-  undoBtn.className = btnRestart.className.replace(/\bhidden\b/g, "").trim() + " hidden";
-  undoBtn.textContent = "Undo restart";
-  undoBtn.title = "Bring back the game you just restarted (Ctrl/Cmd+Z)";
-  undoBtn.addEventListener("click", doRestartUndo);
-  btnRestart.after(undoBtn);
   setInterval(refreshUndoButton, 400);
 }
 document.addEventListener("keydown", e => {            // Ctrl/Cmd+Z, unless you're in the middle of typing something
@@ -4506,26 +4502,51 @@ document.addEventListener("keydown", e => {            // Ctrl/Cmd+Z, unless you
       if (clearBtn) clearBtn.classList.toggle("hidden", !gameSettings.restartHotkey || capturing !== null);
     }
     modeRows.forEach(r => {
-      r.btn.textContent = capturing === r.mode ? "Press a key…" : hasOwn(r.mode) ? (byMode()[r.mode] || "None") : "Default (" + (gameSettings.restartHotkey || "not set") + ")";
-      r.reset.classList.toggle("hidden", !hasOwn(r.mode) || capturing !== null);
+      const own = hasOwn(r.mode), cap = capturing === r.mode;
+      r.btn.textContent = cap ? "Press a key…" : own ? (byMode()[r.mode] || "None") : (gameSettings.restartHotkey || "\u2014");
+      r.btn.classList.toggle("own", own || cap);
+      r.btn.title = own ? "This mode has its own restart key" : "Uses the default key. Click to pick a different one.";
+      r.reset.style.visibility = (!own || capturing !== null) ? "hidden" : "visible";
     });
   };
   if (setBtn) {
+    if (!document.getElementById("restart-hotkey-css")) {
+      const st = document.createElement("style"); st.id = "restart-hotkey-css";
+      st.textContent = `
+        .setting-item:has(+ .restart-hotkey-modes) { border-bottom: none; }
+        .restart-hotkey-modes { position: relative; margin: 0 0 0.6rem 1.6rem; padding: 0.5rem 0 0.4rem; text-align: left; }
+        .restart-hotkey-modes::before { content: ""; position: absolute; left: -1.05rem; top: -0.6rem; width: 0.8rem; height: 1.55rem; border-left: 2px solid #c9c4b8; border-bottom: 2px solid #c9c4b8; border-bottom-left-radius: 6px; }
+        body.dark-mode .restart-hotkey-modes::before { border-color: #55524a; }
+        .restart-hotkey-modes > summary { cursor: pointer; font-size: 1rem; font-weight: 400; list-style: none; }
+        .restart-hotkey-modes > summary::-webkit-details-marker { display: none; }
+        .restart-hotkey-modes > summary::marker { content: ""; }
+        .rh-label, body .restart-hotkey-modes .rh-key.rh-key { color: var(--rh-c); }
+        .restart-hotkey-modes .setting-desc { margin: 0.25rem 0 0.7rem; }
+        .rh-grid { display: grid; grid-template-columns: 1fr max-content 3.4rem; align-items: center; gap: 0.35rem 0.4rem; }
+        .rh-label { font-size: 0.95rem; }
+        .rh-key { min-width: 6.2rem; padding: 0.3rem 0.9rem; font-size: 0.9rem; border-style: dashed; opacity: .6; }
+        .rh-key.own { border-style: solid; opacity: 1; font-weight: 700; }
+        .rh-reset { background: none; border: 0; padding: 0.2rem 0.3rem; font: inherit; font-size: 0.8rem; color: inherit; opacity: .65; text-decoration: underline; cursor: pointer; }
+        .rh-reset:hover { opacity: 1; background: none; }
+      `;
+      document.head.appendChild(st);
+    }
     const strip = c => String(c || "").replace(/\bhidden\b/g, "").trim();
     const details = document.createElement("details");
     details.className = "restart-hotkey-modes";
-    details.style.cssText = "margin:0.5rem 0 0.9rem;";
-    details.innerHTML = '<summary style="cursor:pointer;">Different restart key for specific modes</summary>' +
-      '<p style="margin:0.4rem 0;opacity:0.8;font-size:0.9em;">Pick a key to override the one above for that mode. Press Backspace/Delete while picking to give that mode no restart key.</p>';
+    details.innerHTML = '<summary>Different restart key for specific modes</summary>' +
+      '<p class="setting-desc">Pick a key to override the one above for that mode. Press Backspace/Delete while picking to give that mode no restart key. Dashed boxes use the default.</p>';
+    const grid = document.createElement("div"); grid.className = "rh-grid"; details.appendChild(grid);
     MODE_LIST.forEach(mode => {
-      const row = document.createElement("div");
-      row.style.cssText = "display:flex;align-items:center;gap:10px;margin:0.3rem 0;";
-      const label = document.createElement("span"); label.textContent = MODE_LABELS[mode] || mode; label.style.cssText = "min-width:8.5em;";
-      const btn = document.createElement("button"); btn.type = "button"; btn.className = strip(setBtn.className);
-      const reset = document.createElement("button"); reset.type = "button"; reset.className = strip((clearBtn || setBtn).className) + " hidden"; reset.textContent = "Use default";
+      const MODE_COLOR = { "pin": "var(--mode-pin, #3b82f6)", "pin-hard": "var(--mode-flash, #8b5cf6)", "mc": "var(--mode-mc, #f59e0b)", "type": "var(--mode-list, #14b8a6)", "type-hard": "var(--mode-identify, #ec4899)", "type-strict": "var(--mode-type, #ef4444)" };
+      const label = document.createElement("span"); label.className = "rh-label"; label.textContent = MODE_LABELS[mode] || mode;
+      const btn = document.createElement("button"); btn.type = "button"; btn.className = strip(setBtn.className) + " rh-key";
+      const reset = document.createElement("button"); reset.type = "button"; reset.className = "rh-reset"; reset.style.visibility = "hidden"; reset.textContent = "Reset";
+      reset.title = "Go back to the default restart key";
       btn.addEventListener("click", () => { capturing = mode; paint(); btn.blur(); });
       reset.addEventListener("click", () => { delete byMode()[mode]; saveSettings(); paint(); });
-      row.append(label, btn, reset); details.appendChild(row);
+      label.style.setProperty("--rh-c", MODE_COLOR[mode] || "inherit"); btn.style.setProperty("--rh-c", MODE_COLOR[mode] || "inherit");
+      grid.append(label, btn, reset);
       modeRows.push({ mode, btn, reset });
     });
     const host = setBtn.closest("label, .setting-row, .settings-row, .setting-item, .modal-row") || setBtn.parentElement;
@@ -6044,7 +6065,7 @@ function tucPick(pathEl) {
   document.querySelectorAll(".county.typing-highlight").forEach(el => el.classList.remove("typing-highlight"));
   tucSelected = county;
   currentTarget = county;
-  getCountyElements(county.id).forEach(el => { el.classList.add("typing-highlight"); if (el.parentNode) el.parentNode.appendChild(el); });
+  getCountyElements(county.id).forEach(el => { el.classList.add("typing-highlight"); if (el.parentNode && !isGlobeBubble(el)) el.parentNode.appendChild(el); });
   if (targetPrompt) targetPrompt.innerHTML = `<span class="find-label">${selectedMode === "tuc" ? "Type its name." : "Type its name."}</span>`;
   if (feedbackEl) { feedbackEl.textContent = ""; feedbackEl.className = "feedback-message"; }
   if (typeInputBox) typeInputBox.classList.remove("hidden", "tuc-waiting");
@@ -6316,8 +6337,14 @@ new MutationObserver(changes => {
   }
 }).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class"] });
 function bindCountyInteractivity(path) {
+  if (inGlobe(path)) {
+    const pair = on => getCountyElements(path.dataset.countyId || path.id).forEach(el => el.classList.toggle("pair-hover", on));
+    path.addEventListener("mouseenter", () => pair(true));
+    path.addEventListener("mouseleave", () => pair(false));
+  }
   path.addEventListener("mouseenter", () => {
     if (!isGameActive || (selectedMode !== "type-hard" && selectedMode !== "tuc")) return;
+    if (isGlobeBubble(path)) return;
     const p = path.parentNode;
     if (!p || p.lastElementChild === path || path.classList.contains("found")) return;
     if (!path.classList.contains("typing-highlight") && p.querySelector(".county.typing-highlight")) return;

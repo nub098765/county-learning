@@ -3450,6 +3450,8 @@ body.dark-mode .pmap .us-map.by-mode .us-labels text {
   stroke: rgba(0, 0, 0, .8);
 }
 .va-callout-line { opacity: 0.6; }
+body[data-play-mode="type-hard"] .county.pair-hover:not(.found),
+body[data-play-mode="tuc"] .county.pair-hover:not(.found),
 body[data-play-mode="type-hard"] .county:not(.found):hover,
 body[data-play-mode="type-hard"] .county:not(.found):hover path,
 body[data-play-mode="tuc"] .county:not(.found):hover,
@@ -3841,6 +3843,8 @@ body[data-play-mode="pin-hard"] .county.typing-highlight:not(.wrong) path {
  0%, 100% { --hl-mix: 0; }
  50% { --hl-mix: 100; }
 }
+body[data-play-mode="type-hard"] .county.pair-hover:not(.wrong):not(.found),
+body[data-play-mode="tuc"] .county.pair-hover:not(.wrong):not(.found),
 body[data-play-mode="type-hard"] .county:hover:not(.wrong),
 body[data-play-mode="type-hard"] .county:hover:not(.wrong) path,
 body[data-play-mode="tuc"] .county:hover:not(.wrong),
