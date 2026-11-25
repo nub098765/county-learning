@@ -87,7 +87,7 @@
         <th data-sort="state">State<span class="cl-sort"></span></th>
         <th data-sort="isc" class="mid">County?<span class="cl-info" tabindex="0" role="note" aria-label="Whether this is an actual county, or goes under another designation (like parish)" data-tip="Whether this is an actual county, or goes under another designation (like parish). Hover a mark to see what this one is called.">i</span><span class="cl-sort"></span></th>
         <th data-sort="pop" class="num">Population<span class="cl-sort"></span></th>
-        <th data-sort="area" class="num">Area (sq mi)<span class="cl-sort"></span></th>
+        <th data-sort="area" class="num">Land area (sq mi)<span class="cl-sort"></span></th>
         <th data-sort="where">Where in the state<span class="cl-sort"></span></th>
       </tr></thead>
       <tbody id="cl-body"></tbody>
@@ -99,7 +99,7 @@
 <script src="county-names.js"></script>
 <script src="maps/manifest.js"></script>
 <script src="maps/manifest-extra.js" onerror="void 0"></script>
-<script src="county-data.js" onerror="void 0"></script>
+<script>document.write('<script src="county-data.js?v=' + Date.now() + '" onerror="void 0"><\/script>');</script>
 <script>
 (function () {
   var search = document.getElementById("all-counties-search"), includeState = document.getElementById("all-counties-include-state");
@@ -143,8 +143,7 @@
     if (s === "connecticut") return "Planning Region";
     if (s === "alaska") {
       if (AK_CENSUS_AREAS.has(n)) return "Census Area";
-      if (n === "Anchorage" || n === "Skagway") return "Municipality";
-      return "Borough";
+      return "Borough";   // Anchorage and Skagway included (Census calls them "Municipality"; this list calls them boroughs)
     }
     if (s === "virginia") return (VA_TWIN_CITIES.has(n) || VA_CITY_BASES.has(n)) ? "Independent City" : "County";
     if (s === "maryland") return n === "Baltimore City" ? "Independent City" : "County";
@@ -158,6 +157,12 @@
     if (s === "district_of_columbia") return "District of Columbia";
     return "County";
   }
+
+  /* ---------- manual overrides ----------
+     For rows where the Census land area is wrong or missing. Key = state key + "|" + normalised county name. land is in sq mi. */
+  var OVERRIDES = {
+    "american_samoa|roseisland": { land: 0.033, note: "The Census Bureau lists no land area here. This is about 21 acres of land, per the U.S. Fish & Wildlife Service (which manages the refuge)." }
+  };
 
   /* ---------- rows ---------- */
   var data = {}; (window.__countyData || []).forEach(function (d) { if (d.k) data[d.k] = d; if (d.k2 && !data[d.k2]) data[d.k2] = d; });
@@ -174,10 +179,11 @@
   function add(key, state, svgId, list) {
     if (seen[key]) return; seen[key] = 1; states[key] = { name: state, svgId: svgId };
     list.forEach(function (c) {
-      var n = c[1], cc = { id: c[0], name: n, stateKey: key }, desig = designation(cc), d = lookup(cc, key, state);
+      var n = (key === "united_states_minor_outlying_islands" && /^midway/i.test(c[1])) ? "Midway Islands" : c[1], cc = { id: c[0], name: n, stateKey: key }, desig = designation(cc), d = lookup(cc, key, state);
+      var ov = OVERRIDES[key + "|" + norm(n)];
       if (!d && window.__countyData && key !== "united_states_minor_outlying_islands") missing.push(state + ": " + n);
       if (d && typeof d.county === "boolean" && d.county !== (desig === "County")) disagree.push(state + ": " + n + " (game: " + desig + ", census: " + (d.type || "none") + ")");
-      rows.push({ id: c[0], name: n, state: state, key: key, desig: desig, isc: desig === "County" ? 1 : 0, pop: d ? d.pop : null, area: d ? d.area : null, where: d ? d.where : "" });
+      rows.push({ id: c[0], name: n, state: state, key: key, desig: desig, isc: desig === "County" ? 1 : 0, pop: d ? d.pop : null, area: ov ? ov.land : d ? d.land : null, total: d ? d.area : null, note: ov ? ov.note : "", where: d ? d.where : "" });
     });
   }
   var base = window.__baseCountyNames || {};
@@ -291,7 +297,7 @@
   function openZoom(r, btn) {
     var tok = ++zToken; zFrom = btn || null;
     head.querySelector("h2").textContent = r.name + ", " + r.state;
-    var bits = [r.isc ? "County" : r.desig]; if (r.pop != null) bits.push(fmt(r.pop) + " people"); if (r.area != null) bits.push(r.area.toLocaleString("en-US", { maximumFractionDigits: 1 }) + " sq mi");
+    var bits = [r.isc ? "County" : r.desig]; if (r.pop != null) bits.push(fmt(r.pop) + " people"); if (r.area != null) bits.push(r.note ? "about " + fmtArea(r.area) + " sq mi" : r.area === 0 && r.total > 0 ? "no land area listed (" + fmtArea(r.total) + " sq mi of water)" : fmtArea(r.area) + " sq mi");
     if (r.where) bits.push(r.where === "Whole state" ? "Whole state" : r.where + " part of the state");
     head.querySelector(".cl-sub").textContent = bits.join(" \u00B7 ");
     var msg = document.createElement("div"); msg.className = "cl-zmsg"; msg.textContent = "Loading map\u2026";
@@ -370,6 +376,7 @@
   /* ---------- table ---------- */
   var sortKey = "name", dir = 1;
   try { var p = new URLSearchParams(location.search); if (p.get("sort")) { sortKey = p.get("sort"); dir = p.get("dir") === "desc" ? -1 : 1; } } catch (e) {}
+  var fmtArea = function (n) { return n > 0 && n < 10 ? n.toLocaleString("en-US", { maximumSignificantDigits: 2 }) : n.toLocaleString("en-US", { maximumFractionDigits: 1 }); };
   var fmt = function (n) { return n == null ? "\u2014" : n.toLocaleString("en-US"); };
   var NUMERIC_FIRST = { pop: 1, area: 1, isc: 1 };     // first click on these = biggest / yes first
   function cmp(a, b) {
@@ -386,7 +393,7 @@
     var frag = document.createDocumentFragment();
     shown.forEach(function (r) {
       var tr = document.createElement("tr");
-      [[r.name, ""], [r.state, ""], ["", "mid"], [fmt(r.pop), "num" + (r.pop == null ? " dim" : "")], [r.area == null ? "\u2014" : r.area.toLocaleString("en-US", { maximumFractionDigits: 1 }), "num" + (r.area == null ? " dim" : "")], ["", "cl-loc"]].forEach(function (c) {
+      [[r.name, ""], [r.state, ""], ["", "mid"], [fmt(r.pop), "num" + (r.pop == null ? " dim" : "")], [r.area == null ? "\u2014" : fmtArea(r.area), "num" + (r.area == null ? " dim" : "")], ["", "cl-loc"]].forEach(function (c) {
         var td = document.createElement("td"); td.textContent = c[0]; if (c[1]) td.className = c[1]; tr.appendChild(td);
         if (c[1] === "mid") {
           var m = document.createElement("span"); m.className = r.isc ? "cl-yes" : "cl-no"; m.textContent = r.isc ? "\u2713" : "\u2717";
@@ -394,6 +401,8 @@
         }
         if (c[1] === "cl-loc") { var bt = document.createElement("button"); bt.type = "button"; bt.className = "cl-thumb"; bt.setAttribute("aria-label", "Show " + r.name + ", " + r.state + " on the map"); bt._row = r; td.appendChild(bt); }
       });
+      if (r.note) tr.cells[4].title = r.note;
+      else if (r.area === 0 && r.total > 0) tr.cells[4].title = "The Census Bureau lists no land area here, only water (" + fmtArea(r.total) + " sq mi in total).";
       frag.appendChild(tr);
     });
     thumbObs.disconnect();

@@ -50,7 +50,7 @@ window.ACHIEVEMENTS = {
     "raine": WRENCH,
     "ag": WRENCH,
     "vvg_lol": WRENCH,
-    "Kira": WRENCH
+    "kira": WRENCH
   };
   window.specialBadgeFor = name => window.SPECIAL_BADGES[String(name || "").toLowerCase()] || null;
 })();

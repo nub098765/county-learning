@@ -1369,12 +1369,14 @@ const DEFAULT_SETTINGS = {
   reviewArrowsOn: true,
   reviewLabelsOn: true,
   reviewLabelScale: 1,
-  restartHotkey: ""
+  restartHotkey: "",
+  restartHotkeyByMode: {}
 };
 let gameSettings = { ...DEFAULT_SETTINGS, ...readStoredJson("gameSettings", {}) };
 gameSettings.flashRepeatClickGuardMs = Number.isFinite(Number(gameSettings.flashRepeatClickGuardMs))
   ? Math.min(1000, Math.max(0, Number(gameSettings.flashRepeatClickGuardMs)))
   : DEFAULT_SETTINGS.flashRepeatClickGuardMs;
+gameSettings.restartHotkeyByMode = (gameSettings.restartHotkeyByMode && typeof gameSettings.restartHotkeyByMode === "object") ? { ...gameSettings.restartHotkeyByMode } : {};
 function saveSettings() { localStorage.setItem("gameSettings", JSON.stringify(gameSettings)); }
 const asCheckbox = { read: el => el.checked, write: (el, v) => { el.checked = v; } };
 const asNumber   = { read: el => Number(el.value), write: (el, v) => { el.value = v; } };
@@ -4425,7 +4427,66 @@ if (btnQuitGame) {
   });
 }
 const btnRestart = document.getElementById("btn-restart");
-if (btnRestart) btnRestart.addEventListener("click", () => { if (!reviewMode) initGame(selectedCounties); });
+/* ---- Undo restart: a restart keeps a copy of the game it replaced, and "Undo restart" brings it back (until the new game gets its first answer) ---- */
+let restartUndo = null, undoBtn = null, undoToast = null, undoToastTimer = null;
+const gameHasProgress = () => scoreRight + scoreWrong + forfeitedCount > 0 || targetPool.length < originalTargetList.length;
+function hideUndoToast() { clearTimeout(undoToastTimer); if (undoToast) { undoToast.remove(); undoToast = null; } }
+function undoStillValid() { return !!restartUndo && isGameActive && !reviewMode && currentGameRunId === restartUndo.newRunId && !gameHasProgress(); }
+function refreshUndoButton() {
+  const ok = undoStillValid();
+  if (!ok && restartUndo) restartUndo = null;      // new progress, quit, or a different game: the old one can't come back
+  if (undoBtn) undoBtn.classList.toggle("hidden", !ok);
+  if (!ok) hideUndoToast();
+}
+function captureRestartUndo() {
+  if (!isGameActive || reviewMode || !gameHasProgress()) return;   // nothing to lose (restarting twice keeps the first undo)
+  let snap = null;
+  try { snap = buildResumeSnapshot(); } catch (e) { console.warn("Couldn't keep the game for undo:", e); }
+  if (snap) restartUndo = JSON.parse(JSON.stringify(snap));
+}
+function showUndoToast() {
+  hideUndoToast();
+  const t = document.createElement("div");
+  t.setAttribute("role", "status");
+  t.style.cssText = "position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:3000;display:flex;align-items:center;gap:14px;padding:10px 14px 10px 18px;border-radius:10px;background:#1a1a1a;color:#fff;box-shadow:0 6px 22px rgba(0,0,0,.35);font-size:.95rem;";
+  t.innerHTML = '<span>Game restarted.</span><button type="button" class="btn-primary">Undo</button>';
+  t.querySelector("button").addEventListener("click", doRestartUndo);
+  document.body.appendChild(t);
+  undoToast = t;
+  undoToastTimer = setTimeout(hideUndoToast, 12000);
+}
+function doRestartUndo() {
+  if (!undoStillValid()) return;
+  const snap = restartUndo;
+  restartUndo = null; hideUndoToast(); refreshUndoButton();
+  if (modalSummary) modalSummary.classList.add("hidden");
+  resumeSavedGame(snap);
+}
+if (btnRestart) {
+  btnRestart.addEventListener("click", () => {
+    if (reviewMode) return;
+    captureRestartUndo();
+    initGame(selectedCounties);
+    if (restartUndo) { restartUndo.newRunId = currentGameRunId; showUndoToast(); }
+    refreshUndoButton();
+  });
+  undoBtn = document.createElement("button");
+  undoBtn.type = "button"; undoBtn.id = "btn-undo-restart";
+  undoBtn.className = btnRestart.className.replace(/\bhidden\b/g, "").trim() + " hidden";
+  undoBtn.textContent = "Undo restart";
+  undoBtn.title = "Bring back the game you just restarted (Ctrl/Cmd+Z)";
+  undoBtn.addEventListener("click", doRestartUndo);
+  btnRestart.after(undoBtn);
+  setInterval(refreshUndoButton, 400);
+}
+document.addEventListener("keydown", e => {            // Ctrl/Cmd+Z, unless you're in the middle of typing something
+  if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || String(e.key).toLowerCase() !== "z" || !undoStillValid()) return;
+  const a = document.activeElement;
+  if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && a.value) return;
+  e.preventDefault(); doRestartUndo();
+}, true);
+
+/* ---- Restart hotkey: one default key, plus an optional different key (or no key) for each game mode ---- */
 (function initRestartHotkey() {
   const setBtn = document.getElementById("btn-restart-hotkey");
   const clearBtn = document.getElementById("btn-restart-hotkey-clear");
@@ -4434,26 +4495,58 @@ if (btnRestart) btnRestart.addEventListener("click", () => { if (!reviewMode) in
     const k = e.key === " " ? "Space" : (e.key.length === 1 ? e.key.toUpperCase() : e.key);
     return [e.ctrlKey ? "Ctrl" : "", e.altKey ? "Alt" : "", e.shiftKey ? "Shift" : "", e.metaKey ? "Cmd" : "", k].filter(Boolean).join("+");
   };
-  let capturing = false;
+  const byMode = () => gameSettings.restartHotkeyByMode;
+  const hasOwn = m => Object.prototype.hasOwnProperty.call(byMode(), m);
+  const hotkeyFor = mode => hasOwn(mode) ? byMode()[mode] : gameSettings.restartHotkey;   // "" = no key for that mode
+  let capturing = null;                                  // null, "default", or a mode key
+  const modeRows = [];
   const paint = () => {
-    if (!setBtn) return;
-    setBtn.textContent = capturing ? "Press a key…" : (gameSettings.restartHotkey || "Not set");
-    if (clearBtn) clearBtn.classList.toggle("hidden", !gameSettings.restartHotkey || capturing);
+    if (setBtn) {
+      setBtn.textContent = capturing === "default" ? "Press a key…" : (gameSettings.restartHotkey || "Not set");
+      if (clearBtn) clearBtn.classList.toggle("hidden", !gameSettings.restartHotkey || capturing !== null);
+    }
+    modeRows.forEach(r => {
+      r.btn.textContent = capturing === r.mode ? "Press a key…" : hasOwn(r.mode) ? (byMode()[r.mode] || "None") : "Default (" + (gameSettings.restartHotkey || "not set") + ")";
+      r.reset.classList.toggle("hidden", !hasOwn(r.mode) || capturing !== null);
+    });
   };
+  if (setBtn) {
+    const strip = c => String(c || "").replace(/\bhidden\b/g, "").trim();
+    const details = document.createElement("details");
+    details.className = "restart-hotkey-modes";
+    details.style.cssText = "margin:0.5rem 0 0.9rem;";
+    details.innerHTML = '<summary style="cursor:pointer;">Different restart key for specific modes</summary>' +
+      '<p style="margin:0.4rem 0;opacity:0.8;font-size:0.9em;">Pick a key to override the one above for that mode. Press Backspace/Delete while picking to give that mode no restart key.</p>';
+    MODE_LIST.forEach(mode => {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:10px;margin:0.3rem 0;";
+      const label = document.createElement("span"); label.textContent = MODE_LABELS[mode] || mode; label.style.cssText = "min-width:8.5em;";
+      const btn = document.createElement("button"); btn.type = "button"; btn.className = strip(setBtn.className);
+      const reset = document.createElement("button"); reset.type = "button"; reset.className = strip((clearBtn || setBtn).className) + " hidden"; reset.textContent = "Use default";
+      btn.addEventListener("click", () => { capturing = mode; paint(); btn.blur(); });
+      reset.addEventListener("click", () => { delete byMode()[mode]; saveSettings(); paint(); });
+      row.append(label, btn, reset); details.appendChild(row);
+      modeRows.push({ mode, btn, reset });
+    });
+    const host = setBtn.closest("label, .setting-row, .settings-row, .setting-item, .modal-row") || setBtn.parentElement;
+    host.after(details);
+  }
   paint();
-  if (setBtn) setBtn.addEventListener("click", () => { capturing = true; paint(); setBtn.blur(); });
+  if (setBtn) setBtn.addEventListener("click", () => { capturing = "default"; paint(); setBtn.blur(); });
   if (clearBtn) clearBtn.addEventListener("click", () => { gameSettings.restartHotkey = ""; saveSettings(); paint(); });
   document.addEventListener("keydown", e => {
     if (capturing) {
       e.preventDefault(); e.stopImmediatePropagation();
-      if (e.key === "Escape") { capturing = false; paint(); return; }
+      if (e.key === "Escape") { capturing = null; paint(); return; }
       const c = comboOf(e);
       if (!c) return;
-      gameSettings.restartHotkey = (e.key === "Backspace" || e.key === "Delete") ? "" : c;
-      saveSettings(); capturing = false; paint();
+      const clear = e.key === "Backspace" || e.key === "Delete";
+      if (capturing === "default") gameSettings.restartHotkey = clear ? "" : c;
+      else byMode()[capturing] = clear ? "" : c;
+      saveSettings(); capturing = null; paint();
       return;
     }
-    const hk = gameSettings.restartHotkey;
+    const hk = hotkeyFor(selectedMode);
     if (!hk || e.repeat || comboOf(e) !== hk) return;
     const gs = document.getElementById("screen-game");
     if (!gs || !gs.classList.contains("active") || reviewMode || !btnRestart) return;
@@ -4845,12 +4938,8 @@ function scheduleResumeSave() {
   if (restoringGame || resumeSaveTimer) return;
   resumeSaveTimer = setTimeout(() => { resumeSaveTimer = null; saveResumeSnapshot(); }, 0);
 }
-function saveResumeSnapshot() {
-  if (restoringGame) return;
-  if (!isGameActive || reviewMode || !gameLog || !RESUMABLE_MODES.has(selectedMode) || !originalTargetList.length) {
-    clearResumeSnapshot();
-    return;
-  }
+function buildResumeSnapshot() {
+  if (!isGameActive || reviewMode || !gameLog || !RESUMABLE_MODES.has(selectedMode) || !originalTargetList.length) return null;
   const ids = list => [...list].map(c => c.id);
   const visual = {};
   originalTargetList.forEach(c => {
@@ -4872,6 +4961,12 @@ function saveResumeSnapshot() {
     time: Math.round(finalTime), runId: currentGameRunId, visual,
     log: { id: gameLog.id, started: gameLog.started, elapsed: Math.round(performance.now() - gameLog.t0), events: gameLog.events }
   };
+  return snap;
+}
+function saveResumeSnapshot() {
+  if (restoringGame) return;
+  const snap = buildResumeSnapshot();
+  if (!snap) { clearResumeSnapshot(); return; }
   try { localStorage.setItem(RESUME_KEY, JSON.stringify(snap)); setPlayHash(true); }
   catch (e) { console.warn("Couldn't save the game in progress:", e); }
 }
@@ -5802,15 +5897,10 @@ function registerWrongTypedGuess(pickedHint) {
   currentAttemptMistakes++;
   playSound("wrong");
   if (feedbackEl) {
+    // Only a picked answer (Multiple-Choice) gets a "that's {name}" line. A typed answer gets the general wrong-answer feedback,
+    // because "that one's {name}" reads as if the game were talking about the county you typed.
     let named = null;
-    if (SINGLE_TARGET_TYPE_MODES.has(selectedMode)) {
-      if (pickedHint) { const picked = findCountyById(pickedHint); if (picked) named = getPlainName(picked); }
-      else if (typeInput && typeInput.value) {
-        const typed = normalizeTypedName(typeInput.value);
-        const other = typed && getActiveCountiesPool().find(c => normalizeTypedName(c.name) === typed);
-        if (other) named = getPlainName(other);
-      }
-    }
+    if (SINGLE_TARGET_TYPE_MODES.has(selectedMode) && pickedHint) { const picked = findCountyById(pickedHint); if (picked) named = getPlainName(picked); }
     feedbackEl.textContent = named ? pickFeedback(false, named) : pickGenericWrongLine();
     feedbackEl.className = "feedback-message error";
   }
