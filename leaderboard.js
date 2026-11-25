@@ -49,6 +49,12 @@
         who.append(dot);
       }
       who.append(a);
+      const special = window.specialBadgeFor?.(r.username);
+      if (special) {
+        const img = mk("img", "lb-special");
+        img.src = special.src; img.alt = special.label; img.title = special.label;
+        who.append(img);
+      }
       if (r.has_tuc) who.append(" 🏆");
       tr.append(mk("td", "", r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : String(r.rank)), who, mk("td", "", Number(r.points).toLocaleString()));
       return tr;

@@ -83,7 +83,7 @@ import numpy as np
 import pandas as pd
 import shapely
 from shapely import STRtree
-from shapely.geometry import Polygon, MultiPolygon
+from shapely.geometry import Polygon, MultiPolygon, box
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 
@@ -110,6 +110,19 @@ LAND_BOXES = {
 # states with Great Lakes shoreline (the lake water has to be removed from these)
 # Alaska's water files are enormous and OSM handles its coast well, so skip it unless asked
 SKIP_WATER_STATES = {"02"}
+# Tidal rivers: OSM's land layer treats the lower James, York, Rappahannock, Potomac ... as land, so the rivers vanish and
+# the counties on opposite banks touch. In these states, Census river polygons ("James Riv" etc.) are cut out, but only
+# where the river is at least this wide, so wide tidal rivers show and narrow upstream ribbons stay land. 0 turns it off.
+TIDAL_RIVER_STATES = {"51"}          # Virginia
+TIDAL_RIVER_MIN_WIDTH_M = 300
+# Rivers that get a narrower cut-off than the general one (lower-case name fragment -> minimum width in metres).
+# Add a river here to follow it further upstream, e.g. "chickahominy": 100.
+# "lk meade" is how the Census names the Nansemond estuary (a 26 km2 H3010 polygon from Suffolk down to the mouth; the real
+# Lake Meade reservoir upstream is a different, H2030 polygon and is not touched). "chuckatuck" is its tributary.
+TIDAL_RIVER_WIDTHS = {"nansemond": 100, "lk meade": 100, "chuckatuck": 100}
+# The named rivers above are also cut out AFTER the small-water and tiny-hole filters, so neither of them can fill a narrow
+# river back in as land. tiger_water() leaves the cut here (in the state's projected CRS); main() applies it.
+NAMED_RIVER_CUT = {"cut": None}
 GREAT_LAKES_STATES = {"17", "18", "26", "27", "36", "39", "42", "55"}
 LAKE_NAME = re.compile(r"^(Lake|Lk) (Superior|Michigan|Huron|Erie|Ontario|St\.? ?Clair|Saint Clair)$|^Green Bay$", re.I)   # the Census abbreviates Lake as "Lk"
 SEA_NAME = re.compile(r"\b(Laguna|Lagoon|Sound|Snd|Bay|Gulf|Harbor|Harbour|Hbr|Inlet|Ocean|Sea)\b", re.I)
@@ -164,7 +177,46 @@ def tiger_water(grp, year, crs, lakes, min_water_m2=0):
 
     # coastal bays / sounds / lagoons / gulf
     sea = mt.isin(["H2051", "H2053"]) | (mt.eq("H2030") & names.map(lambda s: bool(SEA_NAME.search(s))))
+    osm_hull = {}
+    for f in osm_lake_files():
+        k = os.path.splitext(os.path.basename(f))[0].lower().replace("_", " ")
+        d = gpd.read_file(f)
+        if d.crs is None:
+            d = d.set_crs(4326)
+        osm_hull[k] = unary_union([make_valid(g) for g in d.to_crs(crs).geometry]).convex_hull
+    for i in list(water.index[sea]):
+        k = lake_core(names[i])
+        if k in osm_hull and geoms[i].intersects(osm_hull[k]):
+            sea.loc[i] = False
     pick |= set(water.index[sea])
+
+    # wide tidal rivers (Virginia): the parts of "... Riv" polygons that are at least TIDAL_RIVER_MIN_WIDTH_M wide
+    river_cut = None
+    if str(grp.GEOID.iloc[0])[:2] in TIDAL_RIVER_STATES and TIDAL_RIVER_MIN_WIDTH_M > 0:
+        rv = list(water.index[mt.isin(["H3010", "H3013"]) & names.map(
+            lambda s: bool(re.search(r"\bRiv\b", s, re.I)) or any(f in s.lower() for f in TIDAL_RIVER_WIDTHS))])
+        if rv:
+            u = make_valid(unary_union([make_valid(geoms[i]) for i in rv]))
+            half = TIDAL_RIVER_MIN_WIDTH_M / 2
+            wide = u.buffer(-half).buffer(half + 40)          # where the river is wide enough (plus a little margin)
+            river_cut = make_valid(u.intersection(wide))      # intersect with the original so the real bank detail is kept
+            named_parts = []
+            for frag, wmin in TIDAL_RIVER_WIDTHS.items():     # named rivers with their own, narrower cut-off
+                mine = [i for i in rv if frag in names[i].lower()]
+                if mine:
+                    um = make_valid(unary_union([make_valid(geoms[i]) for i in mine]))
+                    hm = wmin / 2
+                    part = um.intersection(um.buffer(-hm).buffer(hm + 20))
+                    named_parts.append(part)
+                    river_cut = make_valid(unary_union([river_cut, part]))
+                    print(f"   {frag}: {len(mine)} river polygons, cut where at least {wmin} m wide ({part.area/1e6:.2f} km2)")
+            if named_parts:
+                NAMED_RIVER_CUT["cut"] = make_valid(unary_union(named_parts))
+            if river_cut.is_empty:
+                river_cut = None
+            else:
+                rn = sorted({names[i] for i in rv if names[i]})
+                print(f"   cutting wide tidal rivers (at least {TIDAL_RIVER_MIN_WIDTH_M} m wide): {river_cut.area/1e6:,.0f} km2 from {len(rv)} river polygons ({', '.join(rn[:8])}{' ...' if len(rn) > 8 else ''})")
 
     # Great Lakes + bays that touch them
     if lakes:
@@ -185,12 +237,12 @@ def tiger_water(grp, year, crs, lakes, min_water_m2=0):
                         inc.add(j); nxt.append(j)
             frontier = nxt
         pick |= inc
-    if not pick:
+    if not pick and river_cut is None:
         return None
     # say what is being cut, biggest first, so odd choices are easy to spot
     big = sorted(pick, key=lambda i: -geoms[i].area)[:6]
     print("   cutting water:", "; ".join(f"{names[i] or '(unnamed)'} [{mt[i]}]" for i in big), f"... {len(pick)} polygons")
-    cut = unary_union([make_valid(geoms[i]) for i in pick])
+    cut = unary_union([make_valid(geoms[i]) for i in pick] + ([river_cut] if river_cut is not None else []))
     if min_water_m2 > 0:
         # Merge touching pieces first (a bay split across counties is one body of water), then drop
         # the small ones. A small pond that merely has "Bay" or "Inlet" in its name is not connected to
@@ -255,13 +307,130 @@ def is_connector(name):
     return bool(CONNECT_NAME.search(name.strip()))
 
 
-def tiger_lakes(grp, year, crs, min_m2):
+OSM_LAKE_DIR = "osm_lakes"   # drop <lake>.geojson files here (see fetch_osm_lakes.py); they REPLACE the Census shape of that lake
+NLCD_DIR = "nlcd"            # optional: <lake>.tif here (see fetch_nlcd.py) keeps only the part of the OSM lake that is open water
+NLCD_WATER = 11              # NLCD class 11 = open water (marsh is 95 / 90, not water)
+NLCD_SMOOTH_M = 60           # the OSM shore is kept wherever it is within this many metres of NLCD open water (NLCD pixels are 30 m)
+# Hand-drawn fallbacks, used only when there is NO nlcd/<lake>.tif for that lake:
+# Boxes (min_lon, min_lat, max_lon, max_lat) cut OUT of an OSM lake so that area stays land. Okeechobee: OSM maps Fisheating Bay,
+# a shallow marshy bay on the west shore, as open water; Google and satellite show it as marsh. Set to {} to switch this off.
+OSM_LAKE_TRIM = {"okeechobee": [(-81.08, 26.86, -80.99, 26.948)]}
+# Islands (holes) of an OSM lake whose centre falls in one of these boxes are filled in, i.e. turned back into water.
+# Okeechobee: the big oval off the NW shore. Google paints it as water (a darker blue), not land.  Set to {} to keep it.
+OSM_LAKE_FILL = {"okeechobee": [(-80.87, 27.08, -80.81, 27.14)]}
+OSM_LAKE_MIN_ISLAND_M2 = 1e6   # OSM maps hundreds of tiny marsh patches in a lake; islands under 1 km2 are dropped, bigger ones kept
+OSM_LAKE_ISLAND_MIN = {"laguna madre": 5e4}   # keep islands down to 0.05 km2 here (the ICW spoil banks); other lakes use the 1 km2 default
+
+
+def lake_core(name):
+    """'Lake Okeechobee' / 'Okeechobee Lk' -> 'okeechobee' (same rule as is_wanted_lake)."""
+    core = re.sub(r"\b(Lk|Lake)\b", "", name, flags=re.I)
+    return " ".join(core.lower().split())
+
+
+def osm_lake_files():
+    return sorted(glob.glob(os.path.join(OSM_LAKE_DIR, "*.geojson")))
+
+
+def osm_lake_names():
+    """Lakes that have an OSM file, e.g. okeechobee.geojson -> 'okeechobee', great_salt.geojson -> 'great salt'."""
+    return {os.path.splitext(os.path.basename(f))[0].lower().replace("_", " ") for f in osm_lake_files()}
+
+
+def nlcd_water(path, crs):
+    """Open-water pixels (NLCD class 11) of a land-cover GeoTIFF as one geometry in `crs`, or None."""
+    try:
+        import rasterio
+        from rasterio.features import shapes
+    except ImportError:
+        sys.exit("   nlcd/ has a GeoTIFF but the rasterio package is missing - run:  pip install rasterio")
+    with rasterio.open(path) as ds:
+        mask = ds.read(1) == NLCD_WATER
+        src = ds.crs
+        polys = [shapely.geometry.shape(g) for g, _ in shapes(mask.astype("uint8"), mask=mask, transform=ds.transform)]
+    if not polys:
+        return None
+    return unary_union([make_valid(g) for g in gpd.GeoSeries(polys, crs=src).to_crs(crs)])
+
+
+def boxes_in(boxes, crs):
+    """lon/lat boxes -> one geometry in `crs`."""
+    return unary_union(list(gpd.GeoSeries([box(*b) for b in boxes], crs=4326).to_crs(crs)))
+
+
+def osm_lakes(grp, crs, min_m2):
+    """Lake shapes from osm_lakes/*.geojson (OpenStreetMap open water), in `crs`, for the lakes that touch `grp`.
+
+    These are used INSTEAD of the Census shape for the same lake (tiger_lakes is told to skip it), because the
+    Census polygons are split by county, include unnamed marsh pieces and can swallow far more than the open
+    water. Islands are the inner rings of the OSM shape, so they come through on their own.
+
+    If nlcd/<lake>.tif exists, the lake is also cut back to NLCD open water, so marsh that OSM calls water
+    (Okeechobee's Fisheating Bay) becomes land again. Without it, the hand-drawn OSM_LAKE_TRIM boxes are used.
+    """
+    files = osm_lake_files()
+    if not files:
+        return None
+    area = box(*grp.total_bounds)
+    parts, report = [], []
+    for f in files:
+        key = os.path.splitext(os.path.basename(f))[0].lower().replace("_", " ")
+        d = gpd.read_file(f)
+        if d.crs is None:
+            d = d.set_crs(4326)
+        lakes = [make_valid(g) for g in d.to_crs(crs).geometry if g is not None and not g.is_empty]
+        lakes = [g for g in lakes if g.intersects(area)]
+        if not lakes:
+            continue
+        lake = unary_union(lakes)
+
+        nlcd_path = os.path.join(NLCD_DIR, key.replace(" ", "_") + ".tif")
+        used_nlcd = False
+        if os.path.exists(nlcd_path):
+            water = nlcd_water(nlcd_path, crs)
+            if water is not None and not water.is_empty:
+                was = lake.area
+                lake = make_valid(lake).intersection(water.buffer(NLCD_SMOOTH_M))
+                used_nlcd = True
+                print(f"   {key}: cut back to NLCD open water ({was/1e6:,.0f} -> {lake.area/1e6:,.0f} km2)")
+            else:
+                print(f"   {key}: {nlcd_path} has no open-water pixels - ignoring it")
+
+        fills = OSM_LAKE_FILL.get(key, [])
+        if fills:
+            fbox = boxes_in(fills, crs)
+            lake = unary_union([Polygon(p.exterior, [r for r in p.interiors if not Polygon(r).centroid.within(fbox)])
+                                for p in polygons_of(make_valid(lake))])
+        trims = OSM_LAKE_TRIM.get(key, [])
+        if trims and not used_nlcd:
+            lake = make_valid(lake).difference(boxes_in(trims, crs))
+
+        isl_min = OSM_LAKE_ISLAND_MIN.get(key, OSM_LAKE_MIN_ISLAND_M2)
+        floor = OSM_LAKE_MIN_ISLAND_M2 if used_nlcd else min_m2
+        got = 0
+        for p in polygons_of(lake):
+            if p.area >= floor:
+                before = len(p.interiors)
+                for q in polygons_of(drop_small_holes(p, isl_min)):
+                    parts.append(q)
+                    got += 1
+                    print(f"   {os.path.basename(f)}: kept {len(q.interiors)} of {before} islands (each at least {isl_min/1e6:g} km2)")
+        if got:
+            report.append(os.path.basename(f))
+    if not parts:
+        return None
+    print(f"   using OpenStreetMap lake shape(s) for: {', '.join(report)}")
+    return unary_union(parts)
+
+
+def tiger_lakes(grp, year, crs, min_m2, skip=()):
     """Big INLAND lakes and reservoirs (Okeechobee, Winnebago, ...) from the Census water files.
 
     Reads the water file of every county in `grp`, merges touching pieces (a lake is split at county
     lines in these files, so each piece is small but the lake is big), and keeps the merged lakes of
     at least min_m2. Returns one geometry in `crs`, or None. The Great Lakes are skipped here: the
-    other cut (tiger_water) already handles them.
+    other cut (tiger_water) already handles them. Lakes named in `skip` (those that have an OSM file in
+    osm_lakes/) are left out, and so are the unnamed pieces that would only have joined them.
     """
     frames = []
     geoids = list(grp.GEOID)
@@ -291,7 +460,7 @@ def tiger_lakes(grp, year, crs, min_m2):
     wnames = water["FULLNAME"].fillna("").str.strip().tolist()
     wgeoms = [make_valid(g) for g in water.geometry]
     wtree = STRtree(wgeoms)
-    inc = {i for i, nm in enumerate(wnames) if is_wanted_lake(nm)}        # every wanted lake itself
+    inc = {i for i, nm in enumerate(wnames) if is_wanted_lake(nm) and lake_core(nm) not in skip}   # every wanted lake itself
     frontier = list(inc)                  # every wanted lake absorbs the big unnamed pieces that touch it
     while frontier:                       # (and those pieces chain on to the next big unnamed piece)
         nxt = []
@@ -353,6 +522,50 @@ def drop_small_holes(g, min_area):
     return unary_union(polys) if changed else g
 
 
+def fill_holes_keep_enclaves(geoms, min_area):
+    """Like drop_small_holes on every county, except a hole that ANOTHER COUNTY'S LAND fills stays a hole.
+
+    Such a hole is an enclave: Fairfax city has a hole where a piece of Fairfax County (the courthouse) lies, Manassas
+    has one for Prince William County, Radford one for Montgomery County, and every independent city is a hole in the
+    county around it. Filling those in hides the other county's piece (or merges it away). A hole counts as an enclave
+    when other counties cover at least half of it; ponds, bays and lakes have no county land in them and are filled
+    in as before.
+    """
+    tree = STRtree([g if g is not None else Polygon() for g in geoms])
+    out, kept_enclaves = [], 0
+    for i, g in enumerate(geoms):
+        if g is None or g.is_empty:
+            out.append(g)
+            continue
+        polys, changed = [], False
+        for p in polygons_of(g):
+            keep = []
+            for r in p.interiors:
+                h = Polygon(r)
+                if h.area >= min_area:
+                    keep.append(r)
+                    continue
+                covered = 0.0
+                for j in tree.query(h):
+                    if j == i or geoms[j] is None or geoms[j].is_empty:
+                        continue
+                    try:
+                        covered += h.intersection(geoms[j]).area
+                    except Exception:
+                        pass
+                if h.area > 0 and covered >= 0.5 * h.area:
+                    keep.append(r)
+                    kept_enclaves += 1
+            if len(keep) != len(p.interiors):
+                changed = True
+                p = Polygon(p.exterior, keep)
+            polys.append(p)
+        out.append(unary_union(polys) if changed else g)
+    if kept_enclaves:
+        print(f"   kept {kept_enclaves} small hole(s) that another county's land fills (enclaves / independent cities)")
+    return out
+
+
 def ring_path(pts):
     """Closed ring -> 'M x y l dx dy ... z' with integer, relative coordinates."""
     pts = [(int(round(x)), int(round(y))) for x, y in pts]
@@ -375,6 +588,48 @@ def geom_path(g):
         parts.append(ring_path(poly.exterior.coords))
         parts += [ring_path(r.coords) for r in poly.interiors]
     return "".join(p for p in parts if p)
+
+
+OPEN_HOLE_MIN_EDGE = 10   # output units (20 per km): a hole sharing at least this much outline with its own county is re-opened
+
+
+def open_shared_edge_holes(g, label=""):
+    """Re-open holes that lie on their own county's outline.
+
+    A river cut out of a county can leave a land strip thinner than one output unit between the river and the
+    open water (the Nansemond in Suffolk: strip between the river and Hampton Roads). Rounding to whole units
+    squeezes that strip to nothing, and the hole's edge then lies exactly on the county outline. It is drawn as a
+    straight hairline across the river mouth, with water on both sides. Here the geometry is rounded the way
+    ring_path will round it, and any hole that shares an edge of at least OPEN_HOLE_MIN_EDGE units with its own
+    outline is cut out of the polygon, so the water inside joins the water outside. Anything else is left exactly
+    as it was.
+    """
+    if g is None or g.is_empty:
+        return g
+    r = shapely.transform(g, np.round)
+    out, opened = [], 0
+    for p in polygons_of(r):
+        if not len(p.interiors):
+            out.append(p)
+            continue
+        shell = {}
+        for a, b in zip(p.exterior.coords[:-1], p.exterior.coords[1:]):
+            shell[frozenset((a, b))] = float(np.hypot(a[0] - b[0], a[1] - b[1]))
+        bad = False
+        for h in p.interiors:
+            if any(shell.get(frozenset((a, b)), 0) >= OPEN_HOLE_MIN_EDGE for a, b in zip(h.coords[:-1], h.coords[1:])):
+                bad = True
+                break
+        if not bad:
+            out.append(p)
+            continue
+        q = make_valid(Polygon(p.exterior)).difference(unary_union([make_valid(Polygon(h)) for h in p.interiors]))
+        out.extend(polygons_of(q))
+        opened += 1
+    if not opened:
+        return g
+    print(f"   {label}: re-opened {opened} hole(s) that touched the county outline (hairline across a river mouth)")
+    return unary_union(out)
 
 
 def find_land():
@@ -462,10 +717,11 @@ def main():
         # (e.g. Laguna Madre). Only counties that touch the sea are checked, plus every county
         # in a Great Lakes state.
         want_lakes = fips in GREAT_LAKES_STATES
+        NAMED_RIVER_CUT["cut"] = None
         if not a.no_tiger_water and (fips not in SKIP_WATER_STATES or a.water_alaska):
             raw = [make_valid(g) for g in grp.geometry]
             coastal = [i for i, (r, c) in enumerate(zip(raw, clipped))
-                       if want_lakes or (r.area > 0 and (1 - c.area / r.area) > 0.001)]
+                       if want_lakes or fips in TIDAL_RIVER_STATES or (r.area > 0 and (1 - c.area / r.area) > 0.001)]
             if coastal:
                 print(f"   checking Census water for {len(coastal)} coastal/lake counties")
                 cut = tiger_water(grp.iloc[coastal], year, crs, want_lakes, a.min_water_km2 * 1e6)
@@ -477,7 +733,10 @@ def main():
         # water file of every county, not just the coastal ones.
         if not a.no_lakes and not a.no_tiger_water and (fips not in SKIP_WATER_STATES or a.water_alaska):
             print(f"   checking Census water of all {len(grp)} counties for big lakes")
-            lake_cut = tiger_lakes(grp, year, crs, a.lake_min_km2 * 1e6)
+            lake_cut = tiger_lakes(grp, year, crs, a.lake_min_km2 * 1e6, skip=osm_lake_names())
+            osm_cut = osm_lakes(grp, crs, a.lake_min_km2 * 1e6)
+            parts = [g for g in (lake_cut, osm_cut) if g is not None and not g.is_empty]
+            lake_cut = unary_union(parts) if parts else None
             if lake_cut is not None and not lake_cut.is_empty:
                 ltree = STRtree([lake_cut])
                 clipped = [g.difference(lake_cut) if not g.is_empty and len(ltree.query(g)) else g for g in clipped]
@@ -491,10 +750,19 @@ def main():
 
         # fill in tiny holes (stray ponds) left inside counties; islands are untouched, big lakes stay cut
         holes_before = sum(len(p.interiors) for g in cleaned for p in polygons_of(g))
-        cleaned = [drop_small_holes(g, a.min_water_km2 * 1e6) for g in cleaned]
+        cleaned = fill_holes_keep_enclaves(cleaned, a.min_water_km2 * 1e6)
         holes_after = sum(len(p.interiors) for g in cleaned for p in polygons_of(g))
         if holes_before != holes_after:
             print(f"   filled in {holes_before - holes_after} tiny holes (under {a.min_water_km2:g} km2); {holes_after} kept")
+
+        # named narrow rivers (Nansemond ...): cut them out again now, after the small-water and tiny-hole filters,
+        # so those filters cannot turn them back into land
+        nc = NAMED_RIVER_CUT["cut"]
+        if nc is not None and not nc.is_empty:
+            ntree = STRtree([nc])
+            before = sum(g.area for g in cleaned if not g.is_empty)
+            cleaned = [g.difference(nc) if not g.is_empty and len(ntree.query(g)) else g for g in cleaned]
+            print(f"   named rivers cut after the filters: {(before - sum(g.area for g in cleaned if not g.is_empty))/1e6:.2f} km2 of land removed")
 
         # simplify all counties together so shared borders stay shared
         if a.tolerance_m > 0:
@@ -510,7 +778,7 @@ def main():
         tf = lambda g: shapely.transform(g, lambda c: np.column_stack(((c[:, 0]-x0)*k, (y1-c[:, 1])*k)))
         entries = []
         for row, g in zip(grp.itertuples(), cleaned):
-            d = geom_path(tf(g)) if not g.is_empty else ""
+            d = geom_path(open_shared_edge_holes(tf(g), row.NAME)) if not g.is_empty else ""
             entries.append({"geoid": row.GEOID, "name": row.NAME, "namelsad": row.NAMELSAD, "d": d})
             if not d:
                 print("   WARNING: no land found for", row.NAMELSAD)

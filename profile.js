@@ -4,6 +4,8 @@
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impnd2huaWR0am51dWZkamNtcWR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxOTE4MDgsImV4cCI6MjEwNzc2NzgwOH0.SsIHfT9TFvAYthQbwcD_Ee6W9T9a8yqlD2HfiAbcgCk";
   const A = window.ACHIEVEMENTS || {};
   const BA = window.CountellectBadge;
+  const PAGE = document.body.dataset.page || "profile";     // profile | points | state | achievement
+  if (PAGE === "profile" && new URLSearchParams(location.search).has("points")) { location.replace("points.html"); return; }   // old links
   const MODES = ["pin", "pin-hard", "mc", "type", "type-strict", "type-hard"];
   const MODE_LABEL = { pin: "Pin", "pin-hard": "Flash", mc: "Multiple-Choice", type: "List", "type-strict": "Type", "type-hard": "Identify" };
   const MODE_LETTER = { pin: "P", "pin-hard": "F", mc: "MC", type: "L", "type-strict": "T", "type-hard": "I" };
@@ -30,24 +32,8 @@
   if (!window.supabase) { say("Couldn't load the sign-in service. Check your connection and reload."); return; }
   const sb = window.countellectSupabase || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // Special badges shown at the bottom right of a player's profile picture. Add a line per player: lowercase username -> badge.
-  // Example:  "somename": { src: "special-badge.png", label: "What this badge is" },
-  const CHANNEL_OWNER = { src: "special-badge.png", label: "Channel Owner" };
-  const WRENCH = { src: "wrench-special-badge.svg", label: "Playtester" };
-  const SPECIAL_BADGES = {
-    "mellohihellohi": CHANNEL_OWNER,
-    "stalgoodman": CHANNEL_OWNER,
-    "nub098765": CHANNEL_OWNER,
-    "sponge99fvuj": CHANNEL_OWNER,
-    "phil": WRENCH,
-    "daydownerrr": WRENCH,
-    "macheese": WRENCH,
-    "gamergirljimmy": WRENCH,
-    "goducks": WRENCH,
-    "niceshirtbro": WRENCH,
-    "raine": WRENCH,
-    "ag": WRENCH
-  };
+  // Special badges (channel owner / playtester) live in achievements.js so the leaderboard can show them too.
+  const SPECIAL_BADGES = window.SPECIAL_BADGES || {};
 
   const wantedName = new URLSearchParams(location.search).get("u");   // profile.html?u=name shows that player
   let session = null, me = null;
@@ -134,7 +120,7 @@
         if (!x) return;
         const b = parseFloat(l.style.fontSize) || 12;         // the abbreviation's size
         const count = `${x.d}/${t.total}`;
-        const isCallout = l.classList.contains("callout");
+        const isCallout = l.classList.contains("callout") || l.dataset.code === "um";      // UM's tile is all islands, so its count sits beside the name instead of below it
         const isTerr = l.style.textAnchor === "start";        // PR, VI, MP, AS, GU sit in the corner of their box
 
         // where the pair is centered: the label itself, or the middle of the territory's box
@@ -344,26 +330,20 @@
     return table;
   }
 
-  async function openPoints(returnToLeaderboard) {
-    if ($("pp-overlay")) return;
-    const overlay = mk("div", "pp-overlay");
-    overlay.id = "pp-overlay";
-    const card = mk("div", "pp-card");
-    const top = mk("div", "pp-top");
-    const close = mk("button", "pp-close", "Close");
-    close.type = "button";
-    top.append(mk("p", "pp-note", "When you find a county in a state, you earn points for that county. Perfect full-state runs earn stacking badge bonuses: Bronze (1–2 modes), Silver (3–5), and Gold (all 6). Beat the Ultimate Challenge for 266,260 points."), close);
-    const body = mk("div", "pp-body", "Loading…");
-    card.append(top, body);
-    overlay.append(card);
-    document.body.append(overlay);
-    const onKey = e => { if (e.key === "Escape") shut(); };
-    const shut = () => { overlay.remove(); document.removeEventListener("keydown", onKey); if (returnToLeaderboard === true) location.href = "leaderboard.html"; };
-    document.addEventListener("keydown", onKey);
-    close.addEventListener("click", shut);
-    overlay.addEventListener("click", e => { if (e.target === overlay) shut(); });
-    try { body.replaceChildren(pointsTable(await loadPointsData())); }
-    catch (e) { body.textContent = "Couldn't load the points table: " + e.message; }
+  /* ---------- how points work (its own page: points.html) ---------- */
+  async function renderPointsPage() {
+    if (BA && BA.ready) await BA.ready();
+    const view = $("p-view");
+    view.replaceChildren(mk("p", "info-intro", "Loading\u2026"));
+    try {
+      const data = await loadPointsData();
+      const body = mk("div", "pp-body");
+      body.append(pointsTable(data));
+      view.replaceChildren(
+        mk("h2", "sp-title", "How points work"),
+        mk("p", "pp-note", "Perfect full-state runs earn stacking badge bonuses: Bronze (1\u20132 modes), Silver (3\u20135), and Gold (all 6). Beat the Ultimate Challenge for 266,260 points."),
+        body);
+    } catch (e) { view.replaceChildren(mk("p", "info-intro", "Couldn\u2019t load the points table: " + e.message)); }
   }
 
     // shrink long state names until they fit on two lines
@@ -373,84 +353,43 @@
 
   function stateMedal(t) {
     const tier = TIER(t.badgeFull);
-    const el = mk("div", "medal clickable " + tier);
-    el.tabIndex = 0;
-    el.setAttribute("role", "button");
+    const el = mk("a", "medal clickable " + tier);
+    el.href = pageUrl("state.html", { s: t.key });
     el.setAttribute("aria-label", `${t.name}: see details`);
     const pips = mk("div", "medal-pips");
     t.per.forEach(x => { const p = mk("span", "medal-pip" + (x.badgeEarned ? " on" : "")); p.style.setProperty("--c", MODE_COLOR[x.m]); pips.append(p); });
     el.append(badgeSvg(t), mk("div", "medal-name", t.name), pips);
-    el.addEventListener("click", () => openStateDetail(t));
-    el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openStateDetail(t); } });
     return el;
   }
 
-  // the screen that opens when you click a state's badge
-  function openStateDetail(t) {
-    const tier = TIER(t.badgeFull);
-    const TIER_LABEL = { gold: "Gold", silver: "Silver", bronze: "Bronze", locked: "Not started" };
-    const doneAll = t.per.reduce((a, x) => a + x.d, 0), totalAll = t.total * MODES.length;
-    const pct = totalAll ? Math.round((doneAll / totalAll) * 100) : 0;
-
-    const overlay = mk("div", "modal");
-    overlay.setAttribute("role", "dialog");
-    overlay.setAttribute("aria-modal", "true");
-    overlay.setAttribute("aria-label", t.name + " details");
-    const card = mk("div", "modal-content sd-card");
-
-    const onKey = e => { if (e.key === "Escape") close(); };
-    const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
-    document.addEventListener("keydown", onKey);
-    overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
-
-    const x = mk("button", "sd-close", "×");
-    x.type = "button";
-    x.setAttribute("aria-label", "Close");
-    x.addEventListener("click", close);
-
-    const badge = badgeSvg(t);
-    badge.classList.add("sd-badge");
-
-    const rows = mk("div", "sd-rows");
-    t.per.forEach(r => {
-      const row = mk("div", "sd-row" + (r.badgeEarned ? " full" : ""));
-      const label = mk("span", "sd-mode");
-      const dot = mk("span", "sd-dot");
-      dot.style.background = MODE_COLOR[r.m];
-      label.append(dot, MODE_LABEL[r.m]);
-      const bar = mk("div", "sd-bar"), fill = mk("div", "sd-bar-fill");
-      fill.style.width = (t.total ? (r.d / t.total) * 100 : 0) + "%";
-      fill.style.background = MODE_COLOR[r.m];
-      bar.append(fill);
-      row.append(label, bar, mk("span", "sd-count", (r.badgeEarned ? "\u2713 " : "") + r.d + "/" + t.total));
-      rows.append(row);
-    });
-
-    const foot = mk("div", "sd-foot",
-      `${Math.round(t.pts).toLocaleString()} of ${Math.round(t.maxPts).toLocaleString()} points from this state` +
-      ` \u00b7 \u00d7${Number(t.mult)} multiplier`);
-
-    card.append(
-      x, badge,
-      mk("h2", "sd-title", t.name),
-      mk("div", "sd-sub", `${TIER_LABEL[tier]} \u00b7 ${t.badgeFull} of ${MODES.length} modes mastered`),
-      mk("p", "sd-foot", "A mode badge requires a perfect full-state run."),
-      mk("div", "sd-pct", pct + "%"),
-      mk("div", "sd-pct-label", `${doneAll} of ${totalAll} done`),
-      rows, foot);
-    overlay.append(card);
-    document.body.append(overlay);
-    fitShapes(overlay);
-    x.focus();
-  }
-
   function badgeMedal(a) {
-    const el = mk("div", "medal achievement " + (a.earned ? "gold" : "locked"));
+    const el = mk("a", "medal achievement " + (a.earned ? "gold" : "locked"));
     el.title = a.label + (a.sub ? " — " + a.sub : "") +
       (a.earnedAt ? " — Earned " + new Date(a.earnedAt).toLocaleDateString() : "");
     const svg = discSvg(a.earned ? a.color : TIER_RING.locked, !a.earned);
     const fillColor = a.earned ? a.color : "currentColor";
-    if (a.splitStates) {
+    if (a.splitStates && !a.earned) {
+      // not earned yet: the two silhouettes as quiet solid shapes split by one line (no dashed rings or outlines)
+      const [first, second] = a.splitStates;
+      const clipId = "medal-split-locked-" + a.label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      const defs = svgEl("defs", {});
+      const clip = svgEl("clipPath", { id: clipId });
+      clip.append(svgEl("circle", { cx: 50, cy: 50, r: 43.5 }));
+      defs.append(clip);
+      svg.insertBefore(defs, svg.firstChild);
+      const details = svgEl("g", { "clip-path": `url(#${clipId})` });
+      svg.append(details);
+      details.append(svgEl("line", { x1: 10, y1: 90, x2: 90, y2: 10, stroke: "currentColor", "stroke-width": 2.5, "stroke-opacity": 0.55 }));
+      [{ name: first, x: 15, y: 15 }, { name: second, x: 45, y: 45 }].forEach(({ name, x, y }) => {
+        const d = shapeFor(name);
+        if (!d) return;
+        const icon = svgEl("svg", { x, y, width: 40, height: 40, viewBox: "0 0 100 100", preserveAspectRatio: "xMidYMid meet", class: "medal-shape", "data-fit": 50 });
+        const group = svgEl("g", {});
+        group.append(svgEl("path", { d, "fill-rule": "evenodd", fill: "currentColor", "fill-opacity": 0.5, stroke: "none" }));
+        icon.append(group);
+        details.append(icon);
+      });
+    } else if (a.splitStates) {
       const [first, second] = a.splitStates;
       svg.querySelector(".medal-face").style.fill = "transparent";
       const gradientId = "medal-split-" + a.label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
@@ -464,14 +403,15 @@
       const details = svgEl("g", { "clip-path": `url(#${clipId})` });
       svg.append(details);
       const divider = { x1: 10, y1: 90, x2: 90, y2: 10 };
+      const tone = name => a.earned ? "#" + STATE_STYLE[name][0] : "currentColor";   // not earned yet: plain grey line art, not two bright state colours
       details.append(
         svgEl("line", {
           ...divider, transform: "translate(-1.05 -1.05)",
-          stroke: "#" + STATE_STYLE[first][0], "stroke-width": 3
+          stroke: tone(first), "stroke-width": a.earned ? 3 : 2, "stroke-opacity": a.earned ? 1 : 0.5
         }),
         svgEl("line", {
           ...divider, transform: "translate(1.05 1.05)",
-          stroke: "#" + STATE_STYLE[second][0], "stroke-width": 3
+          stroke: tone(second), "stroke-width": a.earned ? 3 : 2, "stroke-opacity": a.earned ? 1 : 0.5
         })
       );
 
@@ -489,7 +429,7 @@
         group.append(svgEl("path", {
           d, "fill-rule": "evenodd", "vector-effect": "non-scaling-stroke",
           fill: "none",
-          stroke: "#" + STATE_STYLE[name][0],
+          stroke: tone(name),
           "stroke-width": 1.5,
           "stroke-linejoin": "round",
           "stroke-linecap": "round"
@@ -504,8 +444,9 @@
       ].forEach(([name, offset]) => {
         svg.append(svgEl("circle", {
           cx: 50, cy: 50, r: 46,
-          stroke: "#" + STATE_STYLE[name][0],
-          "stroke-width": 5,
+          stroke: tone(name),
+          "stroke-width": a.earned ? 5 : 2,
+          "stroke-opacity": a.earned ? 1 : 0.35,
           "stroke-dasharray": a.earned ? `${halfCircumference} ${halfCircumference}` : "3 5",
           "stroke-dashoffset": offset,
           transform: "rotate(-45 50 50)",
@@ -516,16 +457,348 @@
       svg.append(svgEl("path", { d: "M50 22 C58 34 71 41 67 58 C65 69 58 76 50 76 C42 76 35 69 33 58 C31 50 37 45 41 39 C43 45 46 47 50 45 C53 39 51 31 50 22 Z", fill: fillColor }));
     } else {
       const g = String(a.glyph);
-      const t = svgEl("text", { x: 50, y: 50, "text-anchor": "middle", "dominant-baseline": "central", class: "medal-glyph", fill: fillColor, "font-size": g.length >= 4 ? 20 : g.length === 3 ? 24 : 30 });
+      const t = svgEl("text", { x: 50, y: 50, "text-anchor": "middle", "dominant-baseline": "central", class: "medal-glyph", fill: fillColor, "font-size": g.length >= 5 ? 14 : g.length >= 4 ? 17 : g.length === 3 ? 20 : 30 });
       t.textContent = g;
       svg.append(t);
     }
     el.append(svg, mk("div", "medal-name", a.label), mk("div", "medal-sub", a.sub || ""));
+    el.classList.add("clickable");
+    if (a.id) el.href = pageUrl("achievement.html", { a: a.id });
+    el.setAttribute("aria-label", `${a.label}: see details`);
     return el;
   }
 
+  /* ---------- links between pages ---------- */
+  let subjectName = null;      // whose profile we're looking at; every link carries it as ?u=
+  function pageUrl(file, extra) {
+    const q = new URLSearchParams();
+    if (subjectName) q.set("u", subjectName);
+    Object.entries(extra || {}).forEach(([k, v]) => q.set(k, v));
+    const s = q.toString();
+    return file + (s ? "?" + s : "");
+  }
+  function setBack(name) {          // the "back" link at the top of state / achievement pages
+    const back = $("back-link");
+    if (!back) return;
+    back.href = pageUrl("profile.html");
+    back.textContent = "\u2190 " + name + "\u2019s profile";
+  }
+  const fmtN = n => Math.round(n).toLocaleString();
+
+  /* ---------- state page: state.html?u=name&s=state_key ---------- */
+  function renderStatePage(who, tiles, w) {
+    const view = $("p-view");
+    setBack(who.username);
+    const key = new URLSearchParams(location.search).get("s");
+    const t = tiles.find(x => x.key === key);
+    if (!t) { view.replaceChildren(mk("p", "info-intro", "That state wasn\u2019t found.")); return; }
+    document.title = t.name + " \u00b7 " + who.username;
+
+    const tier = TIER(t.badgeFull);
+    const TIER_LABEL = { gold: "Gold", silver: "Silver", bronze: "Bronze", locked: "No badge yet" };
+    const mult = Number(t.mult);
+    const doneAll = t.per.reduce((a, x) => a + x.d, 0), totalAll = t.total * MODES.length;
+    const countyPts = t.per.reduce((a, x) => a + x.pts, 0);
+
+    // top: badge, name, the one number that matters
+    const badge = badgeSvg(t);
+    badge.classList.add("sp-badge");
+    const points = mk("div", "sp-points", fmtN(t.pts));
+    points.append(mk("span", "sp-points-max", " / " + fmtN(t.maxPts) + " points"));
+    const hero = mk("div", "sp-hero");
+    hero.append(
+      badge,
+      mk("h2", "sp-title", t.name),
+      (() => { const h = mk("div", "plain-head"); h.style.setProperty("--tc", TIER_RING[tier]); h.append(mk("div", "plain-head-main", TIER_LABEL[tier]), mk("div", "plain-head-sub", `${t.badgeFull}/${MODES.length} modes`)); return h; })(),
+      points,
+      mk("div", "sp-sub", `${doneAll} of ${totalAll} counties found across all modes`));
+
+    // one line per mode
+    const modes = mk("div", "sp-modes");
+    t.per.forEach(r => {
+      const row = mk("div", "sp-mode" + (r.badgeEarned ? " on" : ""));
+      const name = mk("span", "sp-mode-name");
+      const dot = mk("span", "sd-dot");
+      dot.style.background = MODE_COLOR[r.m];
+      name.append(dot, MODE_LABEL[r.m]);
+      const bar = mk("div", "sp-bar"), fill = mk("div", "sp-bar-fill");
+      fill.style.width = (t.total ? (r.d / t.total) * 100 : 0) + "%";
+      fill.style.background = MODE_COLOR[r.m];
+      bar.append(fill);
+      const mark = mk("span", "sp-mark", r.badgeEarned ? "\u2713" : "\u25cb");
+      mark.title = r.badgeEarned ? "Perfect run done" : "No perfect run yet";
+      mark.setAttribute("aria-label", mark.title);
+      row.append(name, bar, mk("span", "sp-count", `${r.d}/${t.total}`), mark, mk("span", "sp-pts", "+" + fmtN(r.pts)));
+      modes.append(row);
+    });
+
+    // the badge bonuses as a ladder: more perfect runs, bigger bonus
+    const TIERS = [["Bronze", BADGE_WEIGHTS.bronze, 1, "#b0703c"], ["Silver", BADGE_WEIGHTS.silver, 3, "#aab3c0"], ["Gold", BADGE_WEIGHTS.gold, MODES.length, "#d4a017"]];
+    const tierColor = i => (i < 1 ? TIERS[0][3] : i < 3 ? TIERS[1][3] : TIERS[2][3]);
+    const ladder = mk("div", "sp-ladder");
+    MODES.forEach((m, i) => {
+      const seg = mk("span", "sp-seg" + (i < t.badgeFull ? " on" : ""));
+      seg.style.setProperty("--tc", tierColor(i));
+      ladder.append(seg);
+    });
+    TIERS.forEach(([name, wt, need, color], i) => {                // each tier's name, bonus and status sit right under its own stretch of the bar
+      const from = i === 0 ? 1 : TIERS[i - 1][2] + 1;
+      const on = t.badgeFull >= need, missing = need - t.badgeFull;
+      const lab = mk("div", "sp-tier-lab " + (on ? "on" : "off"));
+      lab.style.setProperty("--tc", color);
+      lab.style.gridColumn = `${from} / ${need + 1}`;
+      lab.append(
+        mk("div", "sp-tier-name", name),
+        mk("div", "sp-tier-amt", "+" + fmtN(t.total * mult * wt)),
+        mk("div", "sp-tier-need", on ? "\u2713 Earned" : `${missing} more to go`));
+      ladder.append(lab);
+    });
+
+    // the arithmetic, for anyone who wants to check it
+    const math = mk("details", "sp-math");
+    math.append(mk("summary", "", "Show the math"));
+    const mrow = (label, formula, amount, cls) => {
+      const r = mk("div", "sp-math-row" + (cls ? " " + cls : ""));
+      r.append(mk("span", "sp-math-label", label), mk("span", "sp-math-formula", formula), mk("span", "sp-math-amt", amount));
+      math.append(r);
+    };
+    mrow("Counties found", `${doneAll} counties \u00d7 ${mult} \u00d7 each mode\u2019s weight`, "+" + fmtN(countyPts));
+    TIERS.forEach(([name, wt, need]) => mrow(name + " bonus", `${t.total} counties \u00d7 ${mult} \u00d7 ${wt}`,
+      t.badgeFull >= need ? "+" + fmtN(t.total * mult * wt) : "not earned", t.badgeFull >= need ? "" : "off"));
+    mrow("Total", "", fmtN(t.pts) + " / " + fmtN(t.maxPts), "total");
+
+    const how = mk("a", "profile-link", "How points work \u2192");
+    how.href = "points.html";
+    const wrap = mk("div", "sp-page");
+    wrap.append(
+      hero,
+      mk("h3", "profile-section-title", "Modes"),
+      modes,
+      mk("h3", "profile-section-title", "Badge bonuses"),
+      ladder, math,
+      mk("p", "sp-how", ""));
+    wrap.lastChild.append(how);
+    view.replaceChildren(wrap);
+    fitShapes(view);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitShapes(view));
+  }
+
+  /* the US map for an achievement: the states behind it lit up, the rest dim */
+  function achievementMap(tiles, isDone, color, lastKey, details) {
+    const holder = mk("div", "ach-map");
+    holder.style.setProperty("--am", color || "#d4a017");
+    holder.innerHTML = window.US_MAP_SVG || "";
+    const svg = holder.querySelector("svg");
+    if (!svg) return mk("p", "info-intro", "Map file missing (us-map.js).");
+    svg.classList.add("us-map");
+    svg.querySelectorAll(".us-labels, .us-leaders, text, line, polyline").forEach(n => n.remove());
+    const byName = new Map(tiles.map(t => [t.name.toLowerCase(), t]));
+    svg.querySelectorAll("path.us-st").forEach(p => {
+      const t = byName.get((p.dataset.name || "").toLowerCase());
+      if (!t) return;
+      const done = isDone(t);
+      p.classList.add(done ? "am-done" : "am-todo");
+      const title = document.createElementNS(SVGNS, "title");
+      title.textContent = t.name + (details.get(t.key) ? " · " + details.get(t.key) : done ? "" : " · not yet");
+      p.prepend(title);
+      p.style.cursor = "pointer";
+      p.addEventListener("click", () => { location.href = pageUrl("state.html", { s: t.key }); });
+      p.addEventListener("mouseenter", () => { if (p.parentNode && p.parentNode.lastElementChild !== p) p.parentNode.appendChild(p); });
+      if (t.key === lastKey) { p.classList.add("am-last"); p.parentNode.appendChild(p); }
+    });
+    return holder;
+  }
+
+  /* a time drawn as a 7-segment display (m:ss.mmm); unlit segments are faint ghosts, no font file needed */
+  function sevenSeg(text) {
+    const SEGS = { 0: "abcdef", 1: "bc", 2: "abdeg", 3: "abcdg", 4: "bcfg", 5: "acdfg", 6: "acdefg", 7: "abc", 8: "abcdefg", 9: "abcdfg" };
+    const H = y => `1.6,${y} 2.6,${y - 1} 7.4,${y - 1} 8.4,${y} 7.4,${y + 1} 2.6,${y + 1}`;
+    const V = (x, y1, y2) => `${x},${y1} ${x + 1},${y1 + 1} ${x + 1},${y2 - 1} ${x},${y2} ${x - 1},${y2 - 1} ${x - 1},${y1 + 1}`;
+    const SHAPE = { a: H(1), b: V(9, 1.6, 8.4), c: V(9, 9.6, 16.4), d: H(17), e: V(1, 9.6, 16.4), f: V(1, 1.6, 8.4), g: H(9) };
+    const svg = document.createElementNS(SVGNS, "svg");
+    svg.setAttribute("class", "seg7");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", text);
+    const g = document.createElementNS(SVGNS, "g");
+    g.setAttribute("transform", "skewX(-7)");
+    const poly = (points, on) => { const e = document.createElementNS(SVGNS, "polygon"); e.setAttribute("points", points); e.setAttribute("fill", "currentColor"); e.setAttribute("opacity", on ? "1" : "0.12"); g.append(e); };
+    const sq = (x, y, on) => poly(`${x},${y} ${x + 2},${y} ${x + 2},${y + 2} ${x},${y + 2}`, on);
+    let x = 3;      // leaves room for the slant
+    for (const ch of text) {
+      const cell = document.createElementNS(SVGNS, "g");
+      cell.setAttribute("transform", `translate(${x} 0)`);
+      g.append(cell);
+      const start = g.childNodes.length;
+      if (ch === ":") { sq(1.5, 5, true); sq(1.5, 11, true); x += 5; }
+      else if (ch === ".") { sq(1.5, 15, true); x += 5; }
+      else if (SEGS[ch]) { for (const k of "abcdefg") poly(SHAPE[k], SEGS[ch].includes(k)); x += 12; }
+      // move what this character drew into its own translated cell
+      while (g.childNodes.length > start) cell.append(g.childNodes[start]);
+    }
+    svg.setAttribute("viewBox", `0 0 ${x + 2} 18`);
+    svg.append(g);
+    return svg;
+  }
+
+  /* a run's numbers, the way the Records screen shows them */
+  function runFacts(run, total, mine, stateName) {
+    const full = ms => { const t = Math.max(0, Math.round(ms)), m = Math.floor(t / 60000), sec = Math.floor(t % 60000 / 1000), r = t % 1000; return `${m}:${String(sec).padStart(2, "0")}.${String(r).padStart(3, "0")}`; };
+    const box = mk("div", "ach-run");
+    if (stateName) { const sn = mk("div", "ach-run-state", stateName); const st = STATE_STYLE[stateName]; if (st && st[0]) {
+        const hex = String(st[0]).replace(/^#/, ""), ch = i => { const v = parseInt(hex.substr(i * 2, 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+        if (hex.length >= 6) {
+          sn.style.setProperty("--sc", "#" + hex.slice(0, 6));      // the state's colour is the outline
+          sn.style.color = 0.2126 * ch(0) + 0.7152 * ch(1) + 0.0722 * ch(2) > 0.179 ? "#000" : "#fff";      // the letters: black on a light colour, white on a dark one
+          sn.classList.add("outlined");
+        }
+      }
+      box.append(sn); }
+    const stats = mk("div", "ach-run-stats");
+    const stat = (v, k, color) => { const d = mk("div", "ach-stat"); const val = mk("div", "ach-stat-v"); if (v instanceof Node) val.append(v); else val.textContent = v; if (color) val.style.color = color; d.append(val, mk("div", "ach-stat-k", k)); stats.append(d); };
+    stat(sevenSeg(full(Number(run.time_ms))), "Time");
+    stat(MODE_LABEL[run.mode] || run.mode, "Mode", MODE_COLOR[run.mode]);
+    if (total && Number(run.time_ms) > 0) stat(sevenSeg((Number(run.time_ms) / total / 1000).toFixed(2)), `Seconds per county (${total})`);
+    box.append(stats);
+    box.append(mk("div", "ach-run-date", new Date(run.completed_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })));
+    if (mine && run.game_run_id) { const a = mk("a", "profile-link ach-run-link", "See the full game \u2192"); a.href = "index.html#game-" + run.game_run_id; box.append(a); }
+    return box;
+  }
+
+  /* the bottom of an achievement page: small ones show the state badges behind them, big ones a map */
+  function achievementVisual(a, tiles, mine) {
+    const GOLD = t => t.badgeFull === MODES.length;
+    const tileOf = key => tiles.find(t => t.key === key);
+    const rows = a.earned && a.how ? a.how.rows : [];
+    const details = new Map(rows.map(r => [r.key, r.detail]));
+    const lastKey = a.earned && rows.length ? rows[rows.length - 1].key : null;
+    const wrap = mk("div", "ach-visual");
+    const SMALL = { participation: 1, goldStar: 1, goldRing: 5, goldNecklace: 10 };
+    const need = SMALL[a.id];
+    if (need) {
+      let keys = rows.map(r => r.key);
+      if (!a.earned) keys = tiles.filter(a.id === "participation" ? t => t.badgeFull >= 1 : GOLD).map(t => t.key);
+      keys = keys.slice(0, need);
+      if (!a.earned && need === 1) return null;
+      if (need === 1 && a.how && a.how.run) {      // one run behind it: just its facts, no badge
+        wrap.append(mk("h3", "profile-section-title", a.id === "participation" ? "Your first perfect run" : "The run that made your first Gold state"));
+        wrap.append(runFacts(a.how.run, a.how.runTotal, mine, (a.how.rows[0] || {}).name));
+        return wrap;
+      }
+      wrap.append(mk("h3", "profile-section-title", a.earned ? (need === 1 ? (a.id === "participation" ? "Your first perfect run" : "Your first Gold state") : "Your Gold states") : `${keys.length} of ${need} Gold states`));
+      const medals = mk("div", "am-medals");
+      keys.forEach((k, i) => {
+        const t = tileOf(k); if (!t) return;
+        const m = stateMedal(t);
+        if (a.earned && need > 1 && i === keys.length - 1) m.classList.add("am-last");
+        if (details.get(k)) m.title = t.name + " · " + details.get(k);
+        medals.append(m);
+      });
+      for (let i = keys.length; !a.earned && i < need; i++) {
+        const slot = mk("div", "medal locked");
+        slot.append(discSvg(TIER_RING.locked, true));
+        medals.append(slot);
+      }
+      wrap.append(medals);
+      if (a.id === "participation" && a.earned && a.how && a.how.run) wrap.append(runFacts(a.how.run, a.how.runTotal, mine));
+      if (a.id === "goldStar" && a.earned && a.how && a.how.run) {
+        wrap.append(mk("h3", "profile-section-title", "The run that made it Gold"));
+        wrap.append(runFacts(a.how.run, a.how.runTotal, mine));
+      }
+      return wrap;
+    }
+    const mode = a.id.startsWith("mode_") ? a.id.slice(5) : null;
+    let isDone = null, target = tiles.length;
+    if (mode) isDone = t => (t.per.find(x => x.m === mode) || {}).badgeEarned;
+    else if (a.id === "jack") isDone = t => t.badgeFull > 0;
+    else if (a.id === "goldRush") { isDone = GOLD; target = 25; }
+    else if (a.id === "countyMaster") { isDone = GOLD; }
+    if (!isDone) return null;
+    const n = tiles.filter(isDone).length;
+    wrap.append(mk("h3", "profile-section-title", isDone === GOLD ? `${n} of ${target} Gold states` : `${n} of ${target} states`));
+    wrap.append(achievementMap(tiles, isDone, a.color, lastKey, details));
+    if (mode && a.earned && a.how && a.how.run) {
+      wrap.append(mk("h3", "profile-section-title", "The run that finished it"));
+      wrap.append(runFacts(a.how.run, a.how.runTotal, mine, a.how.runState));
+    }
+    return wrap;
+  }
+
+  /* ---------- achievement page: achievement.html?u=name&a=id ---------- */
+  function renderAchievementPage(who, achievements, tiles) {
+    const view = $("p-view");
+    setBack(who.username);
+    const id = new URLSearchParams(location.search).get("a");
+    const a = achievements.find(x => x.id === id);
+    if (!a) { view.replaceChildren(mk("p", "info-intro", "That achievement wasn\u2019t found.")); return; }
+    document.title = a.label + " \u00b7 " + who.username;
+
+    const disc = badgeMedal(a).querySelector("svg");
+    disc.classList.add("sp-badge");
+    const hero = mk("div", "sp-hero");
+    hero.append(
+      disc,
+      mk("h2", "sp-title", a.label),
+      (() => { const h = mk("div", "plain-head"); h.style.setProperty("--tc", a.earned ? "#d4a017" : "inherit"); h.append(mk("div", "plain-head-main", a.earned ? "Earned" : "Not earned yet")); if (a.earned && a.earnedAt) h.append(mk("div", "plain-head-sub", new Date(a.earnedAt).toLocaleDateString())); return h; })());
+    if (a.sub) hero.append(mk("p", "sp-sub", a.sub));
+    const wrap = mk("div", "sp-page");
+    wrap.append(hero);
+
+    if (a.items && a.items.length) {
+      const todo = a.items.filter(i => !i.done), done = a.items.filter(i => i.done);
+      wrap.append(mk("h3", "profile-section-title", `${done.length} of ${a.items.length} done`));
+      if (a.itemsNote) wrap.append(mk("p", "sp-note", a.itemsNote));
+      const list = mk("div", "ap-list");
+      [...todo, ...done].forEach(i => {
+        const row = mk(i.key ? "a" : "div", "ad-row" + (i.done ? " done" : ""));
+        if (i.key) row.href = pageUrl("state.html", { s: i.key });
+        row.append(mk("span", "ad-mark", i.done ? "\u2713" : "\u25cb"), mk("span", "ad-name", i.name), mk("span", "ad-detail", i.detail || ""));
+        list.append(row);
+      });
+      wrap.append(list);
+    }
+    if (!(a.items && a.items.length)) { const vis = achievementVisual(a, tiles || [], !!(session && session.user && who && who.id === session.user.id)); if (vis) wrap.append(vis); }
+    view.replaceChildren(wrap);
+    fitShapes(view);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitShapes(view));
+  }
+
+  /* ---------- the stand-alone pages (points / state / achievement) ---------- */
+  async function initSubpage() {
+    if (PAGE === "points") {
+      const back = $("back-link");        // come back to wherever you were, if that was this site
+      let sameSite = false;
+      try { sameSite = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch (e) {}
+      if (back && sameSite) { back.textContent = "\u2190 Back"; back.addEventListener("click", e => { e.preventDefault(); history.back(); }); }
+      await renderPointsPage();
+      return;
+    }
+    const name = new URLSearchParams(location.search).get("u");
+    const { data } = await sb.auth.getSession();
+    session = data.session;
+    let id = null;
+    if (name) {
+      const r = await sb.from("profiles").select("id, username").eq("username", name).maybeSingle();
+      if (r.error || !r.data) { say(r.error ? "Couldn\u2019t look that player up: " + r.error.message : `There\u2019s no player named \u201c${name}\u201d.`); return; }
+      id = r.data.id;
+    } else if (session) id = session.user.id;
+    else { say("Open this page from a player\u2019s profile, or sign in on the profile page first."); return; }
+    await showProfile(id, PAGE);
+  }
+
   // size each state's silhouette to its own outline (needs the medals to be on the page)
-  const fitShapes = root => BA.fit(root);
+  // keep every glyph ("10K", "2.5K", "★25"...) inside its disc: shrink the text until it fits
+  function fitGlyphs(root) {
+    const MAX = 60;       // widest a glyph may be, in the disc's 100-unit space
+    root.querySelectorAll("text.medal-glyph").forEach(t => {
+      const base = Number(t.dataset.base || t.getAttribute("font-size"));
+      t.dataset.base = base;
+      t.setAttribute("font-size", base);
+      let len = 0;
+      try { len = t.getComputedTextLength(); } catch (e) {}
+      if (len > MAX) t.setAttribute("font-size", (base * MAX / len).toFixed(1));
+    });
+  }
+  const fitShapes = root => { BA.fit(root); fitGlyphs(root); };
 
   // shrink long names until they fit on two lines
   function fitNames(root) {
@@ -782,18 +1055,30 @@
     const tileByState = new Map(tiles.map(tile => [tile.key, tile]));
     const firstRunByState = new Map();
     const firstRunByMode = new Map();
+    const firstRunRowByState = new Map();      // state -> mode -> the run itself (for the Gold Star run facts)
+    const firstRunRowByMode = new Map();      // mode -> state -> the run itself (for the run facts on mode badge pages)
     const fastRunByState = new Map();
 
     stateRuns.forEach(run => {
       if (!MODES.includes(run.mode) || !run.completed_at || !tileByState.has(run.state_key)) return;
       const stateRunsByMode = firstRunByState.get(run.state_key) || new Map();
       const previous = stateRunsByMode.get(run.mode);
-      if (!previous || compareDates(run.completed_at, previous) < 0) stateRunsByMode.set(run.mode, run.completed_at);
+      if (!previous || compareDates(run.completed_at, previous) < 0) {
+        stateRunsByMode.set(run.mode, run.completed_at);
+        const rowsForState = firstRunRowByState.get(run.state_key) || new Map();
+        rowsForState.set(run.mode, run);
+        firstRunRowByState.set(run.state_key, rowsForState);
+      }
       firstRunByState.set(run.state_key, stateRunsByMode);
 
       const modeRuns = firstRunByMode.get(run.mode) || new Map();
       const firstForState = modeRuns.get(run.state_key);
-      if (!firstForState || compareDates(run.completed_at, firstForState) < 0) modeRuns.set(run.state_key, run.completed_at);
+      if (!firstForState || compareDates(run.completed_at, firstForState) < 0) {
+        modeRuns.set(run.state_key, run.completed_at);
+        const rowsForMode = firstRunRowByMode.get(run.mode) || new Map();
+        rowsForMode.set(run.state_key, run);
+        firstRunRowByMode.set(run.mode, rowsForMode);
+      }
       firstRunByMode.set(run.mode, modeRuns);
 
       const tile = tileByState.get(run.state_key);
@@ -811,6 +1096,33 @@
       if (modeDates.length) firstModeDateByState.set(tile.key, minDate(modeDates));
     });
     const goldDates = [...goldDateByState.values()].sort(compareDates);
+    const nameOf = key => (tileByState.get(key) || {}).name || key;
+    const fmtD = d => new Date(d).toLocaleDateString();
+    const goldOrder = [...goldDateByState.entries()].sort((p, q) => compareDates(p[1], q[1]));      // [state, when it went Gold]
+    // what to show at the bottom of an earned achievement's page: the states that got you there, with dates
+    const how = {};
+    const listFor = (entries, title, flag) => ({ title, rows: entries.map(([key, detail], i) => ({ key, name: nameOf(key), done: true, detail: detail + (flag && i === entries.length - 1 ? " \u00b7 " + flag : "") })) });
+    {
+      const seen = new Set(), firsts = [];
+      stateRuns.filter(r => MODES.includes(r.mode) && r.completed_at && tileByState.has(r.state_key)).sort((p, q) => compareDates(p.completed_at, q.completed_at)).forEach(r => {
+        const k = r.state_key + "|" + r.mode;
+        if (!seen.has(k)) { seen.add(k); firsts.push([r.state_key, `${MODE_LABEL[r.mode]} \u00b7 ${fmtD(r.completed_at)}`, r]); }
+      });
+      if (firsts.length) {
+        how["Participation Trophy"] = listFor(firsts.slice(0, 1).map(f => [f[0], f[1]]), "Your first perfect run", null);
+        how["Participation Trophy"].run = firsts[0][2];            // the run itself: time, date, game
+        how["Participation Trophy"].runTotal = (tileByState.get(firsts[0][0]) || {}).total || 0;
+      }
+    }
+    [["Gold Star", 1], ["Gold Ring", 5], ["Gold Necklace", 10], ["Gold Rush", 25], ["County Master", 57]].forEach(([label, n]) => {
+      if (goldOrder.length >= n) how[label] = listFor(goldOrder.slice(0, n).map(([k, d]) => [k, fmtD(d)]), n === 1 ? "Your first Gold state" : "Your Gold states, in order", n > 1 ? "this one did it" : null);
+    });
+    if (how["Gold Star"] && goldOrder.length) {      // the run that made the first Gold state Gold: its latest first-run across the six modes
+      const gs = goldOrder[0][0];
+      const goldRuns = [...(firstRunRowByState.get(gs) || new Map()).values()].sort((p, q) => compareDates(p.completed_at, q.completed_at));
+      const gr = goldRuns[goldRuns.length - 1];
+      if (gr) { how["Gold Star"].run = gr; how["Gold Star"].runTotal = (tileByState.get(gs) || {}).total || 0; }
+    }
     const dates = {
       "Participation Trophy": minDate([...firstRunByState.values()].flatMap(runs => [...runs.values()])),
       "Gold Star": goldDates[0] || null,
@@ -829,6 +1141,19 @@
       const modeDates = firstRunByMode.get(mode);
       allModeDates[mode] = maxDate(tiles.map(tile => modeDates?.get(tile.key)));
     });
+    const finishedWith = (label, mode) => {
+      const m = firstRunByMode.get(mode);
+      if (!m || !allModeDates[mode]) return;
+      const ordered = [...m.entries()].sort((p, q) => compareDates(p[1], q[1]));
+      how[label] = listFor(ordered.map(([k, d]) => [k, fmtD(d)]), "The order you finished them in", "last one");
+      const lastState = ordered.length ? ordered[ordered.length - 1][0] : null;
+      const lastRun = lastState && (firstRunRowByMode.get(mode) || new Map()).get(lastState);
+      if (lastRun) { how[label].run = lastRun; how[label].runTotal = (tileByState.get(lastState) || {}).total || 0; how[label].runState = nameOf(lastState); }      // the run that finished the mode
+    };
+    finishedWith("Put Your Finger On It", "pin"); finishedWith("Know It in a Flash", "pin-hard"); finishedWith("Made The Right Choice", "mc");
+    finishedWith("Checking It Twice", "type"); finishedWith("Infinite Monkey Theorem", "type-strict"); finishedWith("This One Is Washington", "type-hard");
+    if (dates["Jack of All Trades"]) how["Jack of All Trades"] = listFor([...firstModeDateByState.entries()].sort((p, q) => compareDates(p[1], q[1])).map(([k, d]) => [k, fmtD(d)]), "The order you got to each state", "last one");
+    Object.defineProperty(dates, "__how", { value: how, enumerable: false });
     dates["Put Your Finger On It"] = allModeDates.pin;
     dates["Know It in a Flash"] = allModeDates["pin-hard"];
     dates["Made The Right Choice"] = allModeDates.mc;
@@ -913,10 +1238,11 @@
   }
 
   /* ---------- the profile itself ---------- */
-  async function showProfile(userId) {
+  async function showProfile(userId, mode = "profile") {      // mode: profile | state | achievement (which page is asking)
     const view = $("p-view");
     view.replaceChildren(mk("p", "info-intro", "Loading…"));
     show("p-view", true);
+    if (BA && BA.ready) await BA.ready();      // state badges are drawn from the outline files, so they must be loaded first
     const [who, prog, states, weights, speedRun, stateRuns, concentratedEffort, completions, tucCompletion] = await Promise.all([
       sb.from("leaderboard_with_badges").select("id, username, points, has_tuc").eq("id", userId).maybeSingle(),
       sb.from("user_state_mode").select("state_key, mode, done").eq("user_id", userId),
@@ -924,9 +1250,9 @@
       sb.from("mode_weights").select("mode, weight"),
       sb.from("state_runs").select("time_ms").eq("user_id", userId).lt("time_ms", 5000).limit(1).maybeSingle(),
       fetchStateRuns(userId),
-      sb.from("concentrated_effort_achievements").select("user_id").eq("user_id", userId).maybeSingle(),
-      fetchCompletions(userId),
-      sb.from("tuc_completions").select("completed_at").eq("user_id", userId).maybeSingle()
+      mode === "state" ? Promise.resolve({ data: null, error: null }) : sb.from("concentrated_effort_achievements").select("user_id").eq("user_id", userId).maybeSingle(),
+      mode === "state" ? Promise.resolve({ data: [], error: null }) : fetchCompletions(userId),      // the state page doesn't need the heavy history
+      mode === "state" ? Promise.resolve({ data: null, error: null }) : sb.from("tuc_completions").select("completed_at").eq("user_id", userId).maybeSingle()
     ]);
     const err = who.error || prog.error || states.error || weights.error || speedRun.error || stateRuns.error || concentratedEffort.error || completions.error || tucCompletion.error;
     if (err || !who.data) {
@@ -934,6 +1260,7 @@
       return;
     }
     document.title = who.data.username;
+    subjectName = who.data.username;
 
     const w = {};
     (weights.data || []).forEach(r => { w[r.mode] = r.weight; });
@@ -965,15 +1292,21 @@
       };
     });
     const pts = Number(who.data.points) || 0;
+    if (mode === "state") { renderStatePage(who.data, tiles, w); return; }
 
-    const head = mk("div", "profile-head");
+    let head = null;
+    if (mode === "profile") {
+    head = mk("div", "profile-head");
     const bar = mk("div", "profile-bar"), fill = mk("div", "profile-bar-fill");
     fill.style.width = Math.max(1.5, Math.min(100, (pts / MAX_POINTS) * 100)) + "%";
     bar.append(fill);
     const pct = (pts / MAX_POINTS) * 100;
     const pctText = pts > 0 && pct < 0.1 ? "<0.1%" : pct.toFixed(1).replace(/\.0$/, "") + "%";
-    const ptsEl = mk("div", "profile-points", pts.toLocaleString());
+    const ptsEl = mk("a", "profile-points", pts.toLocaleString());
+    ptsEl.href = "points.html";
     ptsEl.append(mk("span", "profile-points-max", " / " + MAX_POINTS.toLocaleString()));
+    ptsEl.classList.add("profile-points-link");
+    ptsEl.title = "How points work";
     head.append(mk("div", "profile-avatar", who.data.username.slice(0, 1).toUpperCase()),
                 mk("h2", "profile-name", who.data.username), ptsEl, bar,
                 mk("div", "profile-pct", pctText));
@@ -1002,6 +1335,7 @@
       rankLink.href = "leaderboard.html?u=" + encodeURIComponent(who.data.username);
       head.append(rankLink);
     }
+    }
     const gold = tiles.filter(t => t.badgeFull === MODES.length).length;
     const modeDone = m => tiles.every(t => t.per.find(x => x.m === m).badgeEarned);
     const stateRunRows = stateRuns.data || [];
@@ -1012,36 +1346,53 @@
       .map(run => run.state_key));
     const noTimeToWaste = tiles.length > 0 && tiles.every(tile => fastStateRuns.has(tile.key));
     const badgeDates = achievementUnlockDates(tiles, stateRunRows, completionRows, w, tucCompletedAt);
+    const fmtRun = ms => { const t = Math.round(ms / 100) / 10, m = Math.floor(t / 60); return m + ":" + (t - m * 60).toFixed(1).padStart(4, "0"); };
+    const bestMsByState = new Map();
+    stateRunRows.forEach(run => {
+      const ms = Number(run.time_ms);
+      if (ms > 0 && (!bestMsByState.has(run.state_key) || ms < bestMsByState.get(run.state_key))) bestMsByState.set(run.state_key, ms);
+    });
+    const noTimeItems = tiles.map(t => {
+      const best = bestMsByState.get(t.key), limit = t.total * 3000;
+      return {
+        key: t.key, name: t.name, done: best != null && best <= limit,
+        detail: best == null ? `No runs yet \u00b7 need ${fmtRun(limit)} or faster` : best <= limit ? `Best ${fmtRun(best)}` : `Best ${fmtRun(best)} \u00b7 need ${fmtRun(limit)}`
+      };
+    }).sort((p, q) => p.name.localeCompare(q.name));
+    const overWithItems = ["district_of_columbia", "guam"].map(key => {
+      const t = tiles.find(tile => tile.key === key);
+      return t ? { key: t.key, name: t.name, done: t.badgeFull === MODES.length, detail: `${t.badgeFull} of ${MODES.length} mode badges` } : null;
+    }).filter(Boolean);
     const achievements = [
-      { ...A.participation, color: "#b0703c", earned: tiles.some(t => t.badgeFull >= 1) },
-      { ...A.goldStar, color: "#d4a017", earned: gold >= 1 },
-      { ...A.overWith, color: "#d4a017", splitStates: ["District of Columbia", "Guam"], earned: ["district_of_columbia", "guam"].every(key => tiles.some(t => t.key === key && t.badgeFull === MODES.length)) },
-      { ...A.goldRing, color: "#d4a017", earned: gold >= 5 },
-      { ...A.goldNecklace, color: "#d4a017", earned: gold >= 10 },
-      { ...A.goldRush, color: "#d4a017", earned: gold >= 25 },
-      { ...A.countyMaster, color: "#d4a017", earned: gold >= 57 },
-      { ...A.pts1000, color: "#6FA3D8", earned: pts >= 1000 },
-      { ...A.pts2500, color: "#6FA3D8", earned: pts >= 2500 },
-      { ...A.pts5000, color: "#6FA3D8", earned: pts >= 5000 },
-      { ...A.pts10000, color: "#6FA3D8", earned: pts >= 10000 },
-      { ...A.pts25000, color: "#6FA3D8", earned: pts >= 25000 },
-      { ...A.pts50000, color: "#6FA3D8", earned: pts >= 50000 },
-      { ...A.pts100000, color: "#6FA3D8", earned: pts >= 100000 },
-      { ...A.pts150000, color: "#6FA3D8", earned: pts >= 150000 },
-      { ...A.pts200000, color: "#6FA3D8", earned: pts >= 200000 },
-      { ...A.ptsNoTuc, color: "#6FA3D8", earned: pts >= MAX_POINTS - ULTIMATE_CHALLENGE_POINTS },
-      { ...A.countyGod,icon: "flame", color: "#CE4E2C", earned: !!who.data.has_tuc },
-      { ...A.pointGod, color: "#6FA3D8", earned: pts >= MAX_POINTS },
-      { ...A.jack, color: "#6FA3D8", earned: tiles.every(t => t.badgeFull > 0) },
-      { ...A.effort, color: "#6FA3D8", earned: !!concentratedEffort.data },
-      { ...A.noTime, color: "#6FA3D8", earned: noTimeToWaste },
-     { ...A.mode_pin, color: MODE_COLOR.pin, earned: modeDone("pin") },
-    { ...A["mode_pin-hard"], color: MODE_COLOR["pin-hard"], earned: modeDone("pin-hard") },
-    { ...A.mode_mc, color: MODE_COLOR.mc, earned: modeDone("mc") },
-    { ...A.mode_type, color: MODE_COLOR.type, earned: modeDone("type") },
-    { ...A["mode_type-strict"], color: MODE_COLOR["type-strict"], earned: modeDone("type-strict") },
-    { ...A["mode_type-hard"], color: MODE_COLOR["type-hard"], earned: modeDone("type-hard") },
-    ].map((badge, index) => ({ ...badge, earnedAt: badgeDates[badge.label] || null, originalOrder: index }))
+      { id: "participation", ...A.participation, color: "#b0703c", earned: tiles.some(t => t.badgeFull >= 1) },
+      { id: "goldStar", ...A.goldStar, color: "#d4a017", earned: gold >= 1 },
+      { id: "overWith", ...A.overWith, items: overWithItems, color: "#d4a017", splitStates: ["District of Columbia", "Guam"], earned: ["district_of_columbia", "guam"].every(key => tiles.some(t => t.key === key && t.badgeFull === MODES.length)) },
+      { id: "goldRing", ...A.goldRing, color: "#d4a017", earned: gold >= 5 },
+      { id: "goldNecklace", ...A.goldNecklace, color: "#d4a017", earned: gold >= 10 },
+      { id: "goldRush", ...A.goldRush, color: "#d4a017", earned: gold >= 25 },
+      { id: "countyMaster", ...A.countyMaster, color: "#d4a017", earned: gold >= 57 },
+      { id: "pts1000", ...A.pts1000, color: "#6FA3D8", earned: pts >= 1000 },
+      { id: "pts2500", ...A.pts2500, color: "#6FA3D8", earned: pts >= 2500 },
+      { id: "pts5000", ...A.pts5000, color: "#6FA3D8", earned: pts >= 5000 },
+      { id: "pts10000", ...A.pts10000, color: "#6FA3D8", earned: pts >= 10000 },
+      { id: "pts25000", ...A.pts25000, color: "#6FA3D8", earned: pts >= 25000 },
+      { id: "pts50000", ...A.pts50000, color: "#6FA3D8", earned: pts >= 50000 },
+      { id: "pts100000", ...A.pts100000, color: "#6FA3D8", earned: pts >= 100000 },
+      { id: "pts150000", ...A.pts150000, color: "#6FA3D8", earned: pts >= 150000 },
+      { id: "pts200000", ...A.pts200000, color: "#6FA3D8", earned: pts >= 200000 },
+      { id: "ptsNoTuc", ...A.ptsNoTuc, color: "#6FA3D8", earned: pts >= MAX_POINTS - ULTIMATE_CHALLENGE_POINTS },
+      { id: "countyGod", ...A.countyGod,icon: "flame", color: "#CE4E2C", earned: !!who.data.has_tuc },
+      { id: "pointGod", ...A.pointGod, color: "#6FA3D8", earned: pts >= MAX_POINTS },
+      { id: "jack", ...A.jack, color: "#6FA3D8", earned: tiles.every(t => t.badgeFull > 0) },
+      { id: "effort", ...A.effort, color: "#6FA3D8", earned: !!concentratedEffort.data },
+      { id: "noTime", ...A.noTime, items: noTimeItems, color: "#6FA3D8", earned: noTimeToWaste },
+     { id: "mode_pin", ...A.mode_pin, color: MODE_COLOR.pin, earned: modeDone("pin") },
+    { id: "mode_pin-hard", ...A["mode_pin-hard"], color: MODE_COLOR["pin-hard"], earned: modeDone("pin-hard") },
+    { id: "mode_mc", ...A.mode_mc, color: MODE_COLOR.mc, earned: modeDone("mc") },
+    { id: "mode_type", ...A.mode_type, color: MODE_COLOR.type, earned: modeDone("type") },
+    { id: "mode_type-strict", ...A["mode_type-strict"], color: MODE_COLOR["type-strict"], earned: modeDone("type-strict") },
+    { id: "mode_type-hard", ...A["mode_type-hard"], color: MODE_COLOR["type-hard"], earned: modeDone("type-hard") },
+    ].map((badge, index) => ({ ...badge, earnedAt: badgeDates[badge.label] || null, how: (badgeDates.__how || {})[badge.label] || null, originalOrder: index }))
       .sort((a, b) => {
         if (a.earned !== b.earned) return a.earned ? -1 : 1;
         if (a.earnedAt && b.earnedAt) return Date.parse(a.earnedAt) - Date.parse(b.earnedAt) || a.originalOrder - b.originalOrder;
@@ -1049,6 +1400,8 @@
         if (b.earnedAt) return 1;
         return a.originalOrder - b.originalOrder;
       });
+
+    if (mode === "achievement") { renderAchievementPage(who.data, achievements, tiles); return; }
 
     const byPts = (a, b) => b.badgeFull - a.badgeFull || b.pts - a.pts || a.name.localeCompare(b.name);
     const stateOrder = [
@@ -1130,13 +1483,76 @@
     });
   }
 
+  function openChangeUsername() {
+    if ($("un-overlay")) return;
+    const overlay = mk("div", "pp-overlay");
+    overlay.id = "un-overlay";
+    const card = mk("div", "pw-card");
+    const field = (label, id, type) => {
+      const l = mk("label", "pw-field", label), i = mk("input");
+      i.type = type; i.id = id; i.autocomplete = type === "password" ? "current-password" : "off";
+      if (id === "un-new") { i.maxLength = 20; i.value = me.username; }
+      l.append(i);
+      return l;
+    };
+    const msg = mk("p", "pw-msg", "");
+    const save = mk("button", "btn-primary", "Change username"); save.type = "button";
+    const cancel = mk("button", "btn-secondary", "Cancel"); cancel.type = "button";
+    const row = mk("div", "pw-buttons"); row.append(save, cancel);
+    card.append(
+      mk("h3", "", "Change username"),
+      field("New username (3\u201320 letters, numbers or underscores)", "un-new", "text"),
+      field("Your password", "un-pw", "password"),
+      mk("p", "pw-note", "You'll sign in with the new name from now on. Your points, badges and records stay with your account."),
+      msg, row);
+    overlay.append(card);
+    document.body.append(overlay);
+    const onKey = e => { if (e.key === "Escape") shut(); };
+    const shut = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
+    document.addEventListener("keydown", onKey);
+    cancel.addEventListener("click", shut);
+    overlay.addEventListener("click", e => { if (e.target === overlay) shut(); });
+    ["un-new", "un-pw"].forEach(id => $(id).addEventListener("keydown", e => { if (e.key === "Enter") save.click(); }));
+    $("un-new").focus(); $("un-new").select();
+
+    save.addEventListener("click", async () => {
+      const name = $("un-new").value.trim(), pw = $("un-pw").value;
+      const fail = t => { msg.textContent = t; };
+      if (!/^[A-Za-z0-9_]{3,20}$/.test(name)) return fail("Use 3\u201320 letters, numbers or underscores.");
+      if (name === me.username) return fail("That's already your username.");
+      if (!pw) return fail("Enter your password to confirm.");
+      save.disabled = true; fail("Checking\u2026");
+      const oldEmail = session.user.email || "";
+      const check = await sb.auth.signInWithPassword({ email: oldEmail, password: pw });
+      if (check.error) { save.disabled = false; return fail("Your password is wrong."); }
+      const old = me.username;
+      const upd = await sb.from("profiles").update({ username: name }).eq("id", session.user.id);
+      if (upd.error) {
+        save.disabled = false;
+        return fail(upd.error.code === "23505" ? "That username is taken." : "Couldn't change it: " + upd.error.message);
+      }
+      // the sign-in address is made from the username, so it has to follow (accounts made with a real email keep theirs)
+      if (oldEmail.toLowerCase().endsWith("@" + FAKE_DOMAIN)) {
+        const em = await sb.auth.updateUser({ email: name.toLowerCase() + "@" + FAKE_DOMAIN });
+        if (em.error || (em.data && em.data.user && em.data.user.email && em.data.user.email.toLowerCase() !== name.toLowerCase() + "@" + FAKE_DOMAIN)) {
+          await sb.from("profiles").update({ username: old }).eq("id", session.user.id);
+          save.disabled = false;
+          return fail("Couldn't switch your sign-in name" + (em.error ? ": " + em.error.message : ". Ask the site owner to turn off \u201cConfirm email\u201d in Supabase."));
+        }
+      }
+      shut();
+      if (wantedName) location.replace("profile.html?u=" + encodeURIComponent(name));
+      else { say("Username changed to " + name + "."); route(); }
+    });
+  }
+
   /* ---------- the buttons in the top corner ---------- */
   function renderActions() {
     const box = $("p-actions");
     const btn = (label, fn, secondary) => { const b = mk("button", secondary ? "btn-secondary" : "", label); b.type = "button"; b.addEventListener("click", fn); return b; };
     const link = (label, href) => { const a = mk("a", "profile-link", label); a.href = href; return a; };
     const items = [];
-    items.push(btn("How points work", () => openPoints(), true));
+    items.push(link("How points work", "points.html"));
     const viewing = wantedName || (me && me.username);
     if (viewing) {
       items.push(btn("Copy link", async () => {
@@ -1146,8 +1562,9 @@
     }
     if (!session && wantedName) items.push(link("Sign in", "profile.html"));
     if (session) items.push(btn("Sign out", () => sb.auth.signOut(), true));
-    if (session && me && (!wantedName || wantedName === me.username)) items.push(btn("Change password", openChangePassword, true));
-    if (session && me && wantedName && wantedName !== me.username) items.push(btn("My profile", "profile.html"));
+    const isMine = !!(me && (!wantedName || wantedName.toLowerCase() === me.username.toLowerCase()));
+    if (session && me && isMine) items.push(btn("Change username", openChangeUsername, true), btn("Change password", openChangePassword, true));
+    if (session && me && !isMine) items.push(link("My profile", "profile.html"));
     box.replaceChildren(...items);
   }
 
@@ -1180,10 +1597,11 @@
   /* ---------- sign in / create account / username ---------- */
   const FAKE_DOMAIN = "example.com";   // nobody is ever emailed; this only gives Supabase something that looks like an address
   const toEmail = s => (s.includes("@") ? s : s.toLowerCase() + "@" + FAKE_DOMAIN);   // typing a real email still works for older accounts
+  const on = (id, ev, fn) => { const n = $(id); if (n) n.addEventListener(ev, fn); };   // the other pages have no sign-in form
   let signingUp = false;
   const creds = () => ({ user: $("p-email").value.trim(), password: $("p-password").value });
 
-  $("p-signup").addEventListener("click", async () => {
+  on("p-signup", "click", async () => {
     const { user, password } = creds();
     if (!/^[A-Za-z0-9_]{3,20}$/.test(user)) { say("Username: 3–20 letters, numbers or underscores."); return; }
     if (password.length < 6) { say("Password must be at least 6 characters."); return; }
@@ -1198,20 +1616,20 @@
     route();
   });
 
-  $("p-signin").addEventListener("click", async () => {
+  on("p-signin", "click", async () => {
     const { user, password } = creds();
     if (!user || !password) { say("Enter your username and password."); return; }
     const { error } = await sb.auth.signInWithPassword({ email: toEmail(user), password });
     say(error ? (error.message === "Invalid login credentials" ? "Wrong username or password." : error.message) : "");
   });
-  ["p-email", "p-password"].forEach(id => $(id).addEventListener("keydown", e => { if (e.key === "Enter") $("p-signin").click(); }));
-  $("p-save-name").addEventListener("click", async () => {
+  ["p-email", "p-password"].forEach(id => on(id, "keydown", e => { if (e.key === "Enter") $("p-signin").click(); }));
+  on("p-save-name", "click", async () => {
     const username = $("p-username").value.trim();
     const { error } = await sb.from("profiles").insert({ id: session.user.id, username });
     if (error) { say(error.code === "23505" ? "That username is taken." : "Use 3–20 letters, numbers or underscores."); return; }
     route();
   });
-  $("p-username").addEventListener("keydown", e => { if (e.key === "Enter") $("p-save-name").click(); });
+  on("p-username", "keydown", e => { if (e.key === "Enter") $("p-save-name").click(); });
 
   let ready = false;     // the first load has finished
   sb.auth.onAuthStateChange((evt, sess) => {
@@ -1220,6 +1638,6 @@
     if (uid === (session && session.user ? session.user.id : null)) return;   // same account: just a repeat announcement
     route();
   });
-  route().then(() => { ready = true; });
-  if (new URLSearchParams(location.search).has("points")) openPoints(true);
+  if (PAGE === "profile") route().then(() => { ready = true; });
+  else initSubpage();
 })();

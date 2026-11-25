@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>All county equivalents · Countellect</title>
+<meta name="theme-color" content="#fdeca6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=Roboto+Serif:opsz,wght@8..144,300;400;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="geonerds.png">
+<link rel="stylesheet" href="style.css">
+<style>
+  .cl-page { width: 100%; box-sizing: border-box; padding: 1.2rem clamp(12px, 3vw, 40px) 3rem; text-align: left; }
+  .cl-page h1 { font-size: clamp(2.8rem, 9.5vw, 6.2rem); font-weight: 800; line-height: 1.02; letter-spacing: -0.02em; text-align: center; margin: 1.4rem 0 0.9rem; }
+  .cl-intro { max-width: 46rem; margin: 0 auto 1.6rem; text-align: center; font-size: 1.12rem; line-height: 1.55; opacity: 0.85; }
+  .cl-back { display: inline-block; text-decoration: none; }
+  .cl-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 1.4rem; margin: 0.2rem 0 0.6rem; }
+  .cl-tools .county-list-search { flex: 1 1 280px; max-width: 460px; margin: 0; }
+  .cl-tools .county-list-option, .cl-tools .county-list-count { margin: 0; }
+  .cl-wrap { overflow-x: auto; }
+  table.cl-table { width: 100%; border-collapse: collapse; font-size: 0.98rem; }
+  .cl-table th, .cl-table td { padding: 0.5rem 0.9rem 0.5rem 0.3rem; text-align: left; border-bottom: 1px solid rgba(128, 128, 120, 0.2); white-space: nowrap; }
+  .cl-table th.num, .cl-table td.num { text-align: right; padding-right: 1.4rem; }
+  .cl-table thead th { position: sticky; top: 0; z-index: 2; background: #fdeca6; font-size: 0.85rem; font-weight: 700; border-bottom: 2px solid rgba(128, 128, 120, 0.4); cursor: pointer; user-select: none; }
+  body.dark-mode .cl-table thead th { background: #1a1a17; }
+  .cl-table tbody tr:hover td { background: rgba(128, 128, 120, 0.1); }
+  .cl-table td.dim { opacity: 0.55; }
+  .cl-sort { display: inline-flex; flex-direction: column; gap: 2px; margin-left: 0.45rem; vertical-align: middle; }
+  .cl-sort::before, .cl-sort::after { content: ""; border-left: 4px solid transparent; border-right: 4px solid transparent; opacity: 0.3; }
+  .cl-sort::before { border-bottom: 5px solid currentColor; }
+  .cl-sort::after { border-top: 5px solid currentColor; }
+  th.asc .cl-sort::before, th.desc .cl-sort::after { opacity: 1; }
+  .cl-empty { padding: 1.2rem 0.3rem; opacity: 0.65; }
+  .cl-table td.cl-loc { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+  .cl-thumb { display: block; width: 84px; height: 60px; padding: 0; border: 1px solid rgba(128,128,120,.3); border-radius: 6px; background: rgba(128,128,120,.08); cursor: pointer; overflow: hidden; }
+  .cl-thumb:hover, .cl-thumb:focus-visible { border-color: var(--county-highlight-outline, #0f3f8f); outline: none; }
+  .cl-thumb svg { width: 100%; height: 100%; display: block; }
+  .cl-stash { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
+  .cl-stash .county { stroke-width: 0.5px; cursor: default; }
+
+  .cl-table th.mid, .cl-table td.mid { text-align: center; padding-right: 0.9rem; }
+  .cl-yes, .cl-no { font-weight: 700; font-size: 1.05rem; }
+  .cl-yes { color: #2d5a27; } body.dark-mode .cl-yes { color: #45a049; }
+  .cl-no { color: #b3261e; } body.dark-mode .cl-no { color: #e57373; }
+  .cl-info { display: inline-block; position: relative; box-sizing: border-box; width: 1.2rem; height: 1.2rem; margin-left: 0.4rem; border: 1.5px solid currentColor; border-radius: 50%; font: italic 700 0.78rem/1.05rem Georgia, serif; text-align: center; vertical-align: middle; opacity: 0.65; cursor: help; text-transform: none; }
+  .cl-info:hover, .cl-info:focus { opacity: 1; outline: none; }
+  .cl-info::after { content: attr(data-tip); position: absolute; z-index: 5; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: 15.5rem; padding: 0.55rem 0.7rem; border-radius: 8px; background: #1a1a1a; color: #fff; font: 400 0.82rem/1.35 'Roboto Serif', Georgia, serif; font-style: normal; text-align: left; white-space: normal; box-shadow: 0 4px 14px rgba(0,0,0,.3); opacity: 0; pointer-events: none; transition: opacity .12s; }
+  body.dark-mode .cl-info::after { background: #f2ecd9; color: #1a1a1a; }
+  .cl-info:hover::after, .cl-info:focus::after { opacity: 1; }
+
+  /* Map colours. A <use> thumbnail can't see "body.dark-mode" (its shadow tree stops at the <use>), so the colours are CSS
+     variables set on the svg: variables DO inherit into a <use>, ancestor selectors don't. */
+  .cl-map { --cl-fill: #e8e4d9; --cl-stroke: #6b6b5f; }
+  body.dark-mode .cl-map { --cl-fill: #3a3a34; }
+  .county, .county path { fill: var(--cl-fill) !important; stroke: var(--cl-stroke) !important; }
+  html body .cl-map .county.cl-hl, html body .cl-map .county.cl-hl path, html body .cl-map .cl-hl { fill: var(--county-highlight-fill) !important; stroke: var(--county-highlight-outline) !important; stroke-width: 2px !important; }
+
+  /* zoomed map: uses the game's own .zoom-backdrop / .zoom-scroller / .state-map.zoomed / .zoom-controls from style.css */
+  .cl-zhead { position: fixed; top: 0; left: 0; right: 0; z-index: 1100; display: flex; align-items: center; gap: 0.3rem 1rem; flex-wrap: wrap; padding: 0.55rem clamp(10px, 2vw, 24px); background: #fdeca6; color: #1c1c1a; box-shadow: 0 2px 10px rgba(0,0,0,.25); text-align: left; }
+  body.dark-mode .cl-zhead { background: #242420; color: #fdeca6; }
+  .cl-zhead h2 { margin: 0; font-size: 1.15rem; }
+  .cl-zhead .cl-sub { flex: 1 1 200px; margin: 0; font-size: 0.85rem; opacity: 0.75; }
+  .cl-zmsg { position: fixed; inset: 0; z-index: 1001; display: grid; place-items: center; color: #fff; pointer-events: none; }
+</style>
+</head>
+<body>
+<script>
+  try {
+    var s = localStorage.getItem("darkMode");
+    if (s === null || JSON.parse(s)) document.body.classList.add("dark-mode");
+  } catch (e) { document.body.classList.add("dark-mode"); }
+</script>
+<main class="cl-page">
+  <a class="btn-back cl-back" href="index.html">Back to home</a>
+  <h1>All county equivalents</h1>
+  <p class="cl-intro">A table of all 3,244 county equivalents in the United States, for your perusal and your exploitation. Use this however you’d like. Man, these counties really are numerous, aren’t they?</p>
+  <div class="cl-tools">
+    <input type="search" id="all-counties-search" class="county-list-search" placeholder="Search counties or states…" autocomplete="off" aria-label="Search counties or states">
+    <label class="county-list-option"><input type="checkbox" id="all-counties-include-state" checked> Include state names in search</label>
+    <span id="all-counties-count" class="county-list-count">Loading…</span>
+  </div>
+  <div class="cl-wrap">
+    <table class="cl-table">
+      <thead><tr>
+        <th data-sort="name" class="asc">County<span class="cl-sort"></span></th>
+        <th data-sort="state">State<span class="cl-sort"></span></th>
+        <th data-sort="isc" class="mid">County?<span class="cl-info" tabindex="0" role="note" aria-label="Whether this is an actual county, or goes under another designation (like parish)" data-tip="Whether this is an actual county, or goes under another designation (like parish). Hover a mark to see what this one is called.">i</span><span class="cl-sort"></span></th>
+        <th data-sort="pop" class="num">Population<span class="cl-sort"></span></th>
+        <th data-sort="area" class="num">Area (sq mi)<span class="cl-sort"></span></th>
+        <th data-sort="where">Where in the state<span class="cl-sort"></span></th>
+      </tr></thead>
+      <tbody id="cl-body"></tbody>
+    </table>
+    <p id="cl-empty" class="cl-empty" hidden>No counties match your search.</p>
+  </div>
+</main>
+<svg class="cl-stash state-map cl-map" id="cl-stash" aria-hidden="true"></svg>
+<script src="county-names.js"></script>
+<script src="maps/manifest.js"></script>
+<script src="maps/manifest-extra.js" onerror="void 0"></script>
+<script src="county-data.js" onerror="void 0"></script>
+<script>
+(function () {
+  var search = document.getElementById("all-counties-search"), includeState = document.getElementById("all-counties-include-state");
+  var countEl = document.getElementById("all-counties-count"), body = document.getElementById("cl-body"), emptyEl = document.getElementById("cl-empty");
+  var norm = function (s) { return String(s).normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/st\./g, "saint").replace(/ste\./g, "sainte").replace(/[^a-z0-9]/g, ""); };
+  var slug = function (s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, ""); };
+
+  /* ---------- county or not: same rules as the game (script.js tucFullName / tucDesignation) ---------- */
+  var AK_CENSUS_AREAS = new Set(["Aleutians West", "Bethel", "Chugach", "Copper River", "Dillingham", "Hoonah-Angoon", "Kusilvak", "Nome", "Prince of Wales-Hyder", "Southeast Fairbanks", "Yukon-Koyukuk"]);
+  var AK_CITY_BOROUGHS = new Set(["Juneau", "Sitka", "Wrangell", "Yakutat"]);
+  var VA_TWIN_CITIES = new Set(["Richmond City", "Fairfax City", "Franklin City", "Roanoke City", "Bedford City"]);
+  var VA_CITY_BASES = new Set(["Alexandria", "Bristol", "Buena Vista", "Charlottesville", "Chesapeake", "Colonial Heights", "Covington", "Danville", "Emporia", "Falls Church", "Fredericksburg", "Galax", "Hampton", "Harrisonburg", "Hopewell", "Lexington", "Lynchburg", "Manassas", "Manassas Park", "Martinsville", "Newport News", "Norfolk", "Norton", "Petersburg", "Poquoson", "Portsmouth", "Radford", "Salem", "Staunton", "Suffolk", "Virginia Beach", "Waynesboro", "Williamsburg", "Winchester"]);
+  function fullName(c) {
+    var n = c.name, s = c.stateKey;
+    if (s === "louisiana") return n + " Parish";
+    if (s === "connecticut") return n + " Planning Region";
+    if (s === "alaska") {
+      if (AK_CENSUS_AREAS.has(n)) return n + " Census Area";
+      if (AK_CITY_BOROUGHS.has(n)) return n + " City and Borough";
+      if (n === "Anchorage" || n === "Skagway") return n + " Municipality";
+      return n + " Borough";
+    }
+    if (s === "virginia") {
+      if (VA_TWIN_CITIES.has(n)) return n.replace(/ City$/, " city");
+      if (VA_CITY_BASES.has(n)) return n + " city";
+      return n + " County";
+    }
+    if (s === "maryland") return n === "Baltimore City" ? "Baltimore city" : n + " County";
+    if (s === "missouri") return /\sCity$/.test(n) ? n.replace(/ City$/, " city") : n + " County";
+    if (s === "nevada") return n === "Carson City" ? n : n + " County";
+    if (s === "puerto_rico") return n + " Municipio";
+    if (s === "american_samoa") return /island|atoll/i.test(n) ? n : n.replace(/\s+District$/i, "") + " District";
+    if (s === "united_states_virgin_islands") return /\sIsland$/i.test(n) ? n : n + " Island";
+    if (s === "northern_mariana_islands") return /\sMunicipality$/i.test(n) ? n : n + " Municipality";
+    if (["district_of_columbia", "guam", "united_states_minor_outlying_islands"].indexOf(s) >= 0) return n;
+    return n + " County";
+  }
+  function designation(c) {
+    var n = c.name, s = c.stateKey, id = c.id || "";
+    if (s === "louisiana") return "Parish";
+    if (s === "connecticut") return "Planning Region";
+    if (s === "alaska") {
+      if (AK_CENSUS_AREAS.has(n)) return "Census Area";
+      if (n === "Anchorage" || n === "Skagway") return "Municipality";
+      return "Borough";
+    }
+    if (s === "virginia") return (VA_TWIN_CITIES.has(n) || VA_CITY_BASES.has(n)) ? "Independent City" : "County";
+    if (s === "maryland") return n === "Baltimore City" ? "Independent City" : "County";
+    if (s === "missouri") return /\sCity$/.test(n) ? "Independent City" : "County";
+    if (s === "nevada") return n === "Carson City" ? "Independent City" : "County";
+    if (s === "puerto_rico" || s === "northern_mariana_islands") return "Municipality";
+    if (s === "united_states_virgin_islands") return "Island";
+    if (s === "american_samoa") return /swains/i.test(id) ? "Island" : /rose/i.test(id) ? "Atoll" : "District";
+    if (s === "guam") return "Guam";
+    if (s === "united_states_minor_outlying_islands") return "United States Minor Outlying Island";
+    if (s === "district_of_columbia") return "District of Columbia";
+    return "County";
+  }
+
+  /* ---------- rows ---------- */
+  var data = {}; (window.__countyData || []).forEach(function (d) { if (d.k) data[d.k] = d; if (d.k2 && !data[d.k2]) data[d.k2] = d; });
+  var seen = {}, rows = [], missing = [], disagree = [];
+  var states = {};            // key -> { name, svgId }
+  function lookup(c, key, state) {
+    var slugs = [key, slug(state)], i, d;
+    for (i = 0; i < slugs.length; i++) {            // best match first: the full official name, then the plain name
+      d = data[slugs[i] + "|" + norm(fullName(c))] || data[slugs[i] + "|" + norm(c.name)] || data[slugs[i] + "|" + norm(c.name + " county")];
+      if (d) return d;
+    }
+    return null;
+  }
+  function add(key, state, svgId, list) {
+    if (seen[key]) return; seen[key] = 1; states[key] = { name: state, svgId: svgId };
+    list.forEach(function (c) {
+      var n = c[1], cc = { id: c[0], name: n, stateKey: key }, desig = designation(cc), d = lookup(cc, key, state);
+      if (!d && window.__countyData && key !== "united_states_minor_outlying_islands") missing.push(state + ": " + n);
+      if (d && typeof d.county === "boolean" && d.county !== (desig === "County")) disagree.push(state + ": " + n + " (game: " + desig + ", census: " + (d.type || "none") + ")");
+      rows.push({ id: c[0], name: n, state: state, key: key, desig: desig, isc: desig === "County" ? 1 : 0, pop: d ? d.pop : null, area: d ? d.area : null, where: d ? d.where : "" });
+    });
+  }
+  var base = window.__baseCountyNames || {};
+  Object.keys(base).forEach(function (k) { add(k, base[k].name, base[k].svgId, base[k].counties); });
+  (window.__stateManifest || []).forEach(function (m) {
+    if (m && m.key && Array.isArray(m.counties)) add(m.key, m.name, m.svgId, m.counties);
+  });
+  window.__clMissing = missing; window.__clDisagree = disagree;
+  if (missing.length) console.log(missing.length + " counties had no match in county-data.js. The list is in window.__clMissing (type  copy(__clMissing.join('\\n'))  to copy it):", missing);
+  if (disagree.length) console.log(disagree.length + " rows where the game and the Census file disagree about county-or-not (window.__clDisagree):", disagree);
+
+  /* ---------- map thumbnails ---------- */
+  var NS = "http://www.w3.org/2000/svg", stash = document.getElementById("cl-stash");
+  var MAPDIR = "maps/", V = (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) || location.protocol === "file:") ? Date.now() : "2026-11-23a";
+  function getMapText(name) {
+    return new Promise(function (res, rej) {
+      var t = document.createElement("script"); t.src = MAPDIR + name + ".js?v=" + V;
+      t.onload = function () { t.remove(); res(); }; t.onerror = function () { t.remove(); rej(new Error("no " + name)); };
+      document.head.appendChild(t);
+    }).then(function () {
+      var text = (window.__stateMaps || {})[name]; if (!text) throw new Error("empty " + name);
+      delete window.__stateMaps[name];
+      var open = text.indexOf("<svg"), start = text.indexOf(">", open) + 1, end = text.lastIndexOf("</svg>");
+      if (open < 0 || end < start) throw new Error("bad format " + name);
+      return text.slice(start, end);
+    });
+  }
+  var loadedLo = {};          // key -> Promise of {g, vb}
+  function loadStash(key) {
+    if (loadedLo[key]) return loadedLo[key];
+    var id = states[key].svgId;
+    return loadedLo[key] = getMapText(id + ".lo").catch(function () { return getMapText(id); }).then(function (markup) {
+      var g = document.createElementNS(NS, "g"); g.id = "map-" + key; stash.appendChild(g);
+      g.insertAdjacentHTML("beforeend", markup);
+      return { g: g, vb: padBox(g.getBBox(), 0.03) };
+    });
+  }
+  function padBox(b, f) { var p = Math.max(b.width, b.height) * f; return [b.x - p, b.y - p, b.width + 2 * p, b.height + 2 * p]; }
+  function hlTargets(root, id) {
+    var out = [], sel = '[id="' + id + '"], [data-county-id="' + id + '"]';
+    root.querySelectorAll(sel).forEach(function (e) { out.push(e); });
+    return out;
+  }
+  function mountThumb(btn) {
+    if (btn._done) return; btn._done = true; var r = btn._row;
+    loadStash(r.key).then(function (m) {
+      var svg = document.createElementNS(NS, "svg"); svg.setAttribute("viewBox", m.vb.join(" ")); svg.setAttribute("class", "state-map cl-map");
+      var use = document.createElementNS(NS, "use"); use.setAttribute("href", "#map-" + r.key); svg.appendChild(use);
+      hlTargets(m.g, r.id).forEach(function (el) { var c = el.cloneNode(true); c.removeAttribute("id"); c.querySelectorAll("[id]").forEach(function (x) { x.removeAttribute("id"); }); c.classList.add("cl-hl"); svg.appendChild(c); });
+      btn.appendChild(svg);
+    }).catch(function () { btn._done = false; });
+  }
+  var thumbObs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { thumbObs.unobserve(e.target); mountThumb(e.target); } });
+  }, { rootMargin: "300px" });
+
+  /* ---------- zoomed map: the game's zoom model (fixed scroller, width-scaled .state-map.zoomed, .zoom-controls) ---------- */
+  var ZOOM_MAX = 20, zoomLevel = 1, zMap = null, zMain = null, zToken = 0, zFrom = null, zSpace = false, zPan = null, zPinch = null, zTouches = new Map();
+  var backdrop = document.createElement("div"); backdrop.className = "zoom-backdrop";
+  var scroller = document.createElement("div"); scroller.className = "zoom-scroller";
+  var head = document.createElement("div"); head.className = "cl-zhead";
+  head.innerHTML = '<h2></h2><p class="cl-sub"></p><button type="button" class="btn-secondary" data-z="close">Close</button>';
+  var controls = document.createElement("div"); controls.className = "zoom-controls";
+  controls.innerHTML = '<button type="button" data-z="out" aria-label="Zoom out" title="Zoom out (-)">\u2212</button>' +
+    '<span class="zoom-level" aria-live="polite">1\u00D7</span>' +
+    '<button type="button" data-z="in" aria-label="Zoom in" title="Zoom in (+). Ctrl/\u2318+scroll or pinch also zooms; scroll or drag to pan.">+</button>' +
+    '<button type="button" data-z="county" title="Zoom in on this county">County</button>' +
+    '<button type="button" data-z="reset" title="Whole state (0)">Whole state</button>';
+  var levelLabel = controls.querySelector(".zoom-level");
+  function isOpen() { return !!zMap || backdrop.isConnected; }
+
+  function zLayout() {
+    if (!zMap) return;
+    var top = Math.ceil(head.getBoundingClientRect().bottom + 8); scroller.style.top = top + "px";
+    var cs = getComputedStyle(zMap), pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0), padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    var vb = zMap.viewBox.baseVal, ratio = vb && vb.width && vb.height ? vb.width / vb.height : 1;
+    var availH = Math.max(window.innerHeight - top - 8, 160), maxW = window.innerWidth - 16;
+    var fitW = (availH - pad) * ratio + padX, w = Math.round(Math.max(Math.min(fitW, maxW), 120));
+    var set = function (k, v) { zMap.style.setProperty(k, v, "important"); };
+    set("box-sizing", "border-box"); set("width", Math.round(w * zoomLevel) + "px"); set("max-width", "none"); set("height", "auto"); set("max-height", "none"); set("flex", "none");
+  }
+  function zUpdate() {
+    levelLabel.textContent = (zoomLevel < 10 ? zoomLevel.toFixed(1).replace(/\.0$/, "") : String(Math.round(zoomLevel))) + "\u00D7";
+    controls.querySelector('[data-z="out"]').disabled = zoomLevel <= 1.001;
+    controls.querySelector('[data-z="in"]').disabled = zoomLevel >= ZOOM_MAX - 0.001;
+    controls.querySelector('[data-z="reset"]').disabled = zoomLevel <= 1.001;
+    scroller.classList.toggle("zoom-deep", zoomLevel > 1.001);
+  }
+  function setZoom(next, ax, ay) {
+    if (!zMap) return;
+    next = Math.min(ZOOM_MAX, Math.max(1, next));
+    if (Math.abs(next - zoomLevel) < 0.001) return;
+    var r = zMap.getBoundingClientRect();
+    if (ax == null) { var s = scroller.getBoundingClientRect(); ax = s.left + s.width / 2; ay = s.top + s.height / 2; }
+    var fx = r.width ? (ax - r.left) / r.width : 0.5, fy = r.height ? (ay - r.top) / r.height : 0.5;
+    zoomLevel = next; zLayout();
+    var r2 = zMap.getBoundingClientRect();
+    scroller.scrollLeft += (r2.left + fx * r2.width) - ax; scroller.scrollTop += (r2.top + fy * r2.height) - ay;
+    zUpdate();
+  }
+  function zoomToCounty() {
+    if (!zMap || !zMain) return;
+    zoomLevel = 1; zLayout();
+    var mr = zMain.getBoundingClientRect(), sr = scroller.getBoundingClientRect();
+    var f = Math.min(sr.width * 0.55 / Math.max(mr.width, 1), sr.height * 0.55 / Math.max(mr.height, 1));
+    zoomLevel = Math.min(ZOOM_MAX, Math.max(1, f)); zLayout();
+    mr = zMain.getBoundingClientRect();
+    scroller.scrollLeft += (mr.left + mr.width / 2) - (sr.left + sr.width / 2); scroller.scrollTop += (mr.top + mr.height / 2) - (sr.top + sr.height / 2);
+    zUpdate();
+  }
+  function openZoom(r, btn) {
+    var tok = ++zToken; zFrom = btn || null;
+    head.querySelector("h2").textContent = r.name + ", " + r.state;
+    var bits = [r.isc ? "County" : r.desig]; if (r.pop != null) bits.push(fmt(r.pop) + " people"); if (r.area != null) bits.push(r.area.toLocaleString("en-US", { maximumFractionDigits: 1 }) + " sq mi");
+    if (r.where) bits.push(r.where === "Whole state" ? "Whole state" : r.where + " part of the state");
+    head.querySelector(".cl-sub").textContent = bits.join(" \u00B7 ");
+    var msg = document.createElement("div"); msg.className = "cl-zmsg"; msg.textContent = "Loading map\u2026";
+    document.body.append(backdrop, head, msg); backdrop.classList.add("active"); document.body.style.overflow = "hidden";
+    var id = states[r.key].svgId;
+    getMapText(id).catch(function () { return getMapText(id + ".lo"); }).then(function (markup) {
+      if (tok !== zToken) return; msg.remove();
+      var svg = document.createElementNS(NS, "svg"); svg.setAttribute("class", "state-map cl-map zoomed"); svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      svg.innerHTML = markup; scroller.replaceChildren(svg); document.body.append(scroller, controls);
+      svg.setAttribute("viewBox", padBox(svg.getBBox(), 0.03).join(" "));
+      var targets = hlTargets(svg, r.id); targets.forEach(function (el) { el.classList.add("cl-hl"); if (el.parentNode === svg) svg.appendChild(el); });
+      zMain = targets.filter(function (e) { return !/callout/.test(e.id || ""); })[0] || targets[0] || null;
+      zMap = svg; zoomLevel = 1; scroller.scrollLeft = 0; scroller.scrollTop = 0; zLayout(); zUpdate();
+    }).catch(function () { if (tok !== zToken) return; msg.textContent = "Couldn\u2019t load this map."; msg.style.pointerEvents = "auto"; });
+  }
+  function closeZoom() {
+    zToken++; zMap = null; zMain = null; zoomLevel = 1;
+    [backdrop, scroller, head, controls].forEach(function (e) { e.remove(); }); scroller.replaceChildren();
+    document.querySelectorAll(".cl-zmsg").forEach(function (e) { e.remove(); });
+    document.body.style.overflow = ""; backdrop.classList.remove("active");
+    if (zFrom && zFrom.isConnected) zFrom.focus(); zFrom = null;
+  }
+  window.addEventListener("resize", zLayout);
+  head.addEventListener("click", function (e) { if (e.target.closest('[data-z="close"]')) closeZoom(); });
+  backdrop.addEventListener("click", closeZoom);
+  scroller.addEventListener("click", function (e) { if (e.target === scroller) closeZoom(); });
+  scroller.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  controls.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-z]"); if (!b) return; e.stopPropagation();
+    if (b.dataset.z === "in") setZoom(zoomLevel * 1.6); else if (b.dataset.z === "out") setZoom(zoomLevel / 1.6);
+    else if (b.dataset.z === "county") zoomToCounty(); else { setZoom(1); scroller.scrollLeft = 0; scroller.scrollTop = 0; }
+  });
+  scroller.addEventListener("wheel", function (e) {
+    if (!zMap || !(e.ctrlKey || e.metaKey)) return; e.preventDefault();
+    setZoom(zoomLevel * Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0025)), e.clientX, e.clientY);
+  }, { passive: false });
+  document.addEventListener("keydown", function (e) {
+    if (!isOpen()) return;
+    if (e.key === "Escape") { closeZoom(); return; }
+    if (!zMap || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === "+" || e.key === "=") { setZoom(zoomLevel * 1.6); e.preventDefault(); }
+    else if (e.key === "-" || e.key === "_") { setZoom(zoomLevel / 1.6); e.preventDefault(); }
+    else if (e.key === "0") { setZoom(1); e.preventDefault(); }
+    else if (e.key === " ") { zSpace = true; e.preventDefault(); }
+  });
+  document.addEventListener("keyup", function (e) { if (e.key === " ") zSpace = false; });
+  scroller.addEventListener("pointerdown", function (e) {      // pan: middle / right / space+drag, or plain drag once zoomed in
+    if (!zMap) return;
+    if (e.pointerType === "touch") {
+      zTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (zTouches.size === 2) { var t = Array.from(zTouches.values()); zPinch = { d: Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y) || 1, level: zoomLevel }; }
+      return;
+    }
+    var right = e.button === 2;
+    if (e.button === 1 || right || e.button === 0 && (zSpace || zoomLevel > 1.001)) {
+      e.preventDefault(); zPan = { x: e.clientX, y: e.clientY, sl: scroller.scrollLeft, st: scroller.scrollTop, right: right, moved: false }; scroller.classList.add("zoom-panning");
+    }
+  });
+  window.addEventListener("pointermove", function (e) {
+    if (e.pointerType === "touch") {
+      if (!zTouches.has(e.pointerId)) return; zTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (zTouches.size === 2 && zPinch) { var t = Array.from(zTouches.values()), d = Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y) || 1; setZoom(zPinch.level * d / zPinch.d, (t[0].x + t[1].x) / 2, (t[0].y + t[1].y) / 2); }
+      return;
+    }
+    if (!zPan) return;
+    if (Math.hypot(e.clientX - zPan.x, e.clientY - zPan.y) > 4) zPan.moved = true;
+    scroller.scrollLeft = zPan.sl - (e.clientX - zPan.x); scroller.scrollTop = zPan.st - (e.clientY - zPan.y);
+  });
+  ["pointerup", "pointercancel"].forEach(function (n) { window.addEventListener(n, function (e) {
+    zTouches.delete(e.pointerId); if (zTouches.size < 2) zPinch = null;
+    if (!zPan) return; var rc = zPan.right && !zPan.moved; zPan = null; scroller.classList.remove("zoom-panning");
+    if (rc && zMap) setTimeout(closeZoom, 0);                   // a plain right-click closes, like the game
+  }); });
+  body.addEventListener("click", function (e) { var b = e.target.closest(".cl-thumb"); if (b) openZoom(b._row, b); });
+
+  /* ---------- table ---------- */
+  var sortKey = "name", dir = 1;
+  try { var p = new URLSearchParams(location.search); if (p.get("sort")) { sortKey = p.get("sort"); dir = p.get("dir") === "desc" ? -1 : 1; } } catch (e) {}
+  var fmt = function (n) { return n == null ? "\u2014" : n.toLocaleString("en-US"); };
+  var NUMERIC_FIRST = { pop: 1, area: 1, isc: 1 };     // first click on these = biggest / yes first
+  function cmp(a, b) {
+    var x = a[sortKey], y = b[sortKey];
+    var xe = x == null || x === "", ye = y == null || y === "";
+    if (xe !== ye) return xe ? 1 : -1;                         // blanks always last
+    var r = typeof x === "number" ? x - y : String(x).localeCompare(String(y), undefined, { sensitivity: "base", numeric: true });
+    return (r || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.state.localeCompare(b.state)) * (r ? dir : 1);
+  }
+  function render() {
+    var q = search.value.trim().toLowerCase(), withState = includeState.checked;
+    var shown = (q ? rows.filter(function (r) { return (withState ? r.name + " " + r.state : r.name).toLowerCase().indexOf(q) >= 0; }) : rows.slice()).sort(cmp);
+    countEl.textContent = q ? shown.length + " of " + rows.length : rows.length + " total";
+    var frag = document.createDocumentFragment();
+    shown.forEach(function (r) {
+      var tr = document.createElement("tr");
+      [[r.name, ""], [r.state, ""], ["", "mid"], [fmt(r.pop), "num" + (r.pop == null ? " dim" : "")], [r.area == null ? "\u2014" : r.area.toLocaleString("en-US", { maximumFractionDigits: 1 }), "num" + (r.area == null ? " dim" : "")], ["", "cl-loc"]].forEach(function (c) {
+        var td = document.createElement("td"); td.textContent = c[0]; if (c[1]) td.className = c[1]; tr.appendChild(td);
+        if (c[1] === "mid") {
+          var m = document.createElement("span"); m.className = r.isc ? "cl-yes" : "cl-no"; m.textContent = r.isc ? "\u2713" : "\u2717";
+          m.title = r.isc ? "County" : r.desig; m.setAttribute("aria-label", r.isc ? "Yes, a county" : "No, a " + r.desig); td.appendChild(m);
+        }
+        if (c[1] === "cl-loc") { var bt = document.createElement("button"); bt.type = "button"; bt.className = "cl-thumb"; bt.setAttribute("aria-label", "Show " + r.name + ", " + r.state + " on the map"); bt._row = r; td.appendChild(bt); }
+      });
+      frag.appendChild(tr);
+    });
+    thumbObs.disconnect();
+    body.replaceChildren(frag);
+    body.querySelectorAll(".cl-thumb").forEach(function (t) { thumbObs.observe(t); });
+    emptyEl.hidden = shown.length > 0;
+    document.querySelectorAll(".cl-table th").forEach(function (th) {
+      th.classList.toggle("asc", th.dataset.sort === sortKey && dir === 1);
+      th.classList.toggle("desc", th.dataset.sort === sortKey && dir === -1);
+    });
+    try {
+      var u = new URLSearchParams(); if (search.value.trim()) u.set("q", search.value.trim());
+      if (sortKey !== "name" || dir !== 1) { u.set("sort", sortKey); u.set("dir", dir === 1 ? "asc" : "desc"); }
+      history.replaceState(null, "", u.toString() ? "?" + u : location.pathname);
+    } catch (e) {}
+  }
+  document.querySelectorAll(".cl-info").forEach(function (i) { i.addEventListener("click", function (e) { e.stopPropagation(); }); });
+  document.querySelectorAll(".cl-table th").forEach(function (th) {
+    th.addEventListener("click", function () {
+      var k = th.dataset.sort;
+      if (k === sortKey) dir = -dir; else { sortKey = k; dir = NUMERIC_FIRST[k] ? -1 : 1; }
+      render();
+    });
+  });
+  try { search.value = new URLSearchParams(location.search).get("q") || ""; } catch (e) {}
+  search.addEventListener("input", render);
+  includeState.addEventListener("change", render);
+  render();
+})();
+</script>
+</body>
+</html>

@@ -41,6 +41,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (keys.length <= 3) return keys.map(stateName).join(", ");
     return `${keys.length} states`;
   };
+  const RS = () => window.CountellectRunStyle;      // run-style.js: 7-segment times, state colours, mode colours
+  const seg = text => (RS() ? RS().sevenSeg(text) : document.createTextNode(text));
+  const secNode = ms => {      // "1.7 s" with the number in 7-segment digits (a 7-segment display can't draw the s)
+    const f = document.createDocumentFragment();
+    const t = ms >= 10000 ? (ms / 1000).toFixed(0) : (ms / 1000).toFixed(1);
+    f.append(seg(t), " s");
+    return f;
+  };
   const unitPlural = rec => api.unitWord(true, rec.state_keys || []);
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
   const chip = (text, cls) => el("span", "gh-chip" + (cls ? " " + cls : ""), text);
@@ -737,7 +745,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const names = keys.map(stateName).sort((x, y) => x.localeCompare(y));
     const box = el("div", "gd-states");
     const list = el("ul", "gd-states-list");
-    names.forEach(n => list.append(el("li", null, n)));
+    names.forEach(n => { const li = el("li"); li.append(RS() ? RS().stateName(n) : n); list.append(li); });
     if (names.length <= LIMIT) { box.append(list); return box; }
     list.classList.add("collapsed");
     const label = `${names.length} states`;
@@ -769,8 +777,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const page = el("div", "gd-page");
     const side = el("aside", "gd-side");
-    const big = (v, l) => { const d = el("div", "gd-big"); d.append(el("div", "gd-big-v", v), el("div", "gd-big-l", l)); return d; };
-    side.append(big(rec.accuracy + "%", "accuracy"), big(fmtBig(rec.time_ms), "time"));
+    const big = (v, l) => { const d = el("div", "gd-big"); const bv = el("div", "gd-big-v"); if (v instanceof Node) bv.append(v); else bv.textContent = v; d.append(bv, el("div", "gd-big-l", l)); return d; };
+    side.append(big(rec.accuracy + "%", "accuracy"), big(RS() ? RS().sevenSeg(fmtMs(rec.time_ms)) : fmtBig(rec.time_ms), "time"));
     const main = el("div", "gd-main");
 
     const head = el("div", "gd-head");
@@ -817,14 +825,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const facts = el("dl", "gd-facts");
     const row = (k, v) => { const dd = el("dd"); dd.append(v); facts.append(el("dt", null, k), dd); };
-    row("Mode", MODE_NAME[rec.mode] || rec.mode);
+    const modeText = el("span", null, MODE_NAME[rec.mode] || rec.mode);
+    if (RS() && RS().MODE_COLOR[rec.mode]) modeText.style.color = RS().MODE_COLOR[rec.mode];      // the mode's colour from the main menu
+    row("Mode", modeText);
     row(rec.state_keys.length === 1 ? "State" : "States", statesList(rec.state_keys));
     row("Found", `${a.found.length} of ${rec.total}`);
     row("First try", String(a.counts.first));
     row("Mistakes", String(rec.wrong_count));
-    if (a.perCountyTiming && a.avg) row("Average", fmtSec(a.avg));
-    if (a.fastest.length) row("Fastest", `${fmtSec(a.fastest[0].dt)} · ${a.fastest[0].name}`);
-    if (a.slowest.length) row("Slowest", `${fmtSec(a.slowest[0].dt)} · ${a.slowest[0].name}`);
+    if (a.perCountyTiming && a.avg) row("Average", secNode(a.avg));
+    if (a.fastest.length) { const f = document.createDocumentFragment(); f.append(secNode(a.fastest[0].dt), ` · ${a.fastest[0].name}`); row("Fastest", f); }
+    if (a.slowest.length) { const f = document.createDocumentFragment(); f.append(secNode(a.slowest[0].dt), ` · ${a.slowest[0].name}`); row("Slowest", f); }
     main.append(facts);
 
     if (mine) main.append(shareBar(rec, !!pending));
@@ -883,11 +893,11 @@ document.addEventListener("DOMContentLoaded", () => {
       // click a heading to sort by it; click again to flip. Empty cells (no finish time) always go last.
       const pct = g => g.total ? Math.round(g.first / g.total * 100) : 0;
       const cols = [
-        { label: "State", text: true, dir: 1, get: g => stateName(g.key), show: g => stateName(g.key) },
+        { label: "State", text: true, dir: 1, get: g => stateName(g.key), show: g => (RS() ? RS().stateName(stateName(g.key)) : stateName(g.key)) },
         { label: cap(api.unitWord(true, rec.state_keys)), dir: -1, get: g => g.total, show: g => String(g.total) },
         { label: "First try", dir: -1, get: g => (g.total ? g.first / g.total : 0), show: g => `${g.first} (${pct(g)}%)` },
         { label: "Wrong", dir: -1, get: g => g.mistakes, show: g => String(g.mistakes) },
-        { label: "Finished at", dir: 1, get: g => a.stateTimes[g.key] || null, show: g => (a.stateTimes[g.key] ? fmtMs(a.stateTimes[g.key]) : "-") }
+        { label: "Finished at", dir: 1, get: g => a.stateTimes[g.key] || null, show: g => (a.stateTimes[g.key] ? seg(fmtMs(a.stateTimes[g.key])) : "-") }
       ];
       let sortCol = 0, sortDir = 1;
       const table = el("table", "gd-table");
@@ -912,7 +922,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const d = c.text ? vx.localeCompare(vy) : vx - vy;
           return (d * sortDir) || stateName(x.key).localeCompare(stateName(y.key));
         });
-        tb.replaceChildren(...rows.map(g => { const tr = el("tr"); cols.forEach(cc => tr.append(el("td", null, cc.show(g)))); return tr; }));
+        tb.replaceChildren(...rows.map(g => { const tr = el("tr"); cols.forEach(cc => { const td = el("td"); const v = cc.show(g); if (v instanceof Node) td.append(v); else td.textContent = v; tr.append(td); }); return tr; }));
         ths.forEach((th, i) => {
           th.classList.toggle("asc", i === sortCol && sortDir === 1);
           th.classList.toggle("desc", i === sortCol && sortDir === -1);

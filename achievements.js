@@ -30,3 +30,27 @@ window.ACHIEVEMENTS = {
   "mode_type-strict": { label: "Infinite Monkey Theorem", sub: "Complete a perfect full-state run in Type for every state", glyph: "T" },
   "mode_type-hard":   { label: "This One Is Washington", sub: "Complete a perfect full-state run in Identify for every state", glyph: "I" }
 };
+
+/* Special badges for channel owners and playtesters. Shown on profile pictures AND next to names on the leaderboards.
+   Add a line per player: lowercase username -> badge. */
+(function () {
+  const CHANNEL_OWNER = { src: "special-badge.png", label: "Channel Owner" };
+  const WRENCH = { src: "wrench-special-badge.svg", label: "Playtester" };
+  window.SPECIAL_BADGES = {
+    "mellohihellohi": CHANNEL_OWNER,
+    "stalgoodman": CHANNEL_OWNER,
+    "nub098765": CHANNEL_OWNER,
+    "sponge99fvuj": CHANNEL_OWNER,
+    "phil": WRENCH,
+    "daydownerrr": WRENCH,
+    "macheese": WRENCH,
+    "gamergirljimmy": WRENCH,
+    "goducks": WRENCH,
+    "niceshirtbro": WRENCH,
+    "raine": WRENCH,
+    "ag": WRENCH,
+    "vvg_lol": WRENCH,
+    "Kira": WRENCH
+  };
+  window.specialBadgeFor = name => window.SPECIAL_BADGES[String(name || "").toLowerCase()] || null;
+})();

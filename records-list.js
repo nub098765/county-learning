@@ -11,6 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const OUTCOME = { perfect: "Perfect", complete: "Finished with mistakes", gave_up: "Gave up", failed: "Challenge failed" };
 
   const api = () => window.countellect || {};
+  const RS = () => window.CountellectRunStyle;      // run-style.js: 7-segment times, state colours, mode colours
+  const stateNameOf = k => (api().stateData && api().stateData[k] ? api().stateData[k].name : k);
   const names = keys => keys.map(k => (api().stateData && api().stateData[k] ? api().stateData[k].name : k)).join(", ");
   const word = (n, keys) => (api().unitWord ? api().unitWord(n !== 1, keys) : (n === 1 ? "county" : "counties"));
   function fmtTime(ms) {
@@ -73,6 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
     for (const m of modes) {
       const b = el("button", "rec-tab" + (m === modeTab ? " on" : ""), MODE_LABEL[m] || m);
       b.type = "button";
+      if (RS() && RS().MODE_COLOR[m]) b.style.color = RS().MODE_COLOR[m];      // the mode's colour from the main menu
       b.addEventListener("click", () => { modeTab = m; render(); });
       tabs.append(b);
     }
@@ -97,9 +100,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const best = perfect.length ? Math.min(...perfect.map(x => x.time_ms)) : null;
 
         const sum = el("summary");
-        const name = el("span", "rec-name", stateTotal > 3 ? `${stateTotal} states` : r.name);
+        const name = el("span", "rec-name");
+        if (stateTotal > 3 || !RS()) name.textContent = stateTotal > 3 ? `${stateTotal} states` : r.name;
+        else name.append(RS().stateNames(r.keys.map(stateNameOf)));      // each state's name in its own colours
         if (counts.size === 1) { const n = [...counts][0]; name.append(el("span", "rec-count", `${n} ${word(n, r.keys)}`)); }
-        sum.append(name, el("span", "rec-best", best != null ? fmtTime(best) : "–"), el("span", "rec-runs", `${r.runs.length} run${r.runs.length === 1 ? "" : "s"}`));
+        const bestEl = el("span", "rec-best");
+        if (best != null && RS()) bestEl.append(RS().sevenSeg(fmtTime(best))); else bestEl.textContent = best != null ? fmtTime(best) : "–";
+        sum.append(name, bestEl, el("span", "rec-runs", `${r.runs.length} run${r.runs.length === 1 ? "" : "s"}`));
         det.append(sum);
         if (stateTotal > 3) det.append(el("p", "rec-states-full", r.name));
 
@@ -112,7 +119,9 @@ document.addEventListener("DOMContentLoaded", () => {
           const a = el("a", "record-run-link"); a.href = "#game-" + x.id;
           a.title = (OUTCOME[x.outcome] || x.outcome) + (x.is_retry ? " (Retry Missed)" : "") + ` · ${x.accuracy}% · ${x.total} ${word(x.total, x.state_keys)}` + (x.pending ? " · not uploaded yet" : "");
           if (x.outcome !== "perfect" || x.is_retry) li.classList.add("not-perfect");
-          const right = el("span", "record-run-right"); right.append(el("span", "record-run-time", fmtTime(x.time_ms)));
+          const right = el("span", "record-run-right"); const timeEl = el("span", "record-run-time");
+          if (RS()) timeEl.append(RS().sevenSeg(fmtTime(x.time_ms))); else timeEl.textContent = fmtTime(x.time_ms);
+          right.append(timeEl);
           const label = el("span", "record-run-name");
           label.append(el("span", "record-run-title", (x.title && x.title.trim()) || `Run #${runNo.get(x.id)}`), el("span", "record-run-date", fmtShort(x.played_at)));
           a.append(label, right); li.append(a); ul.append(li);
